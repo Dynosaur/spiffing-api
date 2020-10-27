@@ -1,6 +1,6 @@
 import * as chalkLib from 'chalk';
 
-export type Color = 'red' | 'green' | 'blue' | 'yellow' | 'magenta' | 'cyan' | 'orange';
+export type Color = 'red' | 'green' | 'blue' | 'yellow' | 'magenta' | 'cyan' | 'orange' | 'cherry' | 'lime';
 
 class Chalk {
 
@@ -32,6 +32,18 @@ class Chalk {
         console.log(chalkLib.rgb(255, 160, 0)(message));
     }
 
+    public rust(message: string): void {
+        console.log(chalkLib.rgb(255, 80, 50)(message));
+    }
+
+    public lime(message: string): void {
+        console.log(chalkLib.rgb(75, 255, 75)(message));
+    }
+
+    public sky(message: string): void {
+        console.log(chalkLib.rgb(50, 183, 255)(message));
+    }
+
     public print(message: string, color: Color): void {
         switch(color) {
             case 'red':
@@ -54,6 +66,9 @@ class Chalk {
                 break;
             case 'orange':
                 this.orange(message);
+                break;
+            case 'cherry':
+                this.rust(message);
                 break;
             default:
                 console.log(message);

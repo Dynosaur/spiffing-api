@@ -1,47 +1,77 @@
-import { GetPosts, TxNoResults, TxCreated, DataResponse } from '../interface';
-import { ExportedRoutes, HandlerReply, ResourceManager, } from '../server';
-import { checkScope, reply, sendMissingParameter } from '../../tools';
-import { Request as ExpressRequest } from 'express';
+import { CreatePostEndpoint, GetPostEndpoint, GetPostsEndpoint,
+GetUserEndpoint } from '../interface/responses/api-responses';
+import { ExportedRoutes, RouteHandler } from '../route-handling/route-handler';
+import { payload } from '../route-handling/response-functions';
 
-async function getUser(request: ExpressRequest, rsrc: ResourceManager): Promise<any> {
+const getUser: RouteHandler<GetUserEndpoint> = async (request, actions) => {
     const username = request.params.username;
-    const user = await rsrc.user.getOne(username);
-    if (user) {
-        const message = `Successfully found user "${username}".`;
-        return reply(200, message, 'OK', { data: {
-            username: user.username,
-            screenName: user.screenName,
-            created: user.created
-        }});
+
+    const op = await actions.readUser(username);
+    switch (op.status) {
+        case 'OK': {
+            const user = op.data;
+            delete user.password;
+            return payload<GetUserEndpoint>(200, `Successfully found user "${username}".`, {
+                status: 'OK', user
+            });
+        }
+        case 'NO_USER': {
+            return payload<GetUserEndpoint>(404, `Could not find user "${username}".`, {
+                status: 'NOT_FOUND'
+            });
+        }
+        default:
+            throw new Error(`Unexpected check state:\n${JSON.stringify(op, null, 4)}`);
+    }
+};
+
+const getPosts: RouteHandler<GetPostsEndpoint> = async (request, actions) => {
+    const op = await actions.readPosts(request.query);
+
+    return payload<GetPostsEndpoint>(200, `Successfully found ${op.length} posts.`, {
+        status: 'OK', posts: op
+    });
+};
+
+const getPost: RouteHandler<GetPostEndpoint> = async (request, actions) => {
+    const op = await actions.readPosts({ id: request.params.id });
+    if (op.length) {
+        return payload<GetPostEndpoint>(200, `Found post ${request.params.id}.`, {
+            status: 'OK', post: op[0]
+        });
     } else {
-        const message = `Could not find user "${username}"`;
-        return reply(404, message, 'NO_RESULTS');
+        return payload<GetPostEndpoint>(404, `Could not find post ${request.params.id}.`, {
+            status: 'NOT_FOUND'
+        });
     }
-}
+};
 
-async function getPosts(request: ExpressRequest, rsrc: ResourceManager): Promise<HandlerReply> {
-    const posts = await rsrc.post.getPosts(request.query);
-    if (posts.length) {
-        return reply(200, `Found ${posts.length} posts.`, 'OK', { data: posts });
-    }  else {
-        return reply(404, `No results with query.`, 'NO_RESULTS');
+const createPost: RouteHandler<CreatePostEndpoint> = async (request, actions, checks) => {
+    const authCheck = await checks.authenticate(request);
+    switch (authCheck.state) {
+        case 'error':
+            return authCheck.error;
+        case 'ok':
+            break;
+        default:
+            throw new Error(`Unexpected check state:\n${JSON.stringify(authCheck, null, 4)}`);
     }
-}
-
-async function createPost(request: ExpressRequest, rsrc: ResourceManager): Promise<HandlerReply> {
-    const check = checkScope(request.body, ['author', 'title', 'content']);
-    if (!check.ok) {
-        return sendMissingParameter(check.param, 'body');
+    const bodyCheck = checks.checkScope(['author', 'content', 'title'], request.body, 'body');
+    if (bodyCheck) {
+        return bodyCheck;
     }
 
-    await rsrc.post.create(request.body.title, request.body.content, request.body.author);
-    return reply(201, `Created new post "${request.body.title}"`, 'CREATED');
+    await actions.createPost(request.body.title, request.body.content, request.body.author);
+    return payload<CreatePostEndpoint>(201, `Successfully created post.`, {
+        status: 'CREATED'
+    });
 };
 
 export function apiRoutes(): ExportedRoutes {
     return [
-        { method: 'GET',  path: '/api/user/:username', handler: getUser },
-        { method: 'GET',  path: '/api/posts',          handler: getPosts },
-        { method: 'POST', path: '/api/post',           handler: createPost }
+        { method: 'GET',  path: '/api/user/:username',  handler: getUser },
+        { method: 'GET',  path: '/api/posts',           handler: getPosts },
+        { method: 'POST', path: '/api/:username/post',  handler: createPost },
+        { method: 'GET',  path: '/api/post/:id',        handler: getPost }
     ];
 }

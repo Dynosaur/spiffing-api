@@ -1,69 +1,27 @@
 import * as express from 'express';
-import { Request as ExpressRequest } from 'express';
 import * as cors from 'cors';
-
-import { chalk } from '../tools';
-import { MongoClient, UserActions, PostActions } from '../database';
+import { Request } from 'express';
+import { DatabaseActions, MongoClient } from '../database';
 import { DeveloperActions } from '../dev/dev-actions';
-import { Action } from './interface';
+import { chalk, prettyTimestamp } from '../tools';
+import { executeRouteHandler, ExportedRoutes, RouteHandlerFunctions } from './route-handling/route-handler';
 import { apiRoutes, authRoutes } from './router';
 
-export type HttpMethod = 'GET' | 'POST';
-
-export type Request<T extends Action> = ExpressRequest<T['params'], T['response'], T['body'], T['query']>;
-
-export interface ResourceManager {
-    post: PostActions;
-    user: UserActions;
+function announceRequest(request: Request, response, next): void {
+    chalk.yellow(prettyTimestamp() + ' ' + request.method + ' ' + request.url);
+    // if (request.headers.authorization) {
+    //     chalk.magenta('Authorization: ' + request.headers.authorization);
+    // }
+    next();
 }
 
-export interface RouteHandlerResponse<T extends Action> {
-    httpCode: number;
-    print: string;
-    send: T['response'];
-}
-
-export type ExportedRoutes = Array<{
-    method: HttpMethod;
-    path: string;
-    handler: RouteHandler;
-}>;
-
-export interface HandlerReply {
-    httpCode: number;
-    message: string;
-    payload?: any;
-}
-
-export type RouteHandler = (request: ExpressRequest, rsrc: ResourceManager) => Promise<HandlerReply>;
-
-async function executeRouteHandler(request: ExpressRequest, resources: ResourceManager, handler: RouteHandler): Promise<void> {
-    chalk.yellow(request.method + ' ' + request.url);
-    const reply = await handler(request, resources);
-    request.res.status(reply.httpCode).send(reply.payload);
-
-    const message = `[${reply.httpCode}] ${reply.message}`;
-    if (reply.httpCode < 100 || reply.httpCode > 600) {
-        console.log(message);
-    } else if (reply.httpCode < 200) {
-        chalk.yellow(reply.message);
-    } else if (reply.httpCode < 300) {
-        chalk.green(reply.message);
-    } else {
-        chalk.red(reply.message);
-    }
-}
-
-const hostPort = require('../../server-config.json')['server-port'];
-
-class Server {
+export class Server {
 
     private express = express();
     private mongoClient: MongoClient;
-    private userActions: UserActions;
-    private postActions: PostActions;
-    private devActions: DeveloperActions;
-    private resourceManager: ResourceManager;
+    private dbActions: DatabaseActions;
+    private routeChecks: RouteHandlerFunctions;
+    private devActions = new DeveloperActions();
 
     private async initialize(): Promise<void> {
         chalk.cyan('Initializing server...');
@@ -71,10 +29,8 @@ class Server {
         this.mongoClient = new MongoClient('spiffing');
         await this.mongoClient.initialize();
 
-        this.userActions = new UserActions(this.mongoClient.db.collection('users'));
-        this.postActions = new PostActions(this.mongoClient.db.collection('posts'));
-        this.devActions = new DeveloperActions();
-        this.resourceManager = { post: this.postActions, user: this.userActions };
+        this.dbActions = new DatabaseActions(this.mongoClient.db.collection('users'), this.mongoClient.db.collection('posts'));
+        this.routeChecks = new RouteHandlerFunctions(this.dbActions);
         this.configureExpress();
     }
 
@@ -82,11 +38,19 @@ class Server {
         routes().forEach(route => {
             switch (route.method) {
                 case 'GET':
-                    this.express.get(route.path, request => executeRouteHandler(request, this.resourceManager, route.handler));
+                    this.express.get(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
                     break;
                 case 'POST':
-                    this.express.post(route.path, request => executeRouteHandler(request, this.resourceManager, route.handler));
+                    this.express.post(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
                     break;
+                case 'DELETE':
+                    this.express.delete(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
+                    break;
+                case 'PATCH':
+                    this.express.patch(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
+                    break;
+                default:
+                    throw new Error('Route uses unsupported method: ' + route.method);
             }
         });
     }
@@ -95,6 +59,7 @@ class Server {
         this.express.use(express.urlencoded({ extended: true }));
         this.express.use(express.json());
         this.express.use(cors({ origin: '*' }));
+        this.express.use(announceRequest);
 
         this.attachRoutes(apiRoutes);
         this.attachRoutes(authRoutes);
@@ -106,10 +71,7 @@ class Server {
 
     public start(port: number): void {
         this.initialize().then(() => {
-            this.express.listen(port, () => chalk.yellow(`Listening on port ${port}`));
+            this.express.listen(port, () => chalk.yellow(`Listening on port ${port}\n`));
         });
     }
 }
-
-const server = new Server();
-server.start(hostPort);

@@ -1,69 +1,130 @@
-import { Request } from 'express';
-import { ExportedRoutes, HandlerReply, ResourceManager } from '../server';
-import { checkScope, decodeBasicAuth, reply, sendMissingParameter } from '../../tools';
+import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint } from '../interface/responses/auth-endpoints';
+import { ExportedRoutes, RouteHandler } from '../route-handling/route-handler';
+import { internalError, payload } from '../route-handling/response-functions';
+import { decodeBasicAuth } from '../../tools/auth';
 
-// Do away with the typeCheck thing, I think it is redundant
-async function register(request: Request, rsrc: ResourceManager): Promise<HandlerReply> {
-    const check = checkScope(request.headers, ['authorization']);
-    if (!check.ok) {
-        return sendMissingParameter(check.param, 'headers');
-    }
+/*
+    TODO:
+        - Automate authentication?
+            - For requests that require authentication such as register, authentication, etc..., find a way
+            to somehow not have to rewrite the same accessing of the decodeBasicAuth shit every time. Perhaps I misunderstand
+        - Combine Request and Response types into an "Action" type to shorten function signatures
+*/
+
+const register: RouteHandler<RegisterEndpoint> = async (request, actions, checks) => {
+    const username = request.params.username;
+
+    const check = await checks.userMustNotExist(username);
+    if (check) { return check; }
 
     const isRegisterTest = request.query.test;
 
     const decoded = decodeBasicAuth(request.headers.authorization);
-    if (!decoded.success) {
-        const message = `Could not extract ${decoded.error} from Authorization header.`;
-        return reply(500, message, 'REJECTED');
-    }
-    const username = decoded.username;
+    if (decoded.errorResp) { return decoded.errorResp; }
     const password = decoded.password;
-
-    const isUsernameUnique = await rsrc.user.isUsernameUnique(username);
-    if (!isUsernameUnique) {
-        const message = `Username "${username}" is taken.`;
-        return {
-            httpCode: 400, message, payload: {
-                status: 'REJECTED', message
-            }
-        }
-    }
 
     if (isRegisterTest) {
-        return reply(200, 'Successful test request, no account created.', 'OK');
+        return payload<RegisterEndpoint>(200, 'Test register successful, no users created.', {
+            status: 'TEST_OK'
+        });
     } else {
-        await rsrc.user.create(username, password);
-        const data = await rsrc.user.getUserNoPassword(username);
-        const message = `Successfully created new user "${username}"`
-        return reply(201, message, 'CREATED', { data });
+        await actions.createUser(username, password);
+        return payload<RegisterEndpoint>(201, `Successfully created new user "${username}"`, {
+            status: 'CREATED'
+        });
     }
-}
+};
 
-async function authenticate(request: Request, rsrc: ResourceManager): Promise<HandlerReply> {
-    const check = checkScope(request.headers, ['authorization']);
-    if (!check.ok) {
-        return sendMissingParameter(check.param, 'headers');
+const authenticate: RouteHandler<AuthenticateEndpoint> = async (request, actions, checks) => {
+    const check = await checks.authenticate(request);
+    switch (check.state) {
+        case 'error':
+            return check.error;
+        case 'ok':
+            break;
+        default:
+            throw new Error(`Unexpected check state:\n${JSON.stringify(check, null, 4)}`);
     }
 
-    const decoded = decodeBasicAuth(request.headers.authorization);
-    if (!decoded.success) {
-        const message = `Could not extract ${decoded.error} from Authorization header.`;
-        return reply(500, message, 'MALFORMED');
-    }
-    const username = decoded.username;
-    const password = decoded.password;
+    return payload<AuthenticateEndpoint>(200, 'Successful authentication.', {
+        status: 'OK'
+    });
+};
 
-    const user = await rsrc.user.getOne(username);
-    if (user && password === user.password) {
-        return reply(200, 'Successful authentication.', 'OK');
+const deregister: RouteHandler<DeregisterEndpoint> = async (request, actions, checks) => {
+    const username = request.params.username;
+    const check = await checks.authenticate(request);
+    switch (check.state) {
+        case 'error':
+            return check.error;
+        case 'ok':
+            break;
+        default:
+            throw new Error(`Unexpected check state:\n${JSON.stringify(check, null, 4)}`);
+    }
+
+    if (!await actions.deleteUser(username)) {
+        return internalError('There was an error while removing your account.');
+    }
+    if (!await actions.deletePosts({ author: username })) {
+        return internalError('There was an error while removing your posts.');
+    }
+
+    return payload<DeregisterEndpoint>(200, `User ${username} and its posts successfully deleted.`, {
+        status: 'DELETED'
+    });
+};
+
+const patchUser: RouteHandler<PatchEndpoint> = async (request, actions, checks) => {
+    const authCheck = await checks.authenticate(request);
+    let currentUsername: string;
+    switch (authCheck.state) {
+        case 'error':
+            return authCheck.error;
+        case 'ok':
+            currentUsername = authCheck.username;
+            break;
+        default:
+            throw new Error(`Unexpected check state:\n${JSON.stringify(authCheck, null, 4)}`);
+    }
+
+    const scopeCheck = checks.checkScope(['username', 'password'], request.body, 'body', 'one');
+    if (scopeCheck) {
+        return scopeCheck;
+    }
+
+    const proposedUsername = request.body.username;
+    const proposedPassword = request.body.password;
+    const validUsernameRequest = !!proposedUsername && proposedUsername !== currentUsername;
+    if (validUsernameRequest && proposedPassword) {
+        await actions.updatePassword(currentUsername, proposedPassword);
+        await actions.updateUsername(currentUsername, proposedUsername);
+        return { httpCode: 200, consoleMessage: 'Updated username and password.', payload: {
+            status: 'UPDATED',
+            updated: ['username', 'password']
+        }};
+    } else if (validUsernameRequest) {
+        await actions.updateUsername(currentUsername, proposedUsername);
+        return { httpCode: 200, consoleMessage: 'Updated username.', payload: {
+            status: 'UPDATED',
+            updated: ['username']
+        }};
+    } else if (proposedPassword) {
+        await actions.updatePassword(currentUsername, proposedPassword);
+        return { httpCode: 200, consoleMessage: 'Updated password.', payload: {
+            status: 'UPDATED',
+            updated: ['password']
+        }};
     } else {
-        return reply(400, 'Unsuccessful authentication.', 'REJECTED');
+        return internalError('Unknown path.');
     }
-}
+};
 
 export function authRoutes(): ExportedRoutes {
     return [
-        { method: 'POST', path: '/api/register',     handler: register },
-        { method: 'POST', path: '/api/authenticate', handler: authenticate }
+        { method: 'POST',   path: '/api/user/:username', handler: register },
+        { method: 'POST',   path: '/api/authenticate',   handler: authenticate },
+        { method: 'DELETE', path: '/api/user/:username', handler: deregister },
+        { method: 'PATCH',  path: '/api/user/:username', handler: patchUser }
     ];
 }

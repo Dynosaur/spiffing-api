@@ -3,6 +3,7 @@ export interface Post {
     content: string;
     author: string;
     date: number;
+    id: string;
 }
 
 export interface User {

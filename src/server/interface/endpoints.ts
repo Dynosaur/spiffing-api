@@ -1,51 +1,101 @@
-import { User, Post, MissingParamData, Response, DataResponse } from '../interface';
+// import { User, Post } from '../interface';
+// import { Response } from './';
 
-export type NoParams = { };
-export interface TxNoResults extends Response { status: 'NO_RESULTS'; }
-export interface TxMissingParam extends DataResponse<MissingParamData> { status: 'INCOMPLETE'; }
-export interface TxOk extends Response { status: 'OK'; }
-export interface TxRejected extends Response { status: 'REJECTED'; }
-export interface TxCreated extends Response { status: 'CREATED'; }
+// export type MissingDataResponse = {
+//     status: 'MISSING_DATA';
+//     missing: {
+//         data: string[];
+//         count: number;
+//         scope: string;
+//     };
+// };
 
-// interface HeaderObject {
-//     [header: string]: string;
+// export type DecodeErrorResponse = {
+//     status: 'E_AUTH_DECODE_PARSING';
+//     field: 'username' | 'password';
+//     message: string;
+// };
+
+// export type ExamineResponse = DecodeErrorResponse | MissingDataResponse | {
+//     status: 'UNAUTHORIZED' | 'NO_USER' | 'USER_EXISTS';
+// } | {
+//     status: 'REQ_ERROR';
+//     message: string;
+// };
+
+// export type UnauthorizedErrorResponse = {
+//     status: 'E_UNAUTHORIZED';
 // }
 
-// export interface Action<Tx extends object = {}, Rx extends object = {}, Qx extends object = {}, Px = {}, Hx extends HeaderObject = {}> {
-//     response: Tx;
-//     body: Rx;
-//     query: Qx;
-//     params: Px;
-//     headers: Hx;
+// export type UserExistsErrorResponse = {
+//     status: 'E_USER_EXISTS';
 // }
 
-export interface DefaultOk extends Response { status: 'OK'; }
-export interface DefaultMalformed extends Response { status: 'MALFORMED'; }
-export interface DefaultMissingParam extends Response { status: 'INCOMPLETE'; }
-export interface DefaultRejected extends Response { status: 'REJECTED'; }
+// export type UserNoExistErrorResponse = {
+//     status: 'E_USER_NO_EXIST';
+// }
 
-export namespace Authenticate {
-    // export interface Act extends Action<TxOk | TxRejected, {}, {}, {}, { Authorization: string }> { }
-    export type Response = DefaultMalformed | DefaultMissingParam | DefaultOk | DefaultRejected;
-}
+// export type RegisterResponse = {
+//     status: 'CREATED' | 'TEST_OK';
+// } | UserExistsErrorResponse | DecodeErrorResponse;
 
-export namespace Register {
-    // export interface Act extends Action<TxCreated | TxOk | TxRejected | TxMissingParam, {}, { test: boolean }, {}, { Authorization: string; }> { }
-    export interface Created extends DataResponse<User> { status: 'CREATED'; }
-    export type Response = Created | DefaultMalformed | DefaultOk | DefaultRejected;
-}
+// export type AuthenticateResponse = {
+//     status: 'OK';
+// } | DecodeErrorResponse | UnauthorizedErrorResponse | UserNoExistErrorResponse;
 
-export namespace GetUser {
-    export interface Success extends DataResponse<User> { status: 'OK'; }
-    export interface TxSuccess extends DataResponse<User> { status: 'OK'; }
-    // export interface Act extends Action<TxSuccess | TxNoResults, {}, {}, { username: string }, {}> { }
-}
+// export type DeregisterResponse = {
+//     status: 'DELETED';
+// }
 
-export namespace GetPosts {
-    export interface Success extends DataResponse<Post[]> { status: 'OK'; }
-    export type NoResults = TxNoResults;
-}
+// export type ExaminedResponse = IncompleteResponse | NoChangeResponse | MalformedResponse | RejectedResponse | { status: 'MISSING_RECORD'; message: string; };
 
-export namespace CreatePost {
-    // export interface Act extends Action<TxCreated | TxMissingParam, { title: string; content: string; author: string; }, {}, {}> { }
-}
+// export type AuthenticateResponse = OkResponse | ExaminedResponse;
+
+// export type RegisterResponse = CreatedResponse | OkResponse | ExaminedResponse;
+
+// export class GetUserSuccessResponse extends DataResponse<User> {
+//     public status: 'OK';
+//     constructor(message: string, data: User) {
+//         super('OK', message, data);
+//     }
+// }
+// export type GetUserResponse = GetUserSuccessResponse | NoResultsResponse;
+
+// export class GetPostsSuccessResponse extends DataResponse<Post[]> {
+//     public status: 'OK';
+//     constructor(message: string, data: Post[]) {
+//         super('OK', message, data);
+//     }
+// }
+// export type GetPostsResponse = GetPostsSuccessResponse | NoResultsResponse;
+
+// export interface CreatePostRequest {
+//     author: string;
+//     title: string;
+//     content: string;
+// }
+// export type CreatePostResponse = CreatedResponse | ExaminedResponse;
+
+// export type DeregisterResponse = OkResponse | ExaminedResponse;
+
+// export interface ChangeUserDataRequest {
+//     username: string;
+//     password: string;
+// }
+// export type ChangeUserDataResponse = {
+//     status: 'OK';
+//     updated: string[];
+// } | ExaminedResponse;
+
+// // interface GetPostSuccess extends Response3<'OK' | 'NOT_FOUND'> {
+// //     status: 'OK';
+// //     post: Post;
+// // }
+// // interface GetPostNotFound extends Response3<'OK' | 'NOT_FOUND'> { status: 'NOT_FOUND'; }
+// // export type GetPostResponse = GetPostSuccess | GetPostNotFound;
+// export type GetPostResponse = {
+//     status: 'OK';
+//     post: Post;
+// } | {
+//     status: 'NOT_FOUND';
+// }
