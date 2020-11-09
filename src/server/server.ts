@@ -83,6 +83,6 @@ export class Server {
     public start(port: number): void {
         this.initialize().then(() => {
             this.express.listen(port, () => chalk.yellow(`Listening on port ${port}\n`));
-        });
+        }).catch(e => { throw e; });
     }
 }
