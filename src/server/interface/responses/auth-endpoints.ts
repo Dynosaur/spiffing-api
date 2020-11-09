@@ -1,9 +1,11 @@
 import { Response } from '../response';
 import { AuthenticateErrorResponse, AuthParseErrorResponse, InternalServerErrorResponse,
+    MissingDataErrorResponse,
 UserExistsErrorResponse } from './error-responses';
 
 export type RegisterEndpoint =
     Response<'CREATED' | 'TEST_OK'> |
+    MissingDataErrorResponse |
     UserExistsErrorResponse |
     AuthParseErrorResponse;
 
@@ -22,4 +24,5 @@ export interface PatchUpdatedResponse extends Response<'UPDATED'> {
 export type PatchEndpoint =
     PatchUpdatedResponse |
     AuthenticateErrorResponse |
-    InternalServerErrorResponse;
+    InternalServerErrorResponse |
+    Response<'NO_CHANGE'>;

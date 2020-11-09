@@ -1,5 +1,9 @@
 import { request } from 'http';
 
+interface Headers {
+    [header: string]: string;
+}
+
 export function urlToHostPath(url: string): { matched: boolean, host: string; path: string; port: number; } {
     const match = url.match(/(?:(?<protocol>[\w]+):\/\/)?(?<hostname>[A-z.]+)(?::(?<port>\d+))?(?<path>\/.+)/);
     if (match) {
@@ -31,6 +35,7 @@ export function createRequest<T>(
                         try {
                             resolve(JSON.parse(data));
                         } catch (e) {
+                            console.log(data);
                             reject(e);
                         }
                         break;
@@ -47,4 +52,8 @@ export function createRequest<T>(
         }
         req.end();
     });
+}
+
+export async function postJSON<T>(url: string, body: object, headers: Headers): Promise<T> {
+    return await createRequest<T>('POST', url, 'json', body, headers) as T;
 }

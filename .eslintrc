@@ -4,15 +4,13 @@
     "plugins": [
         "@typescript-eslint"
     ],
-    "extends": [
-        "eslint:recommended",
-        "plugin:@typescript-eslint/eslint-recommended",
-        "plugin:@typescript-eslint/recommended"
-    ],
     "rules": {
         "no-console": "warn",
         "eol-last": "warn",
         "semi": "warn",
-        "no-namespace": "off"
+        "no-namespace": "off",
+        "quotes": [
+            1, "single"
+        ]
     }
 }

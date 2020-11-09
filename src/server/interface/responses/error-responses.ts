@@ -2,14 +2,14 @@ import { Response } from '../response';
 
 export interface MissingDataErrorResponse extends Response<'MISSING_DATA'> {
     missing: {
-        data: string[];
-        count: number;
+        possible: string[][];
+        provided: string[];
         scope: string;
     };
 }
 
 export interface AuthParseErrorResponse extends Response<'E_AUTH_HEADER_PARSE'> {
-    field: 'username' | 'password';
+    field: 'username' | 'password' | 'type';
     message: string;
 }
 

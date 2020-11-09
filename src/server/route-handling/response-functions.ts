@@ -1,11 +1,12 @@
-import { RoutePayload, routePayload } from './route-handler';
-import { AuthParseErrorResponse, InternalServerErrorResponse, MissingDataErrorResponse } from '../interface/responses/error-responses';
+import { RoutePayload } from './route-infra';
+import { routePayload } from './route-handler';
+import { AuthParseErrorResponse, InternalServerErrorResponse, MissingDataErrorResponse, UnauthorizedErrorResponse, UserNoExistErrorResponse } from '../interface/responses/error-responses';
 
 export function payload<T>(httpCode: number, message: string, payload: T): RoutePayload<T> {
     return { httpCode, consoleMessage: message, payload };
 }
 
-export function couldNotParseRequest(thing: 'username' | 'password'): RoutePayload<AuthParseErrorResponse> {
+export function couldNotParseRequest(thing: 'username' | 'password' | 'type'): RoutePayload<AuthParseErrorResponse> {
     const message = `There was an error parsing the request's ${thing}.`;
     return {
         consoleMessage: message,
@@ -18,11 +19,13 @@ export function couldNotParseRequest(thing: 'username' | 'password'): RoutePaylo
     };
 }
 
-export function missingData(missing: string[], scope: string): RoutePayload<MissingDataErrorResponse> {
-    const count = missing.length;
-    return routePayload<MissingDataErrorResponse>(400, `Missing param${count > 1 ? 's' : ''}: ${missing.join(', ')} in request ${scope}.`, {
+export function missingData(possible: string[][], provided: object, name: string): RoutePayload<MissingDataErrorResponse> {
+    const consoleMessage = `Malformed request ${name}.
+    \n\tRequired: [${possible.join(' OR ')}]
+    \n\tProvided: [${Object.keys(provided)}]`;
+    return routePayload<MissingDataErrorResponse>(400, consoleMessage, {
         status: 'MISSING_DATA',
-        missing: { count, data: missing, scope }
+        missing: { possible, provided: Object.keys(provided), scope: name }
     });
 }
 
@@ -31,4 +34,12 @@ export function internalError(message: string): RoutePayload<InternalServerError
         status: 'E_INTERNAL',
         message
     });
+}
+
+export function unauthorized(): RoutePayload<UnauthorizedErrorResponse> {
+    return payload<UnauthorizedErrorResponse>(401, 'Authentication failed.', { status: 'E_UNAUTHORIZED' });
+}
+
+export function userDoesNotExist(): RoutePayload<UserNoExistErrorResponse> {
+    return payload<UserNoExistErrorResponse>(404, 'The user could not be found.', { status: 'E_USER_NO_EXIST' });
 }

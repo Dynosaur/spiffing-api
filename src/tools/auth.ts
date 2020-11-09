@@ -1,32 +1,62 @@
-import { RoutePayload } from '../server/route-handling/route-handler';
+import { RoutePayload } from '../server/route-handling/route-infra';
 import { couldNotParseRequest } from '../server/route-handling/response-functions';
 import { AuthParseErrorResponse } from '../server/interface/responses/error-responses';
 
-// Could be a vulnerability? Regex may be exploited
-export function decodeBasicAuth(authorizationHeader: string): {
+const encodeMap = new Map();
+encodeMap.set(' ', '%20');
+encodeMap.set(':', '%3A');
+
+export function decodeHttp(s: string): string {
+    encodeMap.forEach((encoded, plain) => {
+        s = s.replace(new RegExp(encoded, 'g'), plain);
+    });
+    return s;
+}
+
+export function encodeHttp(s: string): string {
+    encodeMap.forEach((encoded, plain) => {
+        s = s.replace(new RegExp(plain, 'g'), encoded);
+    });
+    return s;
+}
+
+export type DecodeResult = {
+    status: 'ok';
     username: string;
     password: string;
-    errorResp: RoutePayload<AuthParseErrorResponse>;
-} {
+} | {
+    status: 'error';
+    error: RoutePayload<AuthParseErrorResponse>;
+}
+
+export function decodeBasicAuth(authorizationHeader: string): DecodeResult {
+    const basicRegex = authorizationHeader.match(/^Basic /);
+    if (!basicRegex) {
+        return { status: 'error', error: couldNotParseRequest('type') };
+    }
+
     const base64 = authorizationHeader.substring(6);
-    const plainText = Buffer.from(base64, 'base64').toString('ascii');
+    const httpEncoded = Buffer.from(base64, 'base64').toString('ascii');
 
-    const usernameRegex = plainText.match(/^(.+):/);
+    const usernameRegex = httpEncoded.match(/^(.+):/);
     if (!usernameRegex) {
-        return { username: null, password: null, errorResp: couldNotParseRequest('username') };
+        return { status: 'error', error: couldNotParseRequest('username') };
     }
-    const username = usernameRegex[1];
+    const username = decodeHttp(usernameRegex[1]);
 
-    const passwordRegex = plainText.match(/:(.+)$/);
+    const passwordRegex = httpEncoded.match(/:(.+)$/);
     if (!passwordRegex) {
-        return { username: null, password: null, errorResp: couldNotParseRequest('password') };
+        return { status: 'error', error: couldNotParseRequest('password') };
     }
-    const password = passwordRegex[1];
+    const password = decodeHttp(passwordRegex[1]);
 
-    return { username, password, errorResp: null };
+    return { status: 'ok', username, password };
 }
 
 export function encodeBasicAuth(username:string, password:string):string {
+    username = encodeHttp(username);
+    password = encodeHttp(password);
+
     const base64 = btoa(username + ':' + password);
     return 'Basic ' + base64;
 }

@@ -1,25 +1,31 @@
-import { chalk } from '../tools/chalk';
 import { MongoClient as DbClient, Db } from 'mongodb';
-import ServerConfig from '../server-config';
+import { chalk } from '../tools/chalk';
 
-const config: ServerConfig = require('../../server-config.json');
-const databaseUrl = config['database-url'];
+// import ServerConfig from '../server-config';
+// const config: ServerConfig = require('../../server-config.json');
+// const databaseUrl = config['database-url'];
 
 export class MongoClient {
 
-    public db: Db;
+    db: Db;
 
-    constructor(private databaseName: string) { }
+    constructor(private databaseUrl: string, private databaseName: string) { }
 
-    public initialize(): Promise<void> {
-        chalk.orange('Initializing MongoDB Client.');
+    async initialize(): Promise<void> {
+        chalk.cyan('Initializing MongoDB Client.');
+        chalk.cyan('Connecting to ' + this.databaseUrl);
 
         return new Promise((resolve, reject) => {
-            DbClient.connect(databaseUrl, (err, db) => {
-                if (err) reject(err);
-                chalk.orange('MongoDB successfully connected.');
-                this.db = db.db(this.databaseName);
-                chalk.orange('MongoDB Client initialized.');
+            const client = new DbClient(this.databaseUrl, { useNewUrlParser: true, useUnifiedTopology: true });
+            client.connect(err => {
+                if (err) {
+                    chalk.rust('Encountered an error while attempting to connect to the database.');
+                    reject(err);
+                    return;
+                }
+
+                this.db = client.db(this.databaseName);
+                chalk.lime('MongoDB client successfully initialized.');
                 resolve();
             });
         });

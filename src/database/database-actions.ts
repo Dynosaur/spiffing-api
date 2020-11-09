@@ -1,17 +1,20 @@
-import { Collection, FilterQuery, ObjectId, OptionalId, UpdateQuery } from 'mongodb';
+import { Collection, ObjectId } from 'mongodb';
 import { Post } from '../server/interface/data-types';
-import { DbUser } from './data-types';
 
-interface Operation<T> {
-    ok: boolean;
-    message: string;
-    data: T;
+export interface DbUser {
+    username: string;
+    password: string;
+    screenName: string;
+    created: number;
+    id: string;
 }
-type UserOperationStatus = 'OK' | 'FAILED' | 'NO_USER';
-interface UserOperation<T> {
-    status: UserOperationStatus;
-    message: string;
-    data: T;
+
+export interface DbPost {
+    _id: string;
+    title: string;
+    content: string;
+    author: string;
+    date: number;
 }
 
 export class DatabaseActions {
@@ -33,12 +36,6 @@ export class DatabaseActions {
     }
 
     private async create<T>(collection: Collection<T>, data: any): Promise<void> {
-        if (data.id) {
-            const id = data.id;
-            delete data.id;
-            data._id = new ObjectId(id);
-            console.log(data);
-        }
         await collection.insertOne(data);
     }
 
@@ -52,7 +49,7 @@ export class DatabaseActions {
             case 'OK':
                 return { status: 'FAILED', message: 'Username is taken.' };
             case 'NO_USER': {
-                const user: DbUser = { username, password, screenName: username, created: Date.now() };
+                const user = { username, password, screenName: username, created: Date.now() };
                 await this.create<DbUser>(this.users, user);
                 return { status: 'OK', message: `Successfully created user "${username}".` };
             }
@@ -60,17 +57,9 @@ export class DatabaseActions {
     }
 
     private async read<T>(collection: Collection<T>, query: any): Promise<T[]> {
-        if (query.id) {
-            const id = query.id;
-            delete query.id;
-            query._id = new ObjectId(id);
-        }
         const cursor = collection.find<T>(query);
         const items: T[] = [];
         await cursor.forEach((item: any) => {
-            const id = item._id;
-            delete item._id;
-            item.id = id;
             items.push(item);
         });
         return items;
@@ -110,7 +99,7 @@ export class DatabaseActions {
     async updateUsername(oldUsername: string, newUsername: string): Promise<{ status: 'OK' | 'NO_MATCH'; message: string; }> {
         const userUpdate = await this.update<DbUser>(this.users, { username: oldUsername }, { username: newUsername });
         if (userUpdate === 'NO_MATCH') {
-            return { status: 'NO_MATCH', message: `Could not find user "${oldUsername}", no changes made.`}
+            return { status: 'NO_MATCH', message: `Could not find user "${oldUsername}", no changes made.`};
         }
         await this.update<Post>(this.posts, { author: oldUsername }, { author: newUsername });
         return { status: 'OK', message: 'Successfully updated username.' };

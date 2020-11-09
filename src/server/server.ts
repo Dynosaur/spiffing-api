@@ -1,17 +1,16 @@
-import * as express from 'express';
-import * as cors from 'cors';
+import cors from 'cors';
+import express from 'express';
 import { Request } from 'express';
-import { DatabaseActions, MongoClient } from '../database';
+import { RouteInfo } from './route-handling/route-infra';
 import { DeveloperActions } from '../dev/dev-actions';
+import { routes as apiRoutes } from './router/api-router';
+import { routes as authRoutes } from './router/auth-router';
 import { chalk, prettyTimestamp } from '../tools';
-import { executeRouteHandler, ExportedRoutes, RouteHandlerFunctions } from './route-handling/route-handler';
-import { apiRoutes, authRoutes } from './router';
+import { DatabaseActions, MongoClient } from '../database';
+import { executeRouteHandler, RouteHandlerFunctions } from './route-handling/route-handler';
 
 function announceRequest(request: Request, response, next): void {
     chalk.yellow(prettyTimestamp() + ' ' + request.method + ' ' + request.url);
-    // if (request.headers.authorization) {
-    //     chalk.magenta('Authorization: ' + request.headers.authorization);
-    // }
     next();
 }
 
@@ -26,7 +25,19 @@ export class Server {
     private async initialize(): Promise<void> {
         chalk.cyan('Initializing server...');
 
-        this.mongoClient = new MongoClient('spiffing');
+        let dbUri: string;
+        switch (process.env.environment) {
+            case 'DEV':
+                dbUri = 'mongodb://localhost:27017';
+                break;
+            case 'PROD':
+                dbUri = process.env.DB_URL;
+                break;
+            default:
+                throw new Error('Unknown environment: ' + process.env.environment);
+        }
+
+        this.mongoClient = new MongoClient(dbUri, 'spiffing');
         await this.mongoClient.initialize();
 
         this.dbActions = new DatabaseActions(this.mongoClient.db.collection('users'), this.mongoClient.db.collection('posts'));
@@ -34,20 +45,20 @@ export class Server {
         this.configureExpress();
     }
 
-    private attachRoutes(routes: () => ExportedRoutes): void {
-        routes().forEach(route => {
+    private attachRoutes(routes: RouteInfo[]): void {
+        routes.forEach(route => {
             switch (route.method) {
                 case 'GET':
-                    this.express.get(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
+                    this.express.get(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
                     break;
                 case 'POST':
-                    this.express.post(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
+                    this.express.post(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
                     break;
                 case 'DELETE':
-                    this.express.delete(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
+                    this.express.delete(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
                     break;
                 case 'PATCH':
-                    this.express.patch(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler));
+                    this.express.patch(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
                     break;
                 default:
                     throw new Error('Route uses unsupported method: ' + route.method);

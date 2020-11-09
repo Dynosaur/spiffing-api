@@ -1,4 +1,4 @@
-import * as chalkLib from 'chalk';
+import chalkLib from 'chalk';
 
 export type Color = 'red' | 'green' | 'blue' | 'yellow' | 'magenta' | 'cyan' | 'orange' | 'cherry' | 'lime';
 

@@ -1,5 +1,5 @@
-import { createRequest, encodeBasicAuth } from '../../tools';
-import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint } from '../interface/responses/auth-endpoints';
+import { createRequest, encodeBasicAuth, postJSON } from '../../src/tools';
+import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint } from '../../src/server/interface/responses/auth-endpoints';
 
 function createTestUsername(): string {
     return 'test-user-' + (Math.round(999 * Math.random()) + 1);
@@ -14,19 +14,32 @@ function authenticate(): string {
 
 describe('authentication and authorization', () => {
 
-    test('register a new user', async done => {
+    describe('register a new user', () => {
+        it('should create a new user', async done => {
+            const username = 'hello';
+            const password = 'world';
+
+            const resp = await postJSON<RegisterEndpoint>(`localhost:3005/api/user/${username}`, null, { Authorization: encodeBasicAuth(username, password) });
+
+            expect(resp).toMatchObject({ status: 'CREATED' });
+
+            done();
+        });
+    });
+
+    xtest('register a new user', async done => {
         const resp = await createRequest<RegisterEndpoint>('POST', 'localhost:3005/api/user/' + username, 'json', null, { Authorization: authenticate() });
         expect(resp).toMatchObject({ status: 'CREATED' });
         done();
     });
 
-    test('authenticate a user', async done => {
+    xtest('authenticate a user', async done => {
         const res = await createRequest<AuthenticateEndpoint>('POST', 'localhost:3005/api/authenticate', 'json', null, { Authorization: authenticate() });
         expect(res).toMatchObject({ status: 'OK' });
         done();
     });
 
-    describe('update user data', () => {
+    xdescribe('update user data', () => {
         test('change username', async done => {
             const newUsername = createTestUsername();
             const res = await createRequest<PatchEndpoint>('PATCH', `localhost:3005/api/user/${username}`, 'json', { username: newUsername }, { Authorization: authenticate() });
@@ -58,7 +71,7 @@ describe('authentication and authorization', () => {
         });
     });
 
-    test('delete a user', () => {
+    xtest('delete a user', () => {
         return createRequest<DeregisterEndpoint>('DELETE', 'localhost:3005/api/user/' + username, 'json', null, { Authorization: authenticate() }).then(res => {
             expect(res).toMatchObject({ status: 'DELETED' });
         });
