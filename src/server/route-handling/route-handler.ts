@@ -102,7 +102,7 @@ export async function executeRouteHandler(
 }
 
 function sendPayload(request: Request, payload: RoutePayload<any>): void {
-    request.res.status(payload.httpCode).send(payload);
+    request.res.status(payload.httpCode).send(payload.payload);
 
     const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
     if (payload.httpCode >= 100 && payload.httpCode <= 399) {
