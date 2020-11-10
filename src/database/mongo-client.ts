@@ -1,9 +1,5 @@
-import { MongoClient as DbClient, Db } from 'mongodb';
 import { chalk } from '../tools/chalk';
-
-// import ServerConfig from '../server-config';
-// const config: ServerConfig = require('../../server-config.json');
-// const databaseUrl = config['database-url'];
+import { MongoClient as DbClient, Db } from 'mongodb';
 
 export class MongoClient {
 
