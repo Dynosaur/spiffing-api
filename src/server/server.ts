@@ -75,9 +75,13 @@ export class Server {
         this.attachRoutes(apiRoutes);
         this.attachRoutes(authRoutes);
 
+        this.express.get('/', req => req.res.json({ message: 'Hello! Please use the /api path' }));
+
         this.express.get('/dev/data-types', (req, res) => this.devActions.streamDataTypes().pipe(res));
         this.express.get('/dev/endpoints', (req, res) => this.devActions.streamEndpoints().pipe(res));
         this.express.get('/dev/response', (req, res) => this.devActions.streamResponse().pipe(res));
+
+        this.express.get('*', req => req.res.json({ message: 'Path not supported.' }));
     }
 
     public start(port: number): void {
