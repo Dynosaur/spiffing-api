@@ -22,13 +22,13 @@ export const register: RouteHandler<RegisterEndpoint> = async function register(
     }
 };
 
-export const authenticate: RouteHandler<AuthenticateEndpoint> = async (request, actions, checks) => {
+export const authenticate: RouteHandler<AuthenticateEndpoint> = async function authenticate(request, actions, checks) {
     return payload<AuthenticateEndpoint>(200, 'Successful authentication.', {
         status: 'OK'
     });
 };
 
-export const deregister: RouteHandler<DeregisterEndpoint> = async (request, actions, checks, args) => {
+export const deregister: RouteHandler<DeregisterEndpoint> = async function deregister(request, actions, checks, args) {
     const username = args.username;
 
     if (!await actions.deleteUser(username)) {
@@ -43,7 +43,7 @@ export const deregister: RouteHandler<DeregisterEndpoint> = async (request, acti
     });
 };
 
-export const patchUser: RouteHandler<PatchEndpoint> = async (request, actions, checks, args) => {
+export const patchUser: RouteHandler<PatchEndpoint> = async function patchUser(request, actions, checks, args) {
     let currentUsername = args.username;
     const proposedUsername = request.body.username;
     const proposedPassword = request.body.password;

@@ -3,7 +3,7 @@ GetUserEndpoint } from '../interface/responses/api-responses';
 import { RouteInfo, RouteHandler } from '../route-handling/route-infra';
 import { payload } from '../route-handling/response-functions';
 
-export const getUser: RouteHandler<GetUserEndpoint> = async (request, actions) => {
+export const getUser: RouteHandler<GetUserEndpoint> = async function getUser(request, actions) {
     const username = request.params.username;
 
     const op = await actions.readUser(username);
@@ -20,7 +20,7 @@ export const getUser: RouteHandler<GetUserEndpoint> = async (request, actions) =
     }
 };
 
-export const getPosts: RouteHandler<GetPostsEndpoint> = async (request, actions) => {
+export const getPosts: RouteHandler<GetPostsEndpoint> = async function getPosts(request, actions) {
     const op = await actions.readPosts(request.query);
 
     return payload<GetPostsEndpoint>(200, `Successfully found ${op.length} posts.`, {
@@ -28,7 +28,7 @@ export const getPosts: RouteHandler<GetPostsEndpoint> = async (request, actions)
     });
 };
 
-export const getPost: RouteHandler<GetPostEndpoint> = async (request, actions) => {
+export const getPost: RouteHandler<GetPostEndpoint> = async function getPost(request, actions) {
     const op = await actions.readPosts({ _id: request.params.id });
     if (op.length) {
         return payload<GetPostEndpoint>(200, `Found post ${request.params.id}.`, {
@@ -41,7 +41,7 @@ export const getPost: RouteHandler<GetPostEndpoint> = async (request, actions) =
     }
 };
 
-export const createPost: RouteHandler<CreatePostEndpoint> = async (request, actions) => {
+export const createPost: RouteHandler<CreatePostEndpoint> = async function createPost(request, actions) {
     await actions.createPost(request.body.title, request.body.content, request.body.author);
     return payload<CreatePostEndpoint>(201, 'Successfully created post.', {
         status: 'CREATED'
