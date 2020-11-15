@@ -1,5 +1,6 @@
-import { Collection, ObjectId } from 'mongodb';
 import { Post } from '../server/interface/data-types';
+import { Cipher } from '../tools';
+import { Collection, ObjectId } from 'mongodb';
 
 export interface DbUser {
     username: string;
@@ -19,13 +20,15 @@ export interface DbPost {
 
 export class DatabaseActions {
 
+    private cipher = new Cipher(Buffer.from(process.env.KEY, 'hex'));
+
     constructor(private users: Collection<DbUser>, private posts: Collection<Post>) { }
 
     async authenticate(username: string, password: string): Promise<{ status: 'OK' | 'FAILED' | 'NO_USER'; message: string; data: boolean; }> {
         const user = await this.readUser(username);
         switch (user.status) {
             case 'OK':
-                if (user.data.password === password) {
+                if (this.cipher.decrypt(user.data.password) === password) {
                     return { status: 'OK', message: 'Successful authentication.', data: true };
                 } else {
                     return { status: 'FAILED', message: 'Failed authentication.', data: false };
@@ -45,6 +48,7 @@ export class DatabaseActions {
 
     async createUser(username: string, password: string): Promise<{ status: 'OK' | 'FAILED'; message: string; }> {
         const op = await this.readUser(username);
+        password = this.cipher.encrypt(password);
         switch (op.status) {
             case 'OK':
                 return { status: 'FAILED', message: 'Username is taken.' };
