@@ -6,7 +6,7 @@
   "scripts": {
     "start": "tsnd ./src/main.ts",
     "test": "jest --bail",
-    "test:unit": "jest ./tests/unit",
+    "test:unit": "jest ./tests/unit/tests",
     "test:int": "jest ./tests/integration",
     "test:valid": "jest ./tests/validation"
   },
