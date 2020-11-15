@@ -1,4 +1,4 @@
-import { checkScope } from '../../src/server/route-handling/check-scope';
+import { checkScope } from '../../../src/server/route-handling/check-scope';
 
 const missingDataError = { payload: { status: 'MISSING_DATA' } };
 

@@ -1,5 +1,5 @@
-import { couldNotParseRequest } from '../../src/server/route-handling/response-functions';
-import { decodeBasicAuth, decodeHttp, DecodeResult, encodeBasicAuth, encodeHttp } from '../../src/tools/auth';
+import { couldNotParseRequest } from '../../../src/server/route-handling/response-functions';
+import { decodeBasicAuth, decodeHttp, DecodeResult, encodeBasicAuth, encodeHttp } from '../../../src/tools/auth';
 
 describe('auth tools', () => {
 
