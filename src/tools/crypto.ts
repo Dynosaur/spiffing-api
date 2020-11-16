@@ -1,112 +1,111 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 
-type ObfuscationStrategy = 'secret-first' | 'vector-first' | 'secret-interlaced' | 'vector-interlaced';
+export function interlace(buf1: Buffer, buf2: Buffer, strategy = Math.round(Math.random() * 3)): Buffer {
+    switch (strategy) {
+        case 0:
+            return Buffer.concat([
+                Buffer.from([0, buf1.length, buf2.length]),
+                buf1,
+                buf2
+            ]);
+        case 1:
+            return Buffer.concat([
+                Buffer.from([1, buf1.length, buf2.length]),
+                buf2,
+                buf1
+            ]);
+        case 2: {
+            let interlaced = Buffer.from([2, buf1.length, buf2.length]);
+            const secretStep = Math.ceil(buf1.length / buf2.length);
+            const vectorStep = Math.ceil(buf2.length / buf1.length);
+            for (let index = 0; index < buf2.length; index++) {
+                interlaced = Buffer.concat([
+                    interlaced,
+                    buf1.subarray(index * secretStep, index * secretStep + secretStep),
+                    buf2.subarray(index * vectorStep, index * vectorStep + vectorStep)
+                ]);
+            }
+            return interlaced;
+        }
+        case 3: {
+            let interlaced = Buffer.from([3, buf1.length, buf2.length]);
+            const secretStep = Math.ceil(buf1.length / buf2.length);
+            const vectorStep = Math.ceil(buf2.length / buf1.length);
+            for (let index = 0; index < buf2.length; index++) {
+                interlaced = Buffer.concat([
+                    interlaced,
+                    buf2.subarray(index * vectorStep, index * vectorStep + vectorStep),
+                    buf1.subarray(index * secretStep, index * secretStep + secretStep)
+                ]);
+            }
+            return interlaced;
+        }
+    }
+}
+
+export function deinterlace(interlaced: Buffer): { buf1: Buffer; buf2: Buffer; } {
+    const strategy = interlaced[0];
+    interlaced = interlaced.subarray(1);
+
+    const buf1Len = interlaced[0];
+    interlaced = interlaced.subarray(1);
+    const buf2Len = interlaced[0];
+    interlaced = interlaced.subarray(1);
+
+    switch (strategy) {
+        case 0:
+            return {
+                buf1: interlaced.subarray(0, buf1Len),
+                buf2: interlaced.subarray(buf1Len)
+            };
+        case 1:
+            return {
+                buf1: interlaced.subarray(buf2Len),
+                buf2: interlaced.subarray(0, buf2Len)
+            };
+        case 2: {
+            let buf1 = Buffer.alloc(0);
+            let buf2 = Buffer.alloc(0);
+
+            const buf1GroupLen = Math.ceil(buf1Len / buf2Len);
+            const buf2GroupLen = Math.ceil(buf2Len / buf1Len);
+            for (let i = 0; i < interlaced.length; i += buf1GroupLen + buf2GroupLen) {
+                if (buf1.length + buf1GroupLen >= buf1Len) {
+                    const remaining = buf1Len - buf1.length;
+                    buf1 = Buffer.concat([buf1, interlaced.subarray(i, i + remaining)]);
+                    buf2 = Buffer.concat([buf2, interlaced.subarray(i + remaining)]);
+                    break;
+                }
+                const firstBuf2 = i + buf1GroupLen;
+                buf1 = Buffer.concat([buf1, interlaced.subarray(i, firstBuf2)]);
+                buf2 = Buffer.concat([buf2, interlaced.subarray(firstBuf2, firstBuf2 + buf2GroupLen)]);
+            }
+            return { buf1, buf2 };
+        }
+        case 3: {
+            let buf1 = Buffer.alloc(0);
+            let buf2 = Buffer.alloc(0);
+
+            const buf1GrpLen = Math.ceil(buf1Len / buf2Len);
+            const buf2GrpLen = Math.ceil(buf2Len / buf1Len);
+            for (let i = 0; i < interlaced.length; i += buf1GrpLen + buf2GrpLen) {
+                if (buf2.length + buf2GrpLen >= buf2Len) {
+                    const remaining = buf2Len - buf2.length;
+                    buf2 = Buffer.concat([buf2, interlaced.subarray(i, i + remaining)]);
+                    buf1 = Buffer.concat([buf1, interlaced.subarray(i + remaining)]);
+                    break;
+                }
+                const firstBuf1 = i + buf2GrpLen;
+                buf2 = Buffer.concat([buf2, interlaced.subarray(i, firstBuf1)]);
+                buf1 = Buffer.concat([buf1, interlaced.subarray(firstBuf1, firstBuf1 + buf1GrpLen)]);
+            }
+            return { buf1, buf2 };
+        }
+    }
+}
+
 
 export class Cipher {
-
-    static interlace(secret: Buffer, vector: Buffer, strategy: ObfuscationStrategy): Buffer {
-        switch (strategy) {
-            case 'secret-first':
-                return Buffer.concat([
-                    Buffer.from([0, secret.length, vector.length]),
-                    secret,
-                    vector
-                ]);
-            case 'secret-interlaced': {
-                let interlaced = Buffer.from([2, secret.length, vector.length]);
-                const secretStep = Math.ceil(secret.length / vector.length);
-                const vectorStep = Math.ceil(vector.length / secret.length);
-                for (let index = 0; index < vector.length; index++) {
-                    interlaced = Buffer.concat([
-                        interlaced,
-                        secret.subarray(index * secretStep, index * secretStep + secretStep),
-                        vector.subarray(index * vectorStep, index * vectorStep + vectorStep)
-                    ]);
-                }
-                return interlaced;
-            }
-            case 'vector-first':
-                return Buffer.concat([
-                    Buffer.from([1, secret.length, vector.length]),
-                    vector,
-                    secret
-                ]);
-            case 'vector-interlaced': {
-                let interlaced = Buffer.from([3, secret.length, vector.length]);
-                const secretStep = Math.ceil(secret.length / vector.length);
-                const vectorStep = Math.ceil(vector.length / secret.length);
-                for (let index = 0; index < vector.length; index++) {
-                    interlaced = Buffer.concat([
-                        interlaced,
-                        vector.subarray(index * vectorStep, index * vectorStep + vectorStep),
-                        secret.subarray(index * secretStep, index * secretStep + secretStep)
-                    ]);
-                }
-                return interlaced;
-            }
-        }
-    }
-
-    static deinterlace(interlaced: Buffer): { secret: Buffer; vector: Buffer; } {
-        const strategy = interlaced[0];
-        interlaced = interlaced.subarray(1);
-
-        const secretLength = interlaced[0];
-        interlaced = interlaced.subarray(1);
-        const vectorLength = interlaced[0];
-        interlaced = interlaced.subarray(1);
-
-        switch (strategy) {
-            case 0:
-                return {
-                    secret: interlaced.subarray(0, secretLength),
-                    vector: interlaced.subarray(secretLength)
-                };
-            case 1:
-                return {
-                    secret: interlaced.subarray(vectorLength),
-                    vector: interlaced.subarray(0, vectorLength)
-                };
-            case 2: {
-                let secret = Buffer.alloc(0);
-                let vector = Buffer.alloc(0);
-
-                const secretGroupLength = Math.ceil(secretLength / vectorLength);
-                const vectorGroupLength = Math.ceil(vectorLength / secretLength);
-                for (let i = 0; i < interlaced.length; i += secretGroupLength + vectorGroupLength) {
-                    if (secret.length + secretGroupLength >= secretLength) {
-                        const remaining = secretLength - secret.length;
-                        secret = Buffer.concat([secret, interlaced.subarray(i, i + remaining)]);
-                        vector = Buffer.concat([vector, interlaced.subarray(i + remaining)]);
-                        break;
-                    }
-                    const firstVector = i + secretGroupLength;
-                    secret = Buffer.concat([secret, interlaced.subarray(i, firstVector)]);
-                    vector = Buffer.concat([vector, interlaced.subarray(firstVector, firstVector + vectorGroupLength)]);
-                }
-                return { secret, vector };
-            }
-            case 3: {
-                let secret = Buffer.alloc(0);
-                let vector = Buffer.alloc(0);
-
-                const secretGroupLength = Math.ceil(secretLength / vectorLength);
-                const vectorGroupLength = Math.ceil(vectorLength / secretLength);
-                for (let i = 0; i < interlaced.length; i += secretGroupLength + vectorGroupLength) {
-                    if (vector.length + vectorGroupLength >= vectorLength) {
-                        const remaining = vectorLength - vector.length;
-                        vector = Buffer.concat([vector, interlaced.subarray(i, i + remaining)]);
-                        secret = Buffer.concat([secret, interlaced.subarray(i + remaining)]);
-                        break;
-                    }
-                    const firstSecret = i + vectorGroupLength;
-                    vector = Buffer.concat([vector, interlaced.subarray(i, firstSecret)]);
-                    secret = Buffer.concat([secret, interlaced.subarray(firstSecret, firstSecret + secretGroupLength)]);
-                }
-                return { secret, vector };
-            }
-        }
-    }
 
     private algorithm = 'aes-256-cbc';
 
@@ -123,18 +122,14 @@ export class Cipher {
         let secret = cipher.update(plain);
         secret = Buffer.concat([secret, cipher.final()]);
 
-        return Cipher.interlace(
-            secret,
-            vector,
-            (['secret-first', 'vector-first', 'secret-interlaced', 'vector-interlaced'][Math.round(Math.random() * 3)]) as ObfuscationStrategy
-        ).toString('hex');
+        return interlace(secret, vector).toString('hex');
     }
 
     decrypt(encrypted: string): string {
-        const result = Cipher.deinterlace(Buffer.from(encrypted, 'hex'));
+        const result = deinterlace(Buffer.from(encrypted, 'hex'));
 
-        const secret = result.secret;
-        const vector = result.vector;
+        const secret = result.buf1;
+        const vector = result.buf2;
 
         const decipher = createDecipheriv(this.algorithm, this.key, vector);
         let plain = decipher.update(secret);
@@ -142,4 +137,13 @@ export class Cipher {
 
         return plain.toString();
     }
+}
+
+export function hash(plain: string, salt = randomBytes(32).toString('hex')): { hash: string; salt: string; } {
+    const hash = createHash('sha256');
+    hash.update(plain + salt);
+    return {
+        hash: hash.digest('hex'),
+        salt
+    };
 }

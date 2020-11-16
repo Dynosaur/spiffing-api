@@ -2,6 +2,7 @@ import { CreatePostEndpoint, GetPostEndpoint, GetPostsEndpoint,
 GetUserEndpoint } from '../interface/responses/api-responses';
 import { RouteInfo, RouteHandler } from '../route-handling/route-infra';
 import { payload } from '../route-handling/response-functions';
+import { convertDbUser } from '../../database/database-actions';
 
 export const getUser: RouteHandler<GetUserEndpoint> = async function getUser(request, actions) {
     const username = request.params.username;
@@ -12,10 +13,8 @@ export const getUser: RouteHandler<GetUserEndpoint> = async function getUser(req
             status: 'NOT_FOUND'
         });
     } else {
-        const user = op.data;
-        delete user.password;
         return payload<GetUserEndpoint>(200, `Successfully found user "${username}".`, {
-            status: 'OK', user
+            status: 'OK', user: convertDbUser(op.data)
         });
     }
 };

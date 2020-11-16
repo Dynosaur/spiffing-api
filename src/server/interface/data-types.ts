@@ -7,9 +7,10 @@ export interface Post {
 }
 
 export interface User {
-    username: string;
-    screenName: string;
+    _id: string;
     created: number;
+    screenname: string;
+    username: string;
 }
 
 export interface MissingParamData {

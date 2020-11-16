@@ -1,21 +1,15 @@
-import { Post } from '../server/interface/data-types';
-import { Cipher } from '../tools';
+import { DbUser } from '../database/data-types';
+import { Post, User } from '../server/interface/data-types';
+import { Cipher, hash } from '../tools';
 import { Collection, ObjectId } from 'mongodb';
 
-export interface DbUser {
-    username: string;
-    password: string;
-    screenName: string;
-    created: number;
-    id: string;
-}
-
-export interface DbPost {
-    _id: string;
-    title: string;
-    content: string;
-    author: string;
-    date: number;
+export function convertDbUser(dbUser: DbUser): User {
+    return {
+        _id: dbUser._id.toHexString(),
+        created: dbUser._id.generationTime,
+        screenname: dbUser.screenname,
+        username: dbUser.username
+    };
 }
 
 export class DatabaseActions {
@@ -24,11 +18,19 @@ export class DatabaseActions {
 
     constructor(private users: Collection<DbUser>, private posts: Collection<Post>) { }
 
+    securePassword(password: string): { hash: string; salt: string; } {
+        const hh = hash(password);
+        return {
+            hash: this.cipher.encrypt(hh.hash),
+            salt: hh.salt
+        };
+    }
+
     async authenticate(username: string, password: string): Promise<{ status: 'OK' | 'FAILED' | 'NO_USER'; message: string; data: boolean; }> {
         const user = await this.readUser(username);
         switch (user.status) {
             case 'OK':
-                if (this.cipher.decrypt(user.data.password) === password) {
+                if (this.cipher.decrypt(user.data.password.hash) === hash(password, user.data.password.salt).hash) {
                     return { status: 'OK', message: 'Successful authentication.', data: true };
                 } else {
                     return { status: 'FAILED', message: 'Failed authentication.', data: false };
@@ -48,14 +50,25 @@ export class DatabaseActions {
 
     async createUser(username: string, password: string): Promise<{ status: 'OK' | 'FAILED'; message: string; }> {
         const op = await this.readUser(username);
-        password = this.cipher.encrypt(password);
+
         switch (op.status) {
             case 'OK':
                 return { status: 'FAILED', message: 'Username is taken.' };
             case 'NO_USER': {
-                const user = { username, password, screenName: username, created: Date.now() };
+                const storedPassword = hash(password);
+                storedPassword.hash = this.cipher.encrypt(storedPassword.hash);
+                const user: DbUser = {
+                    _id: new ObjectId(),
+                    password: storedPassword,
+                    screenname: username,
+                    username
+                };
                 await this.create<DbUser>(this.users, user);
-                return { status: 'OK', message: `Successfully created user "${username}".` };
+
+                return {
+                    status: 'OK',
+                    message: `Successfully created user "${username}".`
+                };
             }
         }
     }
@@ -110,7 +123,7 @@ export class DatabaseActions {
     }
 
     async updatePassword(username: string, password: string): Promise<{ status: 'OK' | 'NO_MATCH'; message: string; }> {
-        const update = await this.update<DbUser>(this.users, { username }, { password });
+        const update = await this.update<DbUser>(this.users, { username }, { password: this.securePassword(password) });
         if (update === 'NO_MATCH') {
             return { status: 'NO_MATCH', message: `Could not find user "${username}", no changes made.` };
         }

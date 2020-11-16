@@ -2,7 +2,10 @@ import { ObjectId } from 'mongodb';
 
 export interface DbUser {
     _id: ObjectId;
-    password: string;
+    password: {
+        hash: string;
+        salt: string;
+    }
     screenname: string;
     username: string;
 }
