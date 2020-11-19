@@ -14,7 +14,7 @@ export function convertDbUser(dbUser: DbUser): User {
 
 export class DatabaseActions {
 
-    private cipher = new Cipher(Buffer.from(process.env.KEY, 'hex'));
+    cipher = new Cipher(Buffer.from(process.env.KEY, 'hex'));
 
     constructor(private users: Collection<DbUser>, private posts: Collection<Post>) { }
 
