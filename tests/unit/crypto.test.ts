@@ -1,4 +1,4 @@
-import { Cipher, deinterlace, interlace } from '../../../src/tools';
+import { Cipher, deinterlace, interlace } from '../../src/tools';
 
 describe('crypto', () => {
     describe('Cipher class', () => {
