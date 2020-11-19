@@ -13,7 +13,8 @@ export interface AuthParseErrorResponse extends Response<'E_AUTH_HEADER_PARSE'> 
     message: string;
 }
 
-export type UnauthorizedErrorResponse = Response<'E_UNAUTHORIZED'>;
+export type UnauthorizedError = 'E_AUTH_FAILED' | 'E_AUTH_NO_USER';
+export type UnauthorizedErrorResponse = Response<UnauthorizedError>;
 
 export type UserExistsErrorResponse = Response<'E_USER_EXISTS'>;
 

@@ -19,19 +19,22 @@ export async function executeRouteHandler(
     actions: DatabaseActions,
     checks: RouteHandlerFunctions,
     handler: RouteHandler,
-    requirements?: RouteHandlerRequirements
+    requirements?: RouteHandlerRequirements,
+    verbose = true
 ): Promise<void> {
     const routeHandlerArgs: any = {};
 
     // Handle RouteHandler requirements
     if (requirements) {
-        chalk.sky('Checking route handler requirements.');
+        if (verbose) {
+            chalk.sky('Checking route handler requirements.');
+        }
         const presentHeaders: any = {};
         if (requirements.scope) {
             for (const scope of Object.keys(requirements.scope)) {
                 const check = checkScope(requirements.scope[scope].required, requirements.scope[scope].replacements, request[scope], scope);
                 if (check) {
-                    sendPayload(request, check);
+                    sendPayload(request, check, verbose);
                     return;
                 }
                 presentHeaders[scope] = true;
@@ -41,18 +44,20 @@ export async function executeRouteHandler(
             if (!presentHeaders.authorization) {
                 const headerCheck = checkScope('authorization', {}, request.headers, 'headers');
                 if (headerCheck) {
-                    sendPayload(request, headerCheck);
+                    sendPayload(request, headerCheck, verbose);
                     return;
                 }
             }
             const decoded = decodeBasicAuth(request.headers.authorization);
             if (decoded.status === 'error') {
-                sendPayload(request, decoded.error);
+                sendPayload(request, decoded.error, verbose);
                 return;
             }
             if (requirements.auth.checkParamUsername) {
                 if (request.params.username !== decoded.username) {
-                    chalk.rust('Request failed authentication:\nRequest params username does not match decoded header username.');
+                    if (verbose) {
+                        chalk.rust('Request failed authentication:\nRequest params username does not match decoded header username.');
+                    }
                     request.res.status(400).send({ status: 'BAD_REQUEST' });
                     return;
                 }
@@ -62,8 +67,10 @@ export async function executeRouteHandler(
                 case 'authenticate':
                     switch (authRes.status) {
                         case 'FAILED':
+                            sendPayload(request, unauthorized('E_AUTH_FAILED'), verbose);
+                            return;
                         case 'NO_USER':
-                            sendPayload(request, unauthorized());
+                            sendPayload(request, unauthorized('E_AUTH_NO_USER'), verbose);
                             return;
                         case 'OK':
                             break;
@@ -75,19 +82,25 @@ export async function executeRouteHandler(
             routeHandlerArgs.username = decoded.username;
             routeHandlerArgs.password = decoded.password;
         }
-    } else {
+    } else if (verbose) {
         chalk.green('Route handler has no requirements.');
     }
 
+    if (verbose) {
+        chalk.sky(`Executing route handler "${handler.name}".`);
+    }
+
     // Execute and catch errors
-    chalk.sky(`Executing route handler "${handler.name}".`);
     let routePayload: RoutePayload<any>;
     try {
         routePayload = await handler(request, actions, checks, routeHandlerArgs);
     } catch (error) {
-        chalk.red(`ERROR: route handler "${handler.name}" threw an error. Responding with default 500 error.`);
-        chalk.red(error);
+        if (verbose) {
+            chalk.red(`ERROR: route handler "${handler.name}" threw an error. Responding with default 500 error.`);
+            chalk.red(error);
+        }
         request.res.status(500).send({ status: 'ERROR', message: 'An error occurred while responding to the request.', error });
+        return;
     }
 
     // Send response
@@ -95,22 +108,26 @@ export async function executeRouteHandler(
         chalk.red(`ERROR: route handler "${handler.name}" returned null. Responding with error.`);
         request.res.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
     } else {
-        sendPayload(request, routePayload);
+        sendPayload(request, routePayload, verbose);
     }
 
-    console.log('');  // Adds a newline between requests
+    if (verbose) {
+        console.log('');
+    }
 }
 
-function sendPayload(request: Request, payload: RoutePayload<any>): void {
+function sendPayload(request: Request, payload: RoutePayload<any>, verbose = true): void {
     request.res.status(payload.httpCode).send(payload.payload);
 
-    const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
-    if (payload.httpCode >= 100 && payload.httpCode <= 399) {
-        chalk.lime(`SUCCESS: ${message}`);
-    } else if (payload.httpCode >= 400 && payload.httpCode <= 599) {
-        chalk.rust(`FAILED: ${message}`);
-    } else {
-        chalk.yellow(`UNKNOWN: ${message}`);
+    if (verbose) {
+        const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
+        if (payload.httpCode >= 100 && payload.httpCode <= 399) {
+            chalk.lime(`SUCCESS: ${message}`);
+        } else if (payload.httpCode >= 400 && payload.httpCode <= 599) {
+            chalk.rust(`FAILED: ${message}`);
+        } else {
+            chalk.yellow(`UNKNOWN: ${message}`);
+        }
     }
 }
 
@@ -140,7 +157,7 @@ export class RouteHandlerFunctions {
                 error: {
                     consoleMessage: 'No solution: param username is not equal to decoded username.',
                     httpCode: 500,
-                    payload: { status: 'E_UNAUTHORIZED' }
+                    payload: { status: 'E_AUTH_FAILED' }
                 }
             };
         }
@@ -151,13 +168,13 @@ export class RouteHandlerFunctions {
                 return { state: 'error', error: {
                     consoleMessage: 'Prerequisite authentication failed.',
                     httpCode: 403,
-                    payload: { status: 'E_UNAUTHORIZED' }
+                    payload: { status: 'E_AUTH_FAILED' }
                 } };
             case 'NO_USER':
                 return { state: 'error', error: {
                     consoleMessage: `Could not authenticate: user "${username}" does not exist.`,
                     httpCode: 404,
-                    payload: { status: 'E_USER_NO_EXIST' }
+                    payload: { status: 'E_AUTH_NO_USER' }
                 } };
             case 'OK':
                 return { state: 'ok', username, password };

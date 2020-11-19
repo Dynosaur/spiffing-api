@@ -1,6 +1,7 @@
 import { RoutePayload } from './route-infra';
 import { routePayload } from './route-handler';
-import { AuthParseErrorResponse, InternalServerErrorResponse, MissingDataErrorResponse, UnauthorizedErrorResponse, UserNoExistErrorResponse } from '../interface/responses/error-responses';
+import { AuthParseErrorResponse, InternalServerErrorResponse, MissingDataErrorResponse,
+UnauthorizedError, UnauthorizedErrorResponse, UserNoExistErrorResponse } from '../interface/responses/error-responses';
 
 export function payload<T>(httpCode: number, message: string, payload: T): RoutePayload<T> {
     return { httpCode, consoleMessage: message, payload };
@@ -36,8 +37,8 @@ export function internalError(message: string): RoutePayload<InternalServerError
     });
 }
 
-export function unauthorized(): RoutePayload<UnauthorizedErrorResponse> {
-    return payload<UnauthorizedErrorResponse>(401, 'Authentication failed.', { status: 'E_UNAUTHORIZED' });
+export function unauthorized(why: UnauthorizedError): RoutePayload<UnauthorizedErrorResponse> {
+    return payload<UnauthorizedErrorResponse>(401, 'Authentication failed.', { status: why });
 }
 
 export function userDoesNotExist(): RoutePayload<UserNoExistErrorResponse> {
