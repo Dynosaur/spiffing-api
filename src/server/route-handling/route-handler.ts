@@ -1,11 +1,10 @@
 import { Request } from 'express';
 import { checkScope } from './check-scope';
+import { unauthorized } from './response-functions';
 import { DatabaseActions } from '../../database';
 import { chalk, decodeBasicAuth } from '../../tools';
-import { missingData, unauthorized } from './response-functions';
 import { RoutePayload, RouteHandler, RouteHandlerRequirements } from './route-infra';
-
-import { AuthenticateErrorResponse, MissingDataErrorResponse, UserExistsErrorResponse, UserNoExistErrorResponse } from '../interface/responses/error-responses';
+import { AuthenticateErrorResponse, UserExistsErrorResponse, UserNoExistErrorResponse } from '../interface/responses/error-responses';
 
 export function routePayload<T>(httpCode: number, consoleMessage: string, payload: T): RoutePayload<T> {
     return { httpCode, consoleMessage, payload };
@@ -112,7 +111,7 @@ export async function executeRouteHandler(
     }
 
     if (verbose) {
-        console.log('');
+        console.log(''); // eslint-disable-line
     }
 }
 

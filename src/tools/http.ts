@@ -35,7 +35,6 @@ export function createRequest<T>(
                         try {
                             resolve(JSON.parse(data));
                         } catch (e) {
-                            console.log(data);
                             reject(e);
                         }
                         break;

@@ -20,7 +20,7 @@ export class DeveloperActions {
     }
 
     public streamEndpoints(): Readable {
-        return this.streamFile('src/server/interface/endpoints.ts')
+        return this.streamFile('src/server/interface/endpoints.ts');
     }
 
     public streamResponse(): Readable {

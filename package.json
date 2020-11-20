@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "lint": "eslint ./**",
     "start": "tsnd ./src/main.ts",
     "test": "jest --bail",
     "test:unit": "jest ./tests/unit",
