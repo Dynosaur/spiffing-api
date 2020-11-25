@@ -27,4 +27,16 @@ export class DeveloperActions {
         return this.streamFile('src/server/interface/response.ts');
     }
 
+    streamResponsesApi(): Readable {
+        return this.streamFile('src/server/interface/responses/api-responses.ts');
+    }
+
+    streamResponsesAuth(): Readable {
+        return this.streamFile('src/server/interface/responses/auth-endpoints.ts');
+    }
+
+    streamResponsesError(): Readable {
+        return this.streamFile('src/server/interface/responses/error-responses.ts');
+    }
+
 }
