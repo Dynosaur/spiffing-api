@@ -1,6 +1,11 @@
 import { checkScope } from '../../src/server/route-handling/check-scope';
 
-const missingDataError = { payload: { status: 'MISSING_DATA' } };
+const missingDataError = {
+    payload: {
+        error: 'Missing Requirements',
+        ok: false,
+    }
+};
 
 describe('checkScope', () => {
     describe('single param', () => {

@@ -1,12 +1,12 @@
-import { RoutePayload } from '../../src/server/route-handling/route-infra';
-import { UserExistsErrorResponse } from '../../src/server/interface/responses/error-responses';
+import { RoutePayload } from 'server/route-handling/route-infra';
+import { RegisterUserExistsErrorResponse } from 'interface/responses/auth-endpoints';
 
 export class MockChecks {
 
     forceUserMustNotExist: 'exists' | 'not_exists' = 'not_exists';
     userMustNotExistSpy = jest.fn();
 
-    async userMustNotExist(username: string): Promise<RoutePayload<UserExistsErrorResponse>> {
+    async userMustNotExist(username: string): Promise<RoutePayload<RegisterUserExistsErrorResponse>> {
         this.userMustNotExistSpy(username);
         switch (this.forceUserMustNotExist) {
             case 'not_exists':
@@ -16,7 +16,8 @@ export class MockChecks {
                     httpCode: 400,
                     consoleMessage: `Prerequisite user "${username}" must not exist failed.`,
                     payload: {
-                        status: 'E_USER_EXISTS'
+                        error: 'User Already Exists',
+                        ok: false
                     }
                 };
         }

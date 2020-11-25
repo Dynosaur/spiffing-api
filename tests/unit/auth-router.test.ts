@@ -1,7 +1,15 @@
+import { hash } from '../../src/tools/crypto';
 import { MockPost } from '../mock';
-import { fillArray } from '../tools';
+import { fillArray } from '../tools/array';
+import { convertDbUser } from '../../src/database/database-actions';
 import { MockEnvironment } from '../mock/mock-env';
-import { authenticate, deregister, patchUser, register } from '../../src/server/router/auth-router';
+import { SuccessfulResponse } from '../../src/server/interface/response';
+import { authenticate, deregister, patchUser, register }
+from '../../src/server/router/auth-router';
+import { AuthenticateEndpoint, DeregisterErrorResponse, PatchUpdatedResponse,
+RegisterCreatedResponse, RegisterTestResponse, RegisterUserExistsErrorResponse }
+from '../../src/server/interface/responses/auth-endpoints';
+
 
 describe('auth unit tests', () => {
     describe('register', () => {
@@ -13,9 +21,13 @@ describe('auth unit tests', () => {
             mock.request.params.username = username;
 
             const resp = await mock.runRouteHandler(register, { username, password });
-            expect(resp.payload).toStrictEqual({ status: 'CREATED' });
             expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).toBeCalledWith(expect.objectContaining({ username }));
+            expect(resp.payload).toStrictEqual<RegisterCreatedResponse>({
+                ok: true,
+                status: 'Ok',
+                user: convertDbUser(mock.users.data[0])
+            });
 
             done();
         });
@@ -29,7 +41,10 @@ describe('auth unit tests', () => {
 
             const resp = await mock.runRouteHandler(register, { username, password });
             expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp.payload).toStrictEqual({ status: 'TEST_OK' });
+            expect(resp.payload).toStrictEqual<RegisterTestResponse>({
+                ok: true,
+                status: 'Ok Test'
+            });
 
             done();
         });
@@ -45,7 +60,10 @@ describe('auth unit tests', () => {
             const resp = await mock.runRouteHandler(register, { username, password });
             expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp.payload).toStrictEqual({ status: 'E_USER_EXISTS' });
+            expect(resp.payload).toStrictEqual<RegisterUserExistsErrorResponse>({
+                error: 'User Already Exists',
+                ok: false
+            });
 
             done();
         });
@@ -59,7 +77,10 @@ describe('auth unit tests', () => {
             const resp = await mock.runRouteHandler(register, { username });
             expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp.payload).toStrictEqual({ status: 'E_USER_EXISTS' });
+            expect(resp.payload).toStrictEqual<RegisterUserExistsErrorResponse>({
+                error: 'User Already Exists',
+                ok: false
+            });
 
             done();
         });
@@ -69,7 +90,7 @@ describe('auth unit tests', () => {
             const mock = new MockEnvironment();
 
             const resp = await mock.runRouteHandler(authenticate);
-            expect(resp.payload).toMatchObject({ status: 'OK' });
+            expect(resp.payload).toMatchObject<AuthenticateEndpoint>({ ok: true });
             done();
         });
     });
@@ -83,37 +104,45 @@ describe('auth unit tests', () => {
             const userPosts = mock.generatePosts(3, user.username);
 
             const resp = await mock.runRouteHandler(deregister, { username: user.username });
-            expect(resp.payload).toStrictEqual({ status: 'DELETED' });
             expect(mock.users.deleteManySpy).toBeCalledWith({ username: user.username });
             expect(mock.posts.deleteManySpy).toBeCalledWith({ author: user.username });
             expect(mock.users.data).not.toContain(user);
             expect(mock.users.data.length).toBe(numOfOtherUsers);
             expect(mock.posts.data).not.toEqual(expect.arrayContaining(userPosts));
             expect(mock.posts.data.length).toBe(numOfOtherPosts);
+            expect(resp.payload).toStrictEqual<SuccessfulResponse>({ ok: true });
 
             done();
         });
         it('should return a internal error response when database actions fail', async done => {
             const mock = new MockEnvironment({ userFill: 4, postFill: 5 });
-            const user = mock.createUser();
+            const user = mock.createUser('Eldamar');
             const userPosts = mock.generatePosts(5, user.username);
             mock.users.forceDeleteMany = false;
             mock.posts.forceDeleteMany = false;
 
             let resp = await mock.runRouteHandler(deregister, { username: user.username });
-            expect(resp.payload).toMatchObject({ status: 'E_INTERNAL' });
             expect(mock.users.data).toContain(user);
+            expect(mock.posts.data).toEqual(expect.arrayContaining(userPosts));
+            expect(resp.payload).toStrictEqual<DeregisterErrorResponse>({
+                error: 'User Removal',
+                ok: false
+            });
 
             mock.users.forceDeleteMany = true;
             resp = await mock.runRouteHandler(deregister, { username: user.username });
-            expect(resp.payload).toMatchObject({ status: 'E_INTERNAL' });
+            expect(mock.users.data).not.toContain(user);
             expect(mock.posts.data).toEqual(expect.arrayContaining(userPosts));
+            expect(resp.payload).toStrictEqual<DeregisterErrorResponse>({
+                error: 'Posts Removal',
+                ok: false
+            });
 
             mock.posts.forceDeleteMany = true;
             resp = await mock.runRouteHandler(deregister, { username: user.username });
-            expect(resp.payload).toStrictEqual({ status: 'DELETED' });
             expect(mock.users.data).not.toContain(user);
             expect(mock.posts.data).not.toEqual(expect.arrayContaining(userPosts));
+            expect(resp.payload).toStrictEqual<SuccessfulResponse>({ ok: true });
 
             done();
         });
@@ -129,44 +158,63 @@ describe('auth unit tests', () => {
             const oldUsername = user.username;
 
             const resp = await mock.runRouteHandler(patchUser, { username: oldUsername });
-            expect(resp.payload).toStrictEqual({ status: 'UPDATED', updated: ['username'] });
             expect(mock.users.updateManySpy).toBeCalledWith({ username: oldUsername }, { $set: { username: newUsername } });
             expect(user.username).toBe(newUsername);
+            expect(mock.users.data[0].username).toBe(newUsername);
+            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
+                ok: true,
+                updated: ['username']
+            });
 
             done();
         });
         it('should update password', async done => {
-            const password = 'new_password';
+            const newPassword = 'F4%43!&';
+            const oldPassword = 'password';
 
             const mock = new MockEnvironment();
-            const mockUser = mock.createUser();
-            mock.request.body.password = password;
+            const mockUser = mock.createUser(null, oldPassword);
+            mock.request.body.password = newPassword;
 
             const username = mockUser.username;
-            const oldPassword = mockUser.password;
 
             const resp = await mock.runRouteHandler(patchUser, { username });
-            expect(resp.payload).toStrictEqual({ status: 'UPDATED', updated: ['password'] });
             expect(mock.users.updateManySpy).toBeCalled();
-            expect(mock.users.data[0].password).not.toEqual(oldPassword);
+            expect(
+                mock.actions.cipher.decrypt(mock.users.data[0].password.hash)
+            ).not.toBe(
+                hash(oldPassword, mock.users.data[0].password.salt).hash
+            );
+            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
+                ok: true,
+                updated: ['password']
+            });
 
             done();
         });
         it('should update username and password', async done => {
-            const newUsername = 'new-username';
-            const newPassword = 'new-password';
+            const newUsername = 'Eldamar';
+            const newPassword = '!Galao*#&_Eldar';
+            const oldUsername = 'boringUsername';
+            const oldPassword = 'password';
 
             const mock = new MockEnvironment();
-            const user = mock.createUser();
+            const user = mock.createUser(oldUsername, oldPassword);
             mock.request.body.username = newUsername;
             mock.request.body.password = newPassword;
 
-            const username = user.username;
-
-            const resp = await mock.runRouteHandler(patchUser, { username });
-            expect(resp.payload).toStrictEqual({ status: 'UPDATED', updated: ['username', 'password'] });
+            const resp = await mock.runRouteHandler(patchUser, { username: oldUsername });
             expect(mock.users.updateManySpy).toBeCalledTimes(2);
             expect(user.username).toBe(newUsername);
+            expect(
+                mock.actions.cipher.decrypt(user.password.hash)
+            ).not.toBe(
+                hash(oldPassword, user.password.salt).hash
+            );
+            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
+                ok: true,
+                updated: ['username', 'password']
+            });
 
             done();
         });
@@ -181,11 +229,14 @@ describe('auth unit tests', () => {
             mock.posts.data.push(...fillArray(4, () => new MockPost(oldUsername)));
 
             const resp = await mock.runRouteHandler(patchUser, { username: oldUsername });
-            expect(resp.payload).toStrictEqual({ status: 'UPDATED', updated: ['username'] });
             expect(mock.users.updateManySpy).toBeCalledWith({ username: oldUsername }, { $set: { username: newUsername } });
             expect(mock.posts.updateManySpy).toBeCalledWith({ author: oldUsername }, { $set: { author: newUsername } });
-            expect(mock.users.data[0].username).toBe(newUsername);
+            expect(user.username).toBe(newUsername);
             mock.posts.data.forEach(post => expect(post.author).toBe(newUsername));
+            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
+                ok: true,
+                updated: ['username']
+            });
 
             done();
         });

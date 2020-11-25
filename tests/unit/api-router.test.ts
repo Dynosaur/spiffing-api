@@ -1,7 +1,9 @@
-import { fillArray } from '../tools';
-import { convertDbUser } from '../../src/database';
+import { fillArray } from '../tools/array';
+import { convertDbUser } from '../../src/database/database-actions';
 import { getPost, getPosts, getUser, createPost } from '../../src/server/router/api-router';
 import { MockEnvironment, MockPost, testUsername } from '../mock';
+import { GetPostErrorResponse, GetPostFoundResponse, GetPostsEndpoint, GetUserEndpoint }
+from '../../src/server/interface/responses/api-responses';
 
 describe('api route handlers', () => {
     describe('getUser', () => {
@@ -11,9 +13,11 @@ describe('api route handlers', () => {
             mock.request.params.username = mockUser.username;
 
             const resp = await mock.runRouteHandler(getUser);
-            expect(resp.payload).toStrictEqual({ status: 'OK', user: convertDbUser(mockUser) });
+            expect(resp.payload).toStrictEqual<GetUserEndpoint>({
+                ok: true,
+                user: convertDbUser(mockUser)
+            });
             expect((resp.payload as any).user.password).toBeUndefined();
-            expect(mock.users.findSpy).toBeCalledWith({ username: mockUser.username });
 
             done();
         });
@@ -24,7 +28,10 @@ describe('api route handlers', () => {
             mock.request.params.username = queriedUsername;
 
             const resp = await mock.runRouteHandler(getUser);
-            expect(resp.payload).toStrictEqual({ status: 'NOT_FOUND' });
+            expect(resp.payload).toStrictEqual<GetUserEndpoint>({
+                error: 'User Not Found',
+                ok: false
+            });
             expect(mock.users.findSpy).toBeCalledWith({ username: queriedUsername });
 
             done();
@@ -35,8 +42,11 @@ describe('api route handlers', () => {
             const mock = new MockEnvironment({ postFill: 10 });
 
             const resp = await mock.runRouteHandler(getPosts);
-            expect(resp.payload).toStrictEqual({ status: 'OK', posts: mock.posts.data });
             expect(mock.posts.findSpy).toBeCalledWith({ });
+            expect(resp.payload).toStrictEqual<GetPostsEndpoint>({
+                ok: true,
+                posts: mock.posts.data as any
+            });
 
             done();
         });
@@ -49,8 +59,11 @@ describe('api route handlers', () => {
             mock.request.query.author = username;
 
             const resp = await mock.runRouteHandler(getPosts);
-            expect(resp.payload).toStrictEqual({ status: 'OK', posts: correctPosts });
             expect(mock.posts.findSpy).toBeCalledWith({ author: username });
+            expect(resp.payload).toStrictEqual<GetPostsEndpoint>({
+                ok: true,
+                posts: correctPosts as any
+            });
 
             done();
         });
@@ -65,7 +78,10 @@ describe('api route handlers', () => {
 
             const resp = await mock.runRouteHandler(getPost);
             expect(mock.posts.findSpy).toBeCalledWith({ _id: post._id });
-            expect(resp.payload).toStrictEqual({ status: 'OK', post });
+            expect(resp.payload).toStrictEqual<GetPostFoundResponse>({
+                ok: true,
+                post: post as any
+            });
 
             done();
         });
@@ -74,7 +90,11 @@ describe('api route handlers', () => {
             mock.request.params.id = 'random-id';
 
             const resp = await mock.runRouteHandler(getPost);
-            expect(resp.payload).toStrictEqual({ status: 'NOT_FOUND' });
+            expect(mock.posts.findSpy).toBeCalledWith({ _id: 'random-id' });
+            expect(resp.payload).toStrictEqual<GetPostErrorResponse>({
+                error: 'Post Not Found',
+                ok: false
+            });
 
             done();
         });
@@ -91,9 +111,16 @@ describe('api route handlers', () => {
             mock.request.body.title = title;
 
             const resp = await mock.runRouteHandler(createPost);
-            expect(resp.payload).toStrictEqual({ status: 'CREATED' });
             expect(mock.posts.data.length).toBe(1);
             expect(mock.posts.data[0]).toMatchObject({ author, content, title });
+            expect(resp.payload).toMatchObject({
+                ok: true,
+                post: {
+                    author,
+                    content,
+                    title
+                }
+            });
 
             done();
         });
