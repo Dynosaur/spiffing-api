@@ -1,19 +1,28 @@
 import { Request } from 'express';
+import { Response } from 'interface/response';
+import { DatabaseActions } from 'database/database-actions';
 import { RouteHandlerFunctions } from './route-handler';
-import { DatabaseActions } from '../../database/database-actions';
 
-export interface RoutePayload<T> {
+export interface RoutePayload<T extends Response> {
     httpCode: number;
     consoleMessage: string;
     payload: T;
 }
 
-export type RouteHandler<ResponseType = any> = (
-    request: Request<any, ResponseType>,
-    actions: DatabaseActions,
-    checks: RouteHandlerFunctions,
-    args: any
-) => Promise<RoutePayload<ResponseType>>;
+export function payload<T extends Response>(message: string, code: number, ok: T['ok'], payload: Omit<T, 'ok'>): RoutePayload<T> {
+    return {
+        consoleMessage: message,
+        httpCode: code,
+        payload: {
+            ok,
+            ...payload as any
+        }
+    };
+}
+
+export interface RouteHandler<ResponseType extends Response> {
+    (request: Request<any, ResponseType>, actions: DatabaseActions, checks: RouteHandlerFunctions, args: any): Promise<RoutePayload<ResponseType>>
+}
 
 export type RequiredParam = { param: string; strategy?: 'AND' | 'OR'; } | { param: string; strategy: 'REPLACE'; replacement: any; };
 
@@ -38,6 +47,6 @@ export interface RouteHandlerRequirements {
 export interface RouteInfo {
     method: string;
     path: string;
-    handler: RouteHandler;
+    handler: RouteHandler<any>;
     requirements?: RouteHandlerRequirements;
 }
