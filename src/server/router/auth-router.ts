@@ -1,90 +1,87 @@
-import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint } from '../interface/responses/auth-endpoints';
-import { RouteInfo, RouteHandler } from '../route-handling/route-infra';
-import { internalError, payload } from '../route-handling/response-functions';
-import { routePayload } from '../route-handling/route-handler';
+import { convertDbUser } from 'database/database-actions';
+import { SuccessfulResponse } from 'interface/response';
+import { payload, RouteInfo, RouteHandler, RoutePayload }
+from 'server/route-handling/route-infra';
+import { AuthenticateEndpoint, DeregisterEndpoint, DeregisterErrorResponse,
+PatchEndpoint, PatchUpdatedResponse, RegisterCreatedResponse, RegisterEndpoint,
+RegisterTestResponse } from 'interface/responses/auth-endpoints';
 
-
-export const register: RouteHandler<RegisterEndpoint> = async function register(request, actions, checks, args) {
+export const register: RouteHandler<RegisterEndpoint> =
+async function register(request, actions, checks, args): Promise<RoutePayload<RegisterEndpoint>> {
     const check = await checks.userMustNotExist(args.username);
     if (check) {
         return check;
     }
 
     if (request.query.test) {
-        return payload<RegisterEndpoint>(200, 'Test register successful, no users created.', {
-            status: 'TEST_OK'
-        });
+        return payload<RegisterTestResponse>(
+            'Successful test registration, no user created.',
+            200, true, { status: 'Ok Test' }
+        );
     } else {
-        await actions.createUser(args.username, args.password);
-        return payload<RegisterEndpoint>(201, `Successfully created new user "${args.username}"`, {
-            status: 'CREATED'
-        });
+        return payload<RegisterCreatedResponse>(
+            `Successfully created new user ${args.username}`, 201, true, {
+                status: 'Ok',
+                user: convertDbUser(await actions.createUser(args.username, args.password))
+            }
+        );
     }
 };
 
-export const authenticate: RouteHandler<AuthenticateEndpoint> = async function authenticate(request, actions, checks) {
-    return payload<AuthenticateEndpoint>(200, 'Successful authentication.', {
-        status: 'OK'
-    });
+export const authenticate: RouteHandler<AuthenticateEndpoint> =
+async function authenticate(): Promise<RoutePayload<AuthenticateEndpoint>> {
+    return payload<SuccessfulResponse>('Authentication successful.', 200, true, null);
 };
 
-export const deregister: RouteHandler<DeregisterEndpoint> = async function deregister(request, actions, checks, args) {
+export const deregister: RouteHandler<DeregisterEndpoint> =
+async function deregister(request, actions, checks, args): Promise<RoutePayload<DeregisterEndpoint>> {
     const username = args.username;
 
     if (!await actions.deleteUser(username)) {
-        return internalError('There was an error while removing your account.');
+        return payload<DeregisterErrorResponse>(
+            `User ${username} was not deleted during deregistration.`,
+            500, false, { error: 'User Removal' }
+        );
     }
     if (!await actions.deletePosts({ author: username })) {
-        return internalError('There was an error while removing your posts.');
+        return payload<DeregisterErrorResponse>(
+            `User ${username}'s post were not deleted during deregistration.`,
+            500, false, { error: 'Posts Removal' }
+        );
     }
 
-    return payload<DeregisterEndpoint>(200, `User ${username} and its posts successfully deleted.`, {
-        status: 'DELETED'
-    });
+    return payload<SuccessfulResponse>(
+        `User ${username} and their posts have been removed.`,
+        200, true, null
+    );
 };
 
-export const patchUser: RouteHandler<PatchEndpoint> = async function patchUser(request, actions, checks, args) {
+export const patchUser: RouteHandler<PatchEndpoint> =
+async function patchUser(request, actions, checks, args): Promise<RoutePayload<PatchEndpoint>> {
     let currentUsername = args.username;
     const proposedUsername = request.body.username;
     const proposedPassword = request.body.password;
 
     const updated: string[] = [];
     if (proposedUsername && proposedUsername !== currentUsername) {
-        const up = await actions.updateUsername(currentUsername, proposedUsername);
-        if (up.status === 'NO_MATCH') {
-            return routePayload<PatchEndpoint>(404, up.message, {
-                status: 'E_USER_NO_EXIST'
-            });
-        }
+        await actions.updateUsername(currentUsername, proposedUsername);
         currentUsername = proposedUsername;
         updated.push('username');
     }
     if (proposedPassword) {
-        const up = await actions.updatePassword(currentUsername, proposedPassword);
-        if (up.status === 'NO_MATCH') {
-            return routePayload<PatchEndpoint>(404, up.message, {
-                status: 'E_USER_NO_EXIST'
-            });
-        }
+        await actions.updatePassword(currentUsername, proposedPassword);
         updated.push('password');
     }
 
-    if (updated.length) {
-        return routePayload<PatchEndpoint>(200, `Updated ${updated.join(', ')}.`, {
-            status: 'UPDATED', updated
-        });
-    } else {
-        return routePayload<PatchEndpoint>(200, 'No valid username or password change.', {
-            status: 'NO_CHANGE'
-        });
-    }
+    return payload<PatchUpdatedResponse>(
+        updated.length ? `Updated ${updated.join(', ')}.` : 'No changes warranted.',
+        200, true, { updated }
+    );
 };
 
 export const routes: RouteInfo[] = [
     {
-        method: 'POST',
-        path: '/api/user/:username',
-        handler: register,
+        method: 'POST', path: '/api/user/:username', handler: register,
         requirements: {
             auth: {
                 checkParamUsername: true,
@@ -101,9 +98,7 @@ export const routes: RouteInfo[] = [
         }
     },
     {
-        method: 'POST',
-        path: '/api/authenticate',
-        handler: authenticate,
+        method: 'POST', path: '/api/authenticate', handler: authenticate,
         requirements: {
             auth: {
                 checkParamUsername: false,
@@ -112,9 +107,7 @@ export const routes: RouteInfo[] = [
         }
     },
     {
-        method: 'DELETE',
-        path: '/api/user/:username',
-        handler: deregister,
+        method: 'DELETE', path: '/api/user/:username', handler: deregister,
         requirements: {
             auth: {
                 checkParamUsername: true,
@@ -123,9 +116,7 @@ export const routes: RouteInfo[] = [
         }
     },
     {
-        method: 'PATCH',
-        path: '/api/user/:username',
-        handler: patchUser,
+        method: 'PATCH', path: '/api/user/:username', handler: patchUser,
         requirements: {
             scope: {
                 body: {
