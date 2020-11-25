@@ -1,29 +1,23 @@
+import { chalk } from 'tools/chalk';
 import { Request } from 'express';
-import { checkScope } from './check-scope';
-import { unauthorized } from './response-functions';
-import { DatabaseActions } from '../../database';
-import { chalk, decodeBasicAuth } from '../../tools';
-import { RoutePayload, RouteHandler, RouteHandlerRequirements } from './route-infra';
-import { AuthenticateErrorResponse, UserExistsErrorResponse, UserNoExistErrorResponse } from '../interface/responses/error-responses';
+import { checkScope } from 'server/route-handling/check-scope';
+import { unauthorized } from 'server/route-handling/response-functions';
+import { decodeBasicAuth } from 'tools/auth';
+import { DatabaseActions } from 'database/database-actions';
+import { AuthenticateErrorResponse, AuthParseErrorResponse } from 'interface/responses/error-responses';
+import { RegisterUserExistsErrorResponse } from 'interface/responses/auth-endpoints';
+import { RoutePayload, RouteHandler, RouteHandlerRequirements, payload } from 'server/route-handling/route-infra';
 
-export function routePayload<T>(httpCode: number, consoleMessage: string, payload: T): RoutePayload<T> {
-    return { httpCode, consoleMessage, payload };
-}
-
-/**
- * A wrapper around a RouteHandler that executes it, sends the payload, and performs logging.
- */
 export async function executeRouteHandler(
     request: Request,
     actions: DatabaseActions,
     checks: RouteHandlerFunctions,
-    handler: RouteHandler,
+    handler: RouteHandler<any>,
     requirements?: RouteHandlerRequirements,
     verbose = true
 ): Promise<void> {
     const routeHandlerArgs: any = {};
 
-    // Handle RouteHandler requirements
     if (requirements) {
         if (verbose) {
             chalk.sky('Checking route handler requirements.');
@@ -64,18 +58,12 @@ export async function executeRouteHandler(
             const authRes = await actions.authenticate(decoded.username, decoded.password);
             switch (requirements.auth.method) {
                 case 'authenticate':
-                    switch (authRes.status) {
-                        case 'FAILED':
-                            sendPayload(request, unauthorized('E_AUTH_FAILED'), verbose);
-                            return;
-                        case 'NO_USER':
-                            sendPayload(request, unauthorized('E_AUTH_NO_USER'), verbose);
-                            return;
-                        case 'OK':
-                            break;
+                    if (!authRes) {
+                        sendPayload(request, unauthorized(), verbose);
+                        return;
                     }
                 case 'pass':
-                    routeHandlerArgs.authentication = authRes.status;
+                    routeHandlerArgs.authentication = authRes;
                     break;
             }
             routeHandlerArgs.username = decoded.username;
@@ -89,7 +77,6 @@ export async function executeRouteHandler(
         chalk.sky(`Executing route handler "${handler.name}".`);
     }
 
-    // Execute and catch errors
     let routePayload: RoutePayload<any>;
     try {
         routePayload = await handler(request, actions, checks, routeHandlerArgs);
@@ -102,7 +89,6 @@ export async function executeRouteHandler(
         return;
     }
 
-    // Send response
     if (!routePayload) {
         chalk.red(`ERROR: route handler "${handler.name}" returned null. Responding with error.`);
         request.res.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
@@ -153,72 +139,36 @@ export class RouteHandlerFunctions {
         if (request.params.username && request.params.username !== username) {
             return {
                 state: 'error',
-                error: {
-                    consoleMessage: 'No solution: param username is not equal to decoded username.',
-                    httpCode: 500,
-                    payload: { status: 'E_AUTH_FAILED' }
-                }
+                error: payload<AuthParseErrorResponse>('No solution: param username is not equal to decoded username.', 500, false, {
+                    error: 'Authorization Header Parse',
+                    field: 'username param'
+                })
             };
         }
 
-        const operation = await this.actions.authenticate(username, password);
-        switch (operation.status) {
-            case 'FAILED':
-                return { state: 'error', error: {
-                    consoleMessage: 'Prerequisite authentication failed.',
-                    httpCode: 403,
-                    payload: { status: 'E_AUTH_FAILED' }
-                } };
-            case 'NO_USER':
-                return { state: 'error', error: {
-                    consoleMessage: `Could not authenticate: user "${username}" does not exist.`,
-                    httpCode: 404,
-                    payload: { status: 'E_AUTH_NO_USER' }
-                } };
-            case 'OK':
-                return { state: 'ok', username, password };
-            default:
-                throw new Error(`Unexpected operation state:\n${JSON.stringify(operation, null, 4)}`);
+        const authRes = await this.actions.authenticate(username, password);
+        if (authRes) {
+            return {
+                state: 'ok',
+                username,
+                password
+            };
+        } else {
+            return {
+                state: 'error',
+                error: payload<AuthenticateErrorResponse>('Prerequisite authentication failed', 401, false, null)
+            };
         }
     }
 
-    // checkScope(params: string[], scope: any, name: string, require?: 'all' | 'one'): RoutePayload<MissingDataErrorResponse> {
-    //     return checkScope(params, scope, name, require);
-    // }
-
-    async userMustNotExist(username: string): Promise<RoutePayload<UserExistsErrorResponse>> {
-        const operation = await this.actions.readUser(username);
-        switch (operation.status) {
-            case 'NO_USER':
-                return;
-            case 'OK':
-                return {
-                    httpCode: 400,
-                    consoleMessage: `Prerequisite user "${username}" must not exist failed.`,
-                    payload: {
-                        status: 'E_USER_EXISTS'
-                    }
-                };
-            default:
-                throw new Error(`Unexpected operation state:\n${JSON.stringify(operation, null, 4)}`);
-        }
-    }
-
-    async userMustExist(username: string): Promise<RoutePayload<UserNoExistErrorResponse>> {
-        const operation = await this.actions.readUser(username);
-        switch (operation.status) {
-            case 'NO_USER':
-                return {
-                    httpCode: 404,
-                    consoleMessage: `Prerequisite user "${username}" must exist failed.`,
-                    payload: {
-                        status: 'E_USER_NO_EXIST'
-                    }
-                };
-            case 'OK':
-                return;
-            default:
-                throw new Error(`Unexpected operation state:\n${JSON.stringify(operation, null, 4)}`);
+    async userMustNotExist(username: string): Promise<RoutePayload<RegisterUserExistsErrorResponse>> {
+        const user = await this.actions.readUser(username);
+        if (user) {
+            return payload<RegisterUserExistsErrorResponse>(`Prerequisite user "${username}" must not exist failed.`, 400, false, {
+                error: 'User Already Exists'
+            });
+        } else {
+            return null;
         }
     }
 }
