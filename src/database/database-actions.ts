@@ -1,6 +1,6 @@
-import { DbUser } from '../database/data-types';
-import { Post, User } from '../server/interface/data-types';
-import { Cipher, hash } from '../tools';
+import { Post, User } from 'interface/data-types';
+import { Cipher, hash } from 'tools/crypto';
+import { DbPost, DbUser } from 'database/data-types';
 import { Collection, ObjectId } from 'mongodb';
 
 export function convertDbUser(dbUser: DbUser): User {
@@ -9,6 +9,16 @@ export function convertDbUser(dbUser: DbUser): User {
         created: dbUser._id.generationTime,
         screenname: dbUser.screenname,
         username: dbUser.username
+    };
+}
+
+export function convertDbPost(dbPost: DbPost): Post {
+    return {
+        _id: dbPost._id.toHexString(),
+        author: dbPost.author,
+        content: dbPost.content,
+        date: dbPost._id.generationTime,
+        title: dbPost.title
     };
 }
 
@@ -26,17 +36,12 @@ export class DatabaseActions {
         };
     }
 
-    async authenticate(username: string, password: string): Promise<{ status: 'OK' | 'FAILED' | 'NO_USER'; message: string; data: boolean; }> {
+    async authenticate(username: string, password: string): Promise<boolean> {
         const user = await this.readUser(username);
-        switch (user.status) {
-            case 'OK':
-                if (this.cipher.decrypt(user.data.password.hash) === hash(password, user.data.password.salt).hash) {
-                    return { status: 'OK', message: 'Successful authentication.', data: true };
-                } else {
-                    return { status: 'FAILED', message: 'Failed authentication.', data: false };
-                }
-            case 'NO_USER':
-                return { status: 'NO_USER', message: `Could not authenticate because the user "${username}" does not exist.`, data: false };
+        if (user) {
+            return this.cipher.decrypt(user.password.hash) === hash(password, user.password.salt).hash;
+        } else {
+            return false;
         }
     }
 
@@ -44,32 +49,32 @@ export class DatabaseActions {
         await collection.insertOne(data);
     }
 
-    async createPost(title: string, content: string, author: string): Promise<void> {
-        this.create(this.posts, { title, content, author, date: Date.now() });
+    async createPost(title: string, content: string, author: string): Promise<DbPost> {
+        const post: DbPost = {
+            _id: new ObjectId,
+            author,
+            content,
+            title
+        };
+        await this.create(this.posts, post);
+        return post;
     }
 
-    async createUser(username: string, password: string): Promise<{ status: 'OK' | 'FAILED'; message: string; }> {
-        const op = await this.readUser(username);
-
-        switch (op.status) {
-            case 'OK':
-                return { status: 'FAILED', message: 'Username is taken.' };
-            case 'NO_USER': {
-                const storedPassword = hash(password);
-                storedPassword.hash = this.cipher.encrypt(storedPassword.hash);
-                const user: DbUser = {
-                    _id: new ObjectId(),
-                    password: storedPassword,
-                    screenname: username,
-                    username
-                };
-                await this.create<DbUser>(this.users, user);
-
-                return {
-                    status: 'OK',
-                    message: `Successfully created user "${username}".`
-                };
-            }
+    async createUser(username: string, password: string): Promise<DbUser> {
+        const existingUser = await this.readUser(username);
+        if (existingUser) {
+            return null;
+        } else {
+            const storedPassword = hash(password);
+            storedPassword.hash = this.cipher.encrypt(storedPassword.hash);
+            const user: DbUser = {
+                _id: new ObjectId(),
+                password: storedPassword,
+                screenname: username,
+                username
+            };
+            await this.create<DbUser>(this.users, user);
+            return user;
         }
     }
 
@@ -94,13 +99,12 @@ export class DatabaseActions {
         return await this.readFromPosts(query);
     }
 
-    async readUser(username: string): Promise<{ status: 'OK'; data: DbUser; } | { status: 'NO_USER'; }> {
+    async readUser(username: string): Promise<DbUser> {
         const users = await this.readFromUsers({ username });
         if (users.length) {
-            const user = users[0];
-            return { status: 'OK', data: user };
+            return users[0];
         } else {
-            return { status: 'NO_USER' };
+            return null;
         }
     }
 
