@@ -1,8 +1,6 @@
-import { DbPost } from '../../src/database';
-import { fillArray } from '../tools';
-import { asymmetricalMatch } from '../mock/database/mock-collection';
-import { MockCollection, MockPost } from '../mock';
-
+import { DbPost } from 'database/data-types';
+import { fillArray } from 'tests/tools/array';
+import { MockCollection, MockPost, asymmetricalMatch } from 'tests/mock';
 
 describe('mock collection', () => {
     describe('asymmetricalMatch', () => {

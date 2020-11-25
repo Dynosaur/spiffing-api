@@ -1,9 +1,10 @@
+import { Response } from 'interface/response';
 import { randomBytes } from 'crypto';
-import { MockRequest } from './mock-request';
-import { DatabaseActions, DbPost, DbUser } from '../../src/database';
-import { RouteHandler, RoutePayload } from '../../src/server/route-handling/route-infra';
-import { MockCollection, MockPost, MockUser } from './database';
-import { executeRouteHandler, RouteHandlerFunctions } from '../../src/server/route-handling/route-handler';
+import { DbPost, DbUser } from 'database/data-types';
+import { DatabaseActions } from 'database/database-actions';
+import { RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
+import { executeRouteHandler, RouteHandlerFunctions } from 'server/route-handling/route-handler';
+import { MockCollection, MockPost, MockRequest, MockUser } from 'tests/mock';
 
 interface DatabaseConfig {
     userFill?: number;
@@ -64,11 +65,11 @@ export class MockEnvironment<RequestType> {
         return posts;
     }
 
-    async runRouteHandler<T>(handler: RouteHandler<T>, args?: object): Promise<RoutePayload<T>> {
+    async runRouteHandler<T extends Response = any>(handler: RouteHandler<T>, args?: object): Promise<RoutePayload<T>> {
         return await handler(this.request as any, this.actions, this.checks, args);
     }
 
-    async integration(handler: RouteHandler, requirements?: object): Promise<void> {
+    async integration<T extends Response = any>(handler: RouteHandler<T>, requirements?: object): Promise<void> {
         await executeRouteHandler(this.request as any, this.actions, this.checks, handler, requirements, false);
     }
 

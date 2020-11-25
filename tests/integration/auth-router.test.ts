@@ -1,7 +1,9 @@
-import { routes } from '../../src/server/router/auth-router';
-import { MockEnvironment } from '../mock';
-import { encodeBasicAuth, hash } from '../../src/tools';
-import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint } from '../../src/server/interface/responses/auth-endpoints';
+import { hash } from 'tools/crypto';
+import { routes } from 'server/router/auth-router';
+import { MockEnvironment } from 'tests/mock';
+import { encodeBasicAuth } from 'tools/auth';
+import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint }
+from 'interface/responses/auth-endpoints';
 
 const register = routes[0];
 const authenticate = routes[1];

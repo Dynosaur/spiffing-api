@@ -1,6 +1,6 @@
-import { DbPost, DbUser } from '../../src/database/data-types';
 import { ObjectId } from 'mongodb';
-import { MockEnvironment } from './mock-env';
+import { DbPost, DbUser } from 'database/data-types';
+import { MockEnvironment } from 'tests/mock/mock-env';
 
 export function testUsername(): string {
     return `test-user-${Math.round(Math.random() * 999) + 1}`;

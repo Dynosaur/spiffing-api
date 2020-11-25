@@ -1,4 +1,4 @@
-import { chalk } from '../tools/chalk';
+import { chalk } from 'tools/chalk';
 import { MongoClient as DbClient, Db } from 'mongodb';
 
 export class MongoClient {
