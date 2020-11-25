@@ -1,26 +1,33 @@
-import { Response } from '../response';
 import { User, Post } from '../data-types';
 import { AuthenticateErrorResponse } from './error-responses';
+import { ErrorResponse, SuccessfulResponse } from '../response';
 
-export interface GetUserSuccessResponse extends Response<'OK'> {
+export interface GetUserFoundResponse extends SuccessfulResponse {
+    ok: true;
     user: User;
 }
-
+export interface GetUserErrorResponse extends ErrorResponse<'User Not Found'> { }
 export type GetUserEndpoint =
-    GetUserSuccessResponse |
-    Response<'NOT_FOUND'>;
+    GetUserErrorResponse |
+    GetUserFoundResponse;
 
-export interface GetPostsEndpoint extends Response<'OK'> {
+
+export interface GetPostsEndpoint extends SuccessfulResponse {
+    ok: true;
     posts: Post[];
 }
 
-export type GetPostEndpoint = {
-    status: 'OK';
+export interface GetPostFoundResponse extends SuccessfulResponse {
     post: Post;
-} | {
-    status: 'NOT_FOUND';
-};
+}
+export interface GetPostErrorResponse extends ErrorResponse<'Post Not Found'> { }
+export type GetPostEndpoint =
+    GetPostErrorResponse |
+    GetPostFoundResponse;
 
-export type CreatePostEndpoint = {
-    status: 'CREATED';
-} | AuthenticateErrorResponse;
+export interface CreatePostCreatedResponse extends SuccessfulResponse {
+    post: Post;
+}
+export type CreatePostEndpoint =
+    AuthenticateErrorResponse |
+    CreatePostCreatedResponse;

@@ -1,6 +1,6 @@
-import { Response } from '../response';
+import { ErrorResponse } from '../response';
 
-export interface MissingDataErrorResponse extends Response<'MISSING_DATA'> {
+export interface MissingDataErrorResponse extends ErrorResponse<'Missing Requirements'> {
     missing: {
         possible: string[][];
         provided: string[];
@@ -8,20 +8,12 @@ export interface MissingDataErrorResponse extends Response<'MISSING_DATA'> {
     };
 }
 
-export interface AuthParseErrorResponse extends Response<'E_AUTH_HEADER_PARSE'> {
-    field: 'username' | 'password' | 'type';
-    message: string;
+export interface AuthParseErrorResponse extends ErrorResponse<'Authorization Header Parse'> {
+    field: 'username' | 'password' | 'type' | 'username param';
 }
 
-export type UnauthorizedError = 'E_AUTH_FAILED' | 'E_AUTH_NO_USER';
-export type UnauthorizedErrorResponse = Response<UnauthorizedError>;
-
-export type UserExistsErrorResponse = Response<'E_USER_EXISTS'>;
-
-export type UserNoExistErrorResponse = Response<'E_USER_NO_EXIST'>;
-
-export type AuthenticateErrorResponse = AuthParseErrorResponse | MissingDataErrorResponse | UnauthorizedErrorResponse | UserNoExistErrorResponse;
-
-export interface InternalServerErrorResponse extends Response<'E_INTERNAL'> {
-    message: string;
-}
+export type UnauthorizedErrorResponse = ErrorResponse<'Authorization Failed'>;
+export type AuthenticateErrorResponse =
+    AuthParseErrorResponse |
+    MissingDataErrorResponse |
+    UnauthorizedErrorResponse;

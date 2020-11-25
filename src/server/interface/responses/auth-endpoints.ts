@@ -1,28 +1,38 @@
-import { Response } from '../response';
-import { AuthenticateErrorResponse, AuthParseErrorResponse, InternalServerErrorResponse,
-    MissingDataErrorResponse,
-UserExistsErrorResponse } from './error-responses';
+import { User } from '../data-types';
+import { ErrorResponse, SuccessfulResponse } from '../response';
+import { AuthenticateErrorResponse, AuthParseErrorResponse, MissingDataErrorResponse } from './error-responses';
 
+export interface SuccessfulRegisterResponse extends SuccessfulResponse {
+    status: 'Ok' | 'Ok Test';
+}
+export interface RegisterCreatedResponse extends SuccessfulRegisterResponse {
+    status: 'Ok';
+    user: User;
+}
+export interface RegisterTestResponse extends SuccessfulRegisterResponse {
+    status: 'Ok Test';
+}
+export interface RegisterUserExistsErrorResponse extends ErrorResponse<'User Already Exists'> { }
 export type RegisterEndpoint =
-    Response<'CREATED' | 'TEST_OK'> |
+    AuthParseErrorResponse |
     MissingDataErrorResponse |
-    UserExistsErrorResponse |
-    AuthParseErrorResponse;
+    RegisterTestResponse |
+    RegisterCreatedResponse |
+    RegisterUserExistsErrorResponse;
 
 export type AuthenticateEndpoint =
-    Response<'OK'> |
+    SuccessfulResponse |
     AuthenticateErrorResponse;
 
+export interface DeregisterErrorResponse extends ErrorResponse<'User Removal' | 'Posts Removal'> { }
 export type DeregisterEndpoint =
-    Response<'DELETED'> |
     AuthenticateErrorResponse |
-    InternalServerErrorResponse;
+    DeregisterErrorResponse |
+    SuccessfulResponse;
 
-export interface PatchUpdatedResponse extends Response<'UPDATED'> {
+export interface PatchUpdatedResponse extends SuccessfulResponse {
     updated: string[];
 }
 export type PatchEndpoint =
-    PatchUpdatedResponse |
     AuthenticateErrorResponse |
-    InternalServerErrorResponse |
-    Response<'NO_CHANGE'>;
+    PatchUpdatedResponse;
