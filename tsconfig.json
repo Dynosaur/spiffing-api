@@ -1,7 +1,14 @@
 {
     "compilerOptions": {
+        "baseUrl": ".",
         "esModuleInterop": true,
         "moduleResolution": "Node",
-        "target": "ES6",
+        "paths": {
+            "app/*": ["src/*"],
+            "database/*": ["src/database/*"],
+            "interface/*": ["src/server/interface/*"],
+            "tools/*": ["src/tools/*"]
+        },
+        "target": "ES6"
     }
 }
