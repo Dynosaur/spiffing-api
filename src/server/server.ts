@@ -1,13 +1,15 @@
 import cors from 'cors';
 import express from 'express';
+import { chalk } from 'tools/chalk';
 import { Request } from 'express';
-import { RouteInfo } from './route-handling/route-infra';
-import { DeveloperActions } from '../dev/dev-actions';
-import { routes as apiRoutes } from './router/api-router';
-import { routes as authRoutes } from './router/auth-router';
-import { chalk, prettyTimestamp } from '../tools';
-import { DatabaseActions, MongoClient } from '../database';
-import { executeRouteHandler, RouteHandlerFunctions } from './route-handling/route-handler';
+import { RouteInfo } from 'server/route-handling/route-infra';
+import { MongoClient } from 'database/mongo-client';
+import { prettyTimestamp } from 'tools/time';
+import { DatabaseActions } from 'database/database-actions';
+import { DeveloperActions } from 'app/dev/dev-actions';
+import { routes as apiRoutes } from 'server/router/api-router';
+import { routes as authRoutes } from 'server/router/auth-router';
+import { executeRouteHandler, RouteHandlerFunctions } from 'server/route-handling/route-handler';
 
 function announceRequest(request: Request, response, next): void {
     chalk.yellow(prettyTimestamp() + ' ' + request.method + ' ' + request.url);
@@ -80,6 +82,10 @@ export class Server {
         this.express.get('/dev/data-types', (req, res) => this.devActions.streamDataTypes().pipe(res));
         this.express.get('/dev/endpoints', (req, res) => this.devActions.streamEndpoints().pipe(res));
         this.express.get('/dev/response', (req, res) => this.devActions.streamResponse().pipe(res));
+
+        this.express.get('/dev/responses/api', (req, res) => this.devActions.streamResponsesApi().pipe(res));
+        this.express.get('/dev/responses/auth', (req, res) => this.devActions.streamResponsesAuth().pipe(res));
+        this.express.get('/dev/responses/error', (req, res) => this.devActions.streamResponsesError().pipe(res));
 
         this.express.get('*', req => req.res.json({ message: 'Path not supported.' }));
     }
