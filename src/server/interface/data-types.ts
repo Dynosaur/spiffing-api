@@ -1,9 +1,9 @@
 export interface Post {
-    title: string;
-    content: string;
+    _id: string;
     author: string;
+    content: string;
     date: number;
-    id: string;
+    title: string;
 }
 
 export interface User {
@@ -11,13 +11,4 @@ export interface User {
     created: number;
     screenname: string;
     username: string;
-}
-
-export interface MissingParamData {
-    parameter: string;
-    scope: string;
-}
-
-export interface LogInData {
-    success: boolean;
 }
