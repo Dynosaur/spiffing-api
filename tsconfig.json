@@ -7,6 +7,8 @@
             "app/*": ["src/*"],
             "database/*": ["src/database/*"],
             "interface/*": ["src/server/interface/*"],
+            "tests/*": ["tests/*"],
+            "server/*": ["src/server/*"],
             "tools/*": ["src/tools/*"]
         },
         "target": "ES6"
