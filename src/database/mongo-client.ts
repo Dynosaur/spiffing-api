@@ -5,23 +5,40 @@ export class MongoClient {
 
     db: Db;
 
-    constructor(private databaseUrl: string, private databaseName: string) { }
+    constructor(private databaseUrl: string,
+                private databaseName: string,
+                private verbose = true) { }
 
     async initialize(): Promise<void> {
-        chalk.cyan('Initializing MongoDB Client.');
-        chalk.cyan('Connecting to ' + this.databaseUrl);
+        if (this.db) {
+            chalk.rust('\tDatabase already initialized');
+            return;
+        }
+        if (this.verbose) {
+            chalk.cyan('\tStarting mongo client');
+            chalk.cyan('\t\tConnecting to ' + this.databaseUrl);
+        }
 
         return new Promise((resolve, reject) => {
-            const client = new DbClient(this.databaseUrl, { useNewUrlParser: true, useUnifiedTopology: true });
+            const client = new DbClient(this.databaseUrl, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true
+            });
             client.connect(err => {
                 if (err) {
-                    chalk.rust('Encountered an error while attempting to connect to the database.');
+                    if (this.verbose) {
+                        chalk.rust('\t\tEncountered an error while attempting to connect to the database.');
+                    }
                     reject(err);
                     return;
+                } else if (this.verbose) {
+                    chalk.lime('\tSuccessfully connected');
                 }
 
                 this.db = client.db(this.databaseName);
-                chalk.lime('MongoDB client successfully initialized.');
+                if (this.verbose) {
+                    chalk.lime('\tMongoDB client successfully initialized');
+                }
                 resolve();
             });
         });
