@@ -133,7 +133,15 @@ export class Cipher {
 
         const decipher = createDecipheriv(this.algorithm, this.key, vector);
         let plain = decipher.update(secret);
-        plain = Buffer.concat([plain, decipher.final()]);
+
+        try {
+            plain = Buffer.concat([plain, decipher.final()]);
+        } catch (e) {
+            if (e?.reason === 'bad decrypt') {
+                throw new Error('Bad decrypt: this is usually caused by mismatched keys.');
+            }
+            throw new Error();
+        }
 
         return plain.toString();
     }
