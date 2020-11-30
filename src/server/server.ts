@@ -1,5 +1,4 @@
 import cors from 'cors';
-import express from 'express';
 import { chalk } from 'tools/chalk';
 import { Request } from 'express';
 import { RouteInfo } from 'server/route-handling/route-infra';
@@ -7,25 +6,28 @@ import { MongoClient } from 'database/mongo-client';
 import { prettyTimestamp } from 'tools/time';
 import { DatabaseActions } from 'database/database-actions';
 import { DeveloperActions } from 'app/dev/dev-actions';
+import express, { Response } from 'express';
 import { routes as apiRoutes } from 'server/router/api-router';
 import { routes as authRoutes } from 'server/router/auth-router';
+import { RouteRegister, UrlPath } from 'server/routing';
 import { executeRouteHandler, RouteHandlerFunctions } from 'server/route-handling/route-handler';
-
-function announceRequest(request: Request, response, next): void {
-    chalk.yellow(prettyTimestamp() + ' ' + request.method + ' ' + request.url);
-    next();
-}
 
 export class Server {
 
-    private express = express();
-    private mongoClient: MongoClient;
+    app = express();
+    mongo: MongoClient;
+    routeRegister = new RouteRegister();
+
     private dbActions: DatabaseActions;
     private routeChecks: RouteHandlerFunctions;
     private devActions = new DeveloperActions();
 
-    private async initialize(): Promise<void> {
-        chalk.cyan('Initializing server...');
+    constructor(private verbose = true) { }
+
+    async initialize(): Promise<void> {
+        if (this.verbose) {
+            chalk.cyan('Starting server');
+        }
 
         let dbUri: string;
         switch (process.env.environment) {
@@ -39,60 +41,75 @@ export class Server {
                 throw new Error('Unknown environment: ' + process.env.environment);
         }
 
-        this.mongoClient = new MongoClient(dbUri, 'spiffing');
-        await this.mongoClient.initialize();
+        this.mongo = new MongoClient(dbUri, 'spiffing', this.verbose);
+        await this.mongo.initialize();
 
-        this.dbActions = new DatabaseActions(this.mongoClient.db.collection('users'), this.mongoClient.db.collection('posts'));
+        this.dbActions = new DatabaseActions(
+            this.mongo.db.collection('users'),
+            this.mongo.db.collection('posts')
+        );
         this.routeChecks = new RouteHandlerFunctions(this.dbActions);
         this.configureExpress();
     }
 
-    private attachRoutes(routes: RouteInfo[]): void {
-        routes.forEach(route => {
-            switch (route.method) {
-                case 'GET':
-                    this.express.get(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
-                    break;
-                case 'POST':
-                    this.express.post(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
-                    break;
-                case 'DELETE':
-                    this.express.delete(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
-                    break;
-                case 'PATCH':
-                    this.express.patch(route.path, request => executeRouteHandler(request, this.dbActions, this.routeChecks, route.handler, route.requirements));
-                    break;
-                default:
-                    throw new Error('Route uses unsupported method: ' + route.method);
+    private registerRoute(route: RouteInfo): void {
+        this.routeRegister.register(route.path, route.method);
+        this.app.use(async (request: Request, response: Response, next) => {
+            if (request.method === route.method) {
+                const path = new UrlPath(route.path);
+                if (path.doesMatch(request.path)) {
+                    request.params = path.extractParams(request.path) as any;
+                    await executeRouteHandler(
+                        request,
+                        this.dbActions,
+                        this.routeChecks,
+                        route.handler,
+                        route.requirements,
+                        this.verbose
+                    );
+                    return;
+                }
             }
+            next();
         });
     }
 
+    private attachRoutes(routes: RouteInfo[]): void {
+        routes.forEach(route => this.registerRoute(route));
+    }
+
     private configureExpress(): void {
-        this.express.use(express.urlencoded({ extended: true }));
-        this.express.use(express.json());
-        this.express.use(cors({ origin: '*' }));
-        this.express.use(announceRequest);
+        this.app.use(express.json());
+        this.app.use((request: Request, res, next) => {
+            if (this.verbose) {
+                chalk.yellow(prettyTimestamp() + ' ' + request.method + ' ' + request.url);
+            }
+            next();
+        });
+        this.app.use(cors({ origin: '*' }));
+        this.app.use(express.urlencoded({ extended: true }));
 
         this.attachRoutes(apiRoutes);
         this.attachRoutes(authRoutes);
 
-        this.express.get('/', req => req.res.json({ message: 'Hello! Please use the /api path' }));
+        this.app.get('/', req => req.res.json({ message: 'Hello! Please use the /api path' }));
 
-        this.express.get('/dev/data-types', (req, res) => this.devActions.streamDataTypes().pipe(res));
-        this.express.get('/dev/endpoints', (req, res) => this.devActions.streamEndpoints().pipe(res));
-        this.express.get('/dev/response', (req, res) => this.devActions.streamResponse().pipe(res));
+        this.app.get('/dev/response', (req, res) => this.devActions.streamResponse().pipe(res));
+        this.app.get('/dev/endpoints', (req, res) => this.devActions.streamEndpoints().pipe(res));
+        this.app.get('/dev/data-types', (req, res) => this.devActions.streamDataTypes().pipe(res));
+        this.app.get('/dev/responses/api', (req, res) => this.devActions.streamResponsesApi().pipe(res));
+        this.app.get('/dev/responses/auth', (req, res) => this.devActions.streamResponsesAuth().pipe(res));
+        this.app.get('/dev/responses/error', (req, res) => this.devActions.streamResponsesError().pipe(res));
 
-        this.express.get('/dev/responses/api', (req, res) => this.devActions.streamResponsesApi().pipe(res));
-        this.express.get('/dev/responses/auth', (req, res) => this.devActions.streamResponsesAuth().pipe(res));
-        this.express.get('/dev/responses/error', (req, res) => this.devActions.streamResponsesError().pipe(res));
-
-        this.express.get('*', req => req.res.json({ message: 'Path not supported.' }));
+        this.app.get('*', request => {
+            chalk.rust(`No route handlers for ${request.path}.\n`);
+            request.res.status(404).json({ message: 'Path not supported.' });
+        });
     }
 
-    public start(port: number): void {
+    start(port: number): void {
         this.initialize().then(() => {
-            this.express.listen(port, () => chalk.yellow(`Listening on port ${port}\n`));
+            this.app.listen(port, () => chalk.yellow(`Listening on port ${port}\n`));
         }).catch(e => { throw e; });
     }
 }

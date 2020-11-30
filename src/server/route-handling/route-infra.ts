@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { Response } from 'interface/response';
+import { HttpMethod } from 'app/server/routing';
 import { DatabaseActions } from 'database/database-actions';
 import { RouteHandlerFunctions } from './route-handler';
 
@@ -45,7 +46,7 @@ export interface RouteHandlerRequirements {
 };
 
 export interface RouteInfo {
-    method: string;
+    method: HttpMethod;
     path: string;
     handler: RouteHandler<any>;
     requirements?: RouteHandlerRequirements;
