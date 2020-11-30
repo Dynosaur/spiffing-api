@@ -24,7 +24,7 @@ export function missingData(possible: string[][], provided: object, name: string
 }
 
 export function unauthorized(): RoutePayload<UnauthorizedErrorResponse> {
-    return payload<UnauthorizedErrorResponse>('Authentication failed.', 401, false, {
+    return payload<UnauthorizedErrorResponse>('Authentication failed.', 200, false, {
         error: 'Authorization Failed'
     });
 }
