@@ -3,6 +3,7 @@ import { MongoClient as DbClient, Db } from 'mongodb';
 
 export class MongoClient {
 
+    client: DbClient;
     db: Db;
 
     constructor(private databaseUrl: string,
@@ -19,28 +20,14 @@ export class MongoClient {
             chalk.cyan('\t\tConnecting to ' + this.databaseUrl);
         }
 
-        return new Promise((resolve, reject) => {
-            const client = new DbClient(this.databaseUrl, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true
-            });
-            client.connect(err => {
-                if (err) {
-                    if (this.verbose) {
-                        chalk.rust('\t\tEncountered an error while attempting to connect to the database.');
-                    }
-                    reject(err);
-                    return;
-                } else if (this.verbose) {
-                    chalk.lime('\tSuccessfully connected');
-                }
-
-                this.db = client.db(this.databaseName);
-                if (this.verbose) {
-                    chalk.lime('\tMongoDB client successfully initialized');
-                }
-                resolve();
-            });
+        const client = new DbClient(this.databaseUrl, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
         });
+        this.client = await client.connect();
+        if (this.verbose) chalk.lime('\tSuccessfully connected');
+        this.db = this.client.db(this.databaseName);
+        if (this.verbose) chalk.lime('\tMongoDB client successfully initialized');
     }
+
 }
