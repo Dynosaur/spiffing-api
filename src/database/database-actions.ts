@@ -39,7 +39,13 @@ export class DatabaseActions {
     async authenticate(username: string, password: string): Promise<boolean> {
         const user = await this.readUser(username);
         if (user) {
-            return this.cipher.decrypt(user.password.hash) === hash(password, user.password.salt).hash;
+            let decrypted: string;
+            try {
+                decrypted = this.cipher.decrypt(user.password.hash);
+            } catch (e) {
+                return false;
+            }
+            return decrypted === hash(password, user.password.salt).hash;
         } else {
             return false;
         }
