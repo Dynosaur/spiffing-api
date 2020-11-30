@@ -20,7 +20,7 @@ export async function executeRouteHandler(
 
     if (requirements) {
         if (verbose) {
-            chalk.sky('Checking route handler requirements.');
+            chalk.sky(`Checking route handler ${handler.name} requirements.`);
         }
         const presentHeaders: any = {};
         if (requirements.scope) {
@@ -70,7 +70,7 @@ export async function executeRouteHandler(
             routeHandlerArgs.password = decoded.password;
         }
     } else if (verbose) {
-        chalk.green('Route handler has no requirements.');
+        chalk.lime('Route handler has no requirements.');
     }
 
     if (verbose) {
@@ -106,12 +106,10 @@ function sendPayload(request: Request, payload: RoutePayload<any>, verbose = tru
 
     if (verbose) {
         const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
-        if (payload.httpCode >= 100 && payload.httpCode <= 399) {
+        if (payload.payload.ok) {
             chalk.lime(`SUCCESS: ${message}`);
-        } else if (payload.httpCode >= 400 && payload.httpCode <= 599) {
-            chalk.rust(`FAILED: ${message}`);
         } else {
-            chalk.yellow(`UNKNOWN: ${message}`);
+            chalk.rust(`FAILED: ${message}`);
         }
     }
 }
