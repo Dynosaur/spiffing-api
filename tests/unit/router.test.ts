@@ -60,36 +60,36 @@ describe('routing unit', () => {
             reg.register('/path', 'GET');
             expect(reg.registered).toMatchObject([{
                 methods: ['GET'],
-                path: {
-                    path: [{ name: 'path', type: 'path' }]
-                }
+                path: expect.objectContaining({
+                    segments: [ { name: 'path', type: 'path' } ]
+                })
             }]);
             reg.register('/path', 'POST');
             expect(reg.registered).toMatchObject([{
                 methods: ['GET', 'POST'],
-                path: {
-                    path: [{ name: 'path', type: 'path' }]
-                }
+                path: expect.objectContaining({
+                    segments: [{ name: 'path', type: 'path' }]
+                })
             }]);
             reg.register('/path', 'GET');
             expect(reg.registered).toMatchObject([{
                 methods: ['GET', 'POST'],
-                path: {
-                    path: [{ name: 'path', type: 'path' }]
-                }
+                path: expect.objectContaining({
+                    segments: [{ name: 'path', type: 'path' }]
+                })
             }]);
             reg.register('/path/:param', 'POST');
             expect(reg.registered).toMatchObject([
                 {
                     methods: ['GET', 'POST'],
-                    path: {
-                        path: [{ name: 'path', type: 'path' }]
-                    }
+                    path: expect.objectContaining({
+                        segments: [{ name: 'path', type: 'path' }]
+                    })
                 }, {
                     methods: ['POST'],
-                    path: {
-                        path: [{ name: 'path', type: 'path' }, { name: 'param', type: 'param' }]
-                    }
+                    path: expect.objectContaining({
+                        segments: [{ name: 'path', type: 'path' }, { name: 'param', type: 'param' }]
+                    })
                 }
             ]);
         });
