@@ -19,7 +19,7 @@ async function getUser(request, actions): Promise<RoutePayload<GetUserEndpoint>>
     } else {
         return payload<GetUserErrorResponse>(
             `Could not find user "${username}".`,
-            404,
+            200,
             false,
             { error: 'User Not Found' }
         );
@@ -50,7 +50,7 @@ async function getPost(request, actions): Promise<RoutePayload<GetPostEndpoint>>
     } else {
         return payload<GetPostErrorResponse>(
             `Could not find post ${request.params.id}.`,
-            404,
+            200,
             false,
             { error: 'Post Not Found' }
         );

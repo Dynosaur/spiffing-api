@@ -164,7 +164,7 @@ export class RouteHandlerFunctions {
     async userMustNotExist(username: string): Promise<RoutePayload<RegisterUserExistsErrorResponse>> {
         const user = await this.actions.readUser(username);
         if (user) {
-            return payload<RegisterUserExistsErrorResponse>(`Prerequisite user "${username}" must not exist failed.`, 400, false, {
+            return payload<RegisterUserExistsErrorResponse>(`Prerequisite user "${username}" must not exist failed.`, 200, false, {
                 error: 'User Already Exists'
             });
         } else {
