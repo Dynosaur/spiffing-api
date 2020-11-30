@@ -1,79 +1,230 @@
-import { createRequest, encodeBasicAuth, postJSON } from '../../src/tools';
-import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint } from '../../src/server/interface/responses/auth-endpoints';
+import supertest from 'supertest';
+import { Server } from 'server/server';
+import { Express } from 'express';
+import { randomBytes } from 'crypto';
+import { DeregisterEndpoint, PatchEndpoint, PatchUpdatedResponse, RegisterCreatedResponse } from 'app/server/interface/responses/auth-endpoints';
+import { GetUserErrorResponse, GetUserFoundResponse } from 'app/server/interface/responses/api-responses';
 
-function createTestUsername(): string {
-    return 'test-user-' + (Math.round(999 * Math.random()) + 1);
-}
-
-let username = createTestUsername();
-let password = 'test';
-
-function authenticate(): string {
-    return encodeBasicAuth(username, password);
-}
+process.env.environment = 'DEV';
+process.env.KEY = randomBytes(32).toString('hex');
 
 describe('authentication and authorization', () => {
 
-    describe('register a new user', () => {
+    let app: Express;
+    let server: Server;
+
+    let username = 'hello';
+    let password = 'world';
+
+    beforeEach(async done => {
+        server = new Server(false);
+        await server.initialize();
+        app = server.app;
+        done();
+    });
+
+    afterEach(async done => {
+        await server.mongo.client.close();
+        done();
+    });
+
+    describe('register', () => {
         it('should create a new user', async done => {
-            const username = 'hello';
-            const password = 'world';
+            await supertest(app)
+                .post(`/api/user/${username}`)
+                .auth(username, password)
+                .expect(201).then(res => {
+                    expect(res.body).toStrictEqual<RegisterCreatedResponse>({
+                        ok: true,
+                        status: 'Ok',
+                        user: expect.objectContaining({
+                            screenname: username,
+                            username
+                        })
+                    });
+                });
 
-            const resp = await postJSON<RegisterEndpoint>(`localhost:3005/api/user/${username}`, null, { Authorization: encodeBasicAuth(username, password) });
+            await supertest(app)
+                .get(`/api/user/${username}`)
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<GetUserFoundResponse>({
+                        ok: true,
+                        user: expect.objectContaining({
+                            screenname: username,
+                            username
+                        })
+                    });
+                });
 
-            expect(resp).toMatchObject({ status: 'CREATED' });
+            done();
+        });
+        it('should not create a user if the username is taken', async done => {
+            await supertest(app)
+                .post(`/api/user/${username}`)
+                .auth(username, password)
+                .expect(200).then(res => {
+                    expect(res.body.ok).toBe(false);
+                });
 
             done();
         });
     });
 
-    xtest('register a new user', async done => {
-        const resp = await createRequest<RegisterEndpoint>('POST', 'localhost:3005/api/user/' + username, 'json', null, { Authorization: authenticate() });
-        expect(resp).toMatchObject({ status: 'CREATED' });
-        done();
+    describe('authenticate', () => {
+        it('should authenticate', async done => {
+            await supertest(app)
+                .post('/api/authenticate')
+                .auth(username, password)
+                .expect(200).then(res => {
+                    expect(res.body.ok).toBe(true);
+                });
+            done();
+        });
+        it('should not authenticate', async done => {
+            await supertest(app)
+                .post('/api/authenticate')
+                .auth(username, randomBytes(16).toString('hex'))
+                .expect(200).then(res => {
+                    expect(res.body.ok).toBe(false);
+                });
+            done();
+        });
     });
 
-    xtest('authenticate a user', async done => {
-        const res = await createRequest<AuthenticateEndpoint>('POST', 'localhost:3005/api/authenticate', 'json', null, { Authorization: authenticate() });
-        expect(res).toMatchObject({ status: 'OK' });
-        done();
-    });
-
-    xdescribe('update user data', () => {
-        test('change username', async done => {
-            const newUsername = createTestUsername();
-            const res = await createRequest<PatchEndpoint>('PATCH', `localhost:3005/api/user/${username}`, 'json', { username: newUsername }, { Authorization: authenticate() });
+    describe('patch', () => {
+        it('should not update if authentication fails', async done => {
+            await supertest(app)
+                .patch(`/api/user/${username}`)
+                .auth(username, randomBytes(16).toString('hex'))
+                .send({ username: 'hard2explain' })
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<PatchEndpoint>({
+                        error: 'Authorization Failed',
+                        ok: false
+                    });
+                });
+            await supertest(app)
+                .post('/api/authenticate')
+                .auth(username, password)
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual({
+                        ok: true
+                    });
+                });
+            done();
+        });
+        it('should update username', async done => {
+            const newUsername = 'Johari';
+            await supertest(app)
+                .patch(`/api/user/${username}`)
+                .auth(username, password)
+                .send({ username: newUsername })
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<PatchUpdatedResponse>({
+                        ok: true,
+                        updated: ['username']
+                    });
+                });
             username = newUsername;
-            expect(res).toMatchObject({ status: 'UPDATED' });
+            await supertest(app)
+                .post('/api/authenticate')
+                .auth(username, password)
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual({
+                        ok: true
+                    });
+                });
             done();
         });
-        test('change password', async done => {
-            const newPassword = 'world';
-            const res = await createRequest<PatchEndpoint>('PATCH', `localhost:3005/api/user/${username}`, 'json', { password: newPassword }, { Authorization: authenticate() });
+        it('should update password', async done => {
+            const newPassword = 'theb3stKn0w';
+            await supertest(app)
+                .patch(`/api/user/${username}`)
+                .auth(username, password)
+                .send({ password: newPassword })
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<PatchUpdatedResponse>({
+                        ok: true,
+                        updated: ['password']
+                    });
+                });
             password = newPassword;
-            expect(res).toMatchObject({ status: 'UPDATED' });
+            await supertest(app)
+                .post('/api/authenticate')
+                .auth(username, password)
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual({
+                        ok: true
+                    });
+                });
             done();
         });
-        test('change username and password', async done => {
-            const newUsername = createTestUsername();
-            const newPassword = (Math.round(999 * Math.random()) + 1).toString();
-            const res = await createRequest<PatchEndpoint>(
-                'PATCH',
-                `localhost:3005/api/user/${username}`,
-                'json',
-                { username: newUsername, password: newPassword },
-                { Authorization: authenticate() }
-            );
-                username = newUsername;
-                password = newPassword;
-            expect(res).toMatchObject({ status: 'UPDATED' });
+        it ('should update username and password', async done => {
+            const newUsername = 'CandyStoreOfOurs';
+            const newPassword = 'Som3Feather5!';
+            await supertest(app)
+                .patch(`/api/user/${username}`)
+                .auth(username, password)
+                .send({ username: newUsername, password: newPassword })
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<PatchUpdatedResponse>({
+                        ok: true,
+                        updated: ['username', 'password']
+                    });
+                });
+            username = newUsername;
+            password = newPassword;
+            await supertest(app)
+                .post('/api/authenticate')
+                .auth(username, password)
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual({
+                        ok: true
+                    });
+                });
             done();
         });
     });
 
-    xtest('delete a user', () => {
-        return createRequest<DeregisterEndpoint>('DELETE', 'localhost:3005/api/user/' + username, 'json', null, { Authorization: authenticate() }).then(res => {
-            expect(res).toMatchObject({ status: 'DELETED' });
+    describe('deregister', () => {
+        it('should not delete if authentication fails', async done => {
+            await supertest(app)
+                .delete(`/api/user/${username}`)
+                .auth(username, randomBytes(16).toString('hex'))
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<DeregisterEndpoint>({
+                        error: 'Authorization Failed',
+                        ok: false
+                    });
+                });
+            await supertest(app)
+                .get(`/api/user/${username}`)
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<GetUserFoundResponse>({
+                        ok: true,
+                        user: expect.objectContaining({
+                            username
+                        })
+                    });
+                });
+            done();
+        });
+        it('should delete the user and its posts', async done => {
+            await supertest(app)
+                .delete(`/api/user/${username}`)
+                .auth(username, password)
+                .expect(200).then(res => {
+                    expect(res.body.ok).toBe(true);
+                });
+            await supertest(app)
+                .get(`/api/user/${username}`)
+                .expect(200).then(res => {
+                    expect(res.body).toStrictEqual<GetUserErrorResponse>({
+                        error: 'User Not Found',
+                        ok: false
+                    });
+                });
+            done();
         });
     });
 
