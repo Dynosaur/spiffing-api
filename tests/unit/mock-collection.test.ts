@@ -1,8 +1,25 @@
 import { DbPost } from 'database/data-types';
 import { fillArray } from 'tests/tools/array';
-import { MockCollection, MockPost, asymmetricalMatch } from 'tests/mock';
+import { MockCollection, asymmetricalMatch } from 'tests/mock';
+import { ObjectId } from 'mongodb';
 
-describe('mock collection', () => {
+function mockPost(id = new ObjectId(), author = new ObjectId()): DbPost {
+    return {
+        _id: id,
+        author,
+        comments: [],
+        content: 'Meadowlands',
+        dislikes: 0,
+        likes: 0,
+        title: 'Hopeless'
+    };
+}
+
+function mockPosts(length: number, author: ObjectId = undefined): DbPost[] {
+    return new Array(length).map(() => mockPost(undefined, author));
+}
+
+xdescribe('mock collection', () => {
     describe('asymmetricalMatch', () => {
         it('should match identical objects', () => {
             expect(asymmetricalMatch(
@@ -102,38 +119,65 @@ describe('mock collection', () => {
         });
     });
     describe('find', () => {
-        it('should find a queried item', () => {
-            const post = new MockPost();
-
+        it('should call findSpy', () => {
             const mock = new MockCollection<DbPost>();
+            const post = mockPost();
             mock.data.push(post);
 
-            expect(mock.find({ author: post.author }).internalArray).toContain(post);
+            mock.find({ _id: post._id });
+            expect(mock.findSpy).toBeCalledWith({ _id: post._id });
         });
-        it('should find multiple queried items', () => {
-            const author = 'hello';
+        it('should be able to return a single item', () => {
             const mock = new MockCollection<DbPost>();
-            mock.data.push(...fillArray(3, () => new MockPost(author)), ...fillArray(7, () => new MockPost));
-            expect(mock.find({ author }).internalArray).toEqual(expect.arrayContaining([expect.objectContaining({ author })]));
+            const post = mockPost();
+            const fientPost = mockPost();
+            mock.data.push(post, fientPost);
+
+            const found = mock.find({ _id: post._id })._data;
+            expect(found).toContain(post);
+            expect(found).not.toContain(fientPost);
+        });
+        it('should be able to return multiple items', () => {
+            const mock = new MockCollection<DbPost>();
+            const author = new ObjectId();
+            const posts = mockPosts(3, author);
+            const fientPosts = mockPosts(7);
+            mock.data.push(...posts, ...fientPosts);
+
+            const found = mock.find({ author })._data;
+            expect(found).toContain(expect.arrayContaining(posts));
+            expect(found).not.toContain(expect.arrayContaining(fientPosts));
         });
     });
     describe('deleteMany', () => {
-        it('should delete an entry', async done => {
-            const post = new MockPost('quirky-name-quirk-quirk');
+        it('should call deleteManySpy', () => {
             const mock = new MockCollection<DbPost>();
-            mock.data.push(post);
-            await mock.deleteMany({ author: post.author });
-            expect(mock.data).not.toContainEqual(post);
+
+            mock.deleteMany({ likes: 4 });
+            expect(mock.deleteManySpy).toBeCalledWith({ likes: 4 });
+        });
+        it('should be able to delete a single entry', async done => {
+            const mock = new MockCollection<DbPost>();
+            const post = mockPost();
+            const fientPost = mockPost();
+            mock.data.push(post, fientPost);
+
+            await mock.deleteMany({ _id: post._id });
+            expect(mock.data).not.toContain(post);
+            expect(mock.data).toContain(fientPost);
 
             done();
         });
-        it('should delete many entries', async done => {
-            const author = 'ride';
-            const mock = new MockCollection<MockPost>();
-            mock.data.push(...fillArray(10, () => new MockPost(author)));
+        it('should be able to delete multiple entries', async done => {
+            const mock = new MockCollection<DbPost>();
+            const author = new ObjectId();
+            const posts = mockPosts(3, author);
+            const fientPosts = mockPosts(7);
+            mock.data.push(... posts, ...fientPosts);
 
             await mock.deleteMany({ author });
-            expect(mock.data).not.toContainEqual(expect.objectContaining({ author }));
+            expect(mock.data).not.toContain(posts);
+            expect(mock.data).toContain(fientPosts);
 
             done();
         });
