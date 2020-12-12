@@ -1,25 +1,18 @@
 import { MockCursor } from './mock-cursor';
 
-export function asymmetricalMatch(hole: object, key: object): boolean {
-    const requiredKeys = Object.keys(hole);
-    for (const reqKey of requiredKeys) {
-        if (key[reqKey]) {
-            if (typeof hole[reqKey] === 'object') {
-                if (typeof key[reqKey] === 'object') {
-                    if (!asymmetricalMatch(hole[reqKey], key[reqKey])) {
-                        return false;
-                    }
-                    break;
-                } else {
-                    return false;
-                }
-            }
-            if (key[reqKey] !== hole[reqKey]) {
-                return false;
-            }
-        } else {
-            return false;
-        }
+export function asymmetricalMatch(model: object, subject: object): boolean {
+    if (typeof model !== 'object') throw new Error('Model must be an object. Type provided: ' + typeof model);
+    if (subject === undefined || subject === null) return false;
+
+    const modelKeys = Object.keys(model);
+    for (const required of modelKeys) {
+        if (required in subject) {
+            if (typeof model[required] === 'object') {
+                if (typeof subject[required] === 'object') {
+                    if (!asymmetricalMatch(model[required], subject[required])) return false;
+                } else return false;
+            } else if (subject[required] !== model[required]) return false;
+        } else return false;
     }
     return true;
 }
@@ -35,7 +28,7 @@ export class MockCollection<T extends object> {
     deleteManySpy = jest.fn();
     updateManySpy = jest.fn();
 
-    find(query: any): MockCursor {
+    find(query: Partial<T>): MockCursor<T> {
         this.findSpy(query);
 
         if (this.forceFind) {
@@ -60,7 +53,7 @@ export class MockCollection<T extends object> {
         this.data.push(object);
     }
 
-    async deleteMany(query: any): Promise<void> {
+    async deleteMany(query: Partial<T>): Promise<void> {
         this.deleteManySpy(query);
 
         if (!this.forceDeleteMany) {
