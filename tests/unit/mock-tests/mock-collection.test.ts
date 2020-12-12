@@ -1,7 +1,6 @@
 import { DbPost } from 'database/data-types';
-import { fillArray } from 'tests/tools/array';
-import { MockCollection, asymmetricalMatch } from 'tests/mock';
 import { ObjectId } from 'mongodb';
+import { MockCollection, asymmetricalMatch } from 'tests/mock';
 
 function mockPost(id = new ObjectId(), author = new ObjectId()): DbPost {
     return {
@@ -16,10 +15,10 @@ function mockPost(id = new ObjectId(), author = new ObjectId()): DbPost {
 }
 
 function mockPosts(length: number, author: ObjectId = undefined): DbPost[] {
-    return new Array(length).map(() => mockPost(undefined, author));
+    return new Array(length).fill(null).map(() => mockPost(undefined, author));
 }
 
-xdescribe('mock collection', () => {
+describe('mock collection', () => {
     describe('asymmetricalMatch', () => {
         it('should match identical objects', () => {
             expect(asymmetricalMatch(
@@ -117,6 +116,28 @@ xdescribe('mock collection', () => {
                 }
             )).toBe(false);
         });
+        it('should continue checking after the first recursion', () => {
+            const model = {
+                a: {
+                    b: 'b',
+                    c: 'c'
+                },
+                b: 'b'
+            };
+            const subject = {
+                a: {
+                    b: 'b',
+                    c: 'c'
+                },
+                b: 'z'
+            };
+            expect(asymmetricalMatch(model, subject)).toBe(false);
+        });
+        it('should not get a false-negative from falsy values', () => {
+            const model = { a: 0 };
+            const subject = { a: 0 };
+            expect(asymmetricalMatch(model, subject)).toBe(true);
+        });
     });
     describe('find', () => {
         it('should call findSpy', () => {
@@ -145,8 +166,8 @@ xdescribe('mock collection', () => {
             mock.data.push(...posts, ...fientPosts);
 
             const found = mock.find({ author })._data;
-            expect(found).toContain(expect.arrayContaining(posts));
-            expect(found).not.toContain(expect.arrayContaining(fientPosts));
+            expect(found).toEqual(expect.arrayContaining(posts));
+            expect(found).not.toEqual(expect.arrayContaining(fientPosts));
         });
     });
     describe('deleteMany', () => {
@@ -176,8 +197,8 @@ xdescribe('mock collection', () => {
             mock.data.push(... posts, ...fientPosts);
 
             await mock.deleteMany({ author });
-            expect(mock.data).not.toContain(posts);
-            expect(mock.data).toContain(fientPosts);
+            expect(mock.data).not.toEqual(expect.arrayContaining(posts));
+            expect(mock.data).toEqual(expect.arrayContaining(fientPosts));
 
             done();
         });
