@@ -1,83 +1,52 @@
 import { hash } from '../../src/tools/crypto';
-import { MockPost } from '../mock';
-import { fillArray } from '../tools/array';
-import { convertDbUser } from '../../src/database/database-actions';
-import { MockEnvironment } from '../mock/mock-env';
-import { SuccessfulResponse } from '../../src/server/interface/response';
-import { authenticate, deregister, patchUser, register }
-from '../../src/server/router/auth-router';
-import { AuthenticateEndpoint, DeregisterErrorResponse, PatchUpdatedResponse,
-RegisterCreatedResponse, RegisterTestResponse, RegisterUserExistsErrorResponse }
-from '../../src/server/interface/responses/auth-endpoints';
-
+import { MockEnvironment } from '../mock/mock-environment';
+import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
+import { authenticate, deregister, patchUser, register } from 'server/router/auth-router';
 
 describe('auth unit tests', () => {
     describe('register', () => {
+        it('should check if the user exists already', async done => {
+            const mock = new MockEnvironment();
+
+            await mock.runRouteHandler(register, { username: 'hello', password: 'world' });
+            expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
+
+            done();
+        });
         it('should create a user', async done => {
+            const mock = new MockEnvironment();
             const username = 'hello';
             const password = 'world';
 
+            await mock.runRouteHandler(register, { username, password });
+            expect(mock.users.insertOneSpy).toBeCalledWith(expect.objectContaining({ username, password }));
+            expect(mock.users.data[0]).toEqual(expect.objectContaining({ username, password }));
+
+            done();
+        });
+        it('should return ok and the user when created', async done => {
             const mock = new MockEnvironment();
-            mock.request.params.username = username;
+            const username = 'hello';
+            const password = 'world';
 
             const resp = await mock.runRouteHandler(register, { username, password });
-            expect(mock.users.findSpy).toBeCalledWith({ username });
-            expect(mock.users.insertOneSpy).toBeCalledWith(expect.objectContaining({ username }));
-            expect(resp.payload).toStrictEqual<RegisterCreatedResponse>({
+            expect(resp.payload).toStrictEqual<Register.Ok.Created>({
                 ok: true,
-                status: 'Ok',
-                user: convertDbUser(mock.users.data[0])
+                status: 'Created',
+                user: expect.objectContaining({ username })
             });
 
             done();
         });
-        it('should not create a user when "test" query param is present', async done => {
-            const username = 'hello';
-            const password = 'world';
-
+        it('should return an error if the username is taken', async done => {
             const mock = new MockEnvironment();
-            mock.request.query.test = true;
-            mock.request.params.username = username;
-
-            const resp = await mock.runRouteHandler(register, { username, password });
-            expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp.payload).toStrictEqual<RegisterTestResponse>({
-                ok: true,
-                status: 'Ok Test'
-            });
-
-            done();
-        });
-        it('should respond with error even if "test" query param is present when user already exists', async done => {
             const username = 'hello';
-            const password = 'world';
-
-            const mock = new MockEnvironment();
-            mock.createUser(username);
-            mock.request.query.test = true;
-            mock.request.params.username = username;
-
-            const resp = await mock.runRouteHandler(register, { username, password });
-            expect(mock.users.findSpy).toBeCalledWith({ username });
-            expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp.payload).toStrictEqual<RegisterUserExistsErrorResponse>({
-                error: 'User Already Exists',
-                ok: false
-            });
-
-            done();
-        });
-        it('should return an error when the username is taken', async done => {
-            const username = 'hello';
-
-            const mock = new MockEnvironment();
             mock.createUser(username);
             mock.request.params.username = username;
 
             const resp = await mock.runRouteHandler(register, { username });
-            expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp.payload).toStrictEqual<RegisterUserExistsErrorResponse>({
+            expect(resp.payload).toStrictEqual<Register.Failed.UserExists>({
                 error: 'User Already Exists',
                 ok: false
             });
@@ -90,152 +59,139 @@ describe('auth unit tests', () => {
             const mock = new MockEnvironment();
 
             const resp = await mock.runRouteHandler(authenticate);
-            expect(resp.payload).toMatchObject<AuthenticateEndpoint>({ ok: true });
+            expect(resp.payload).toMatchObject<Authenticate.Ok>({ ok: true });
             done();
         });
     });
     describe('deregister', () => {
-        it('should delete the user and its posts', async done => {
-            const numOfOtherUsers = 4;
-            const numOfOtherPosts = 7;
+        it('should return an error if the user does not exist', async done => {
+            const mock = new MockEnvironment();
 
-            const mock = new MockEnvironment({ userFill: numOfOtherUsers, postFill: numOfOtherPosts });
-            const user = mock.createUser();
-            const userPosts = mock.generatePosts(3, user.username);
-
-            const resp = await mock.runRouteHandler(deregister, { username: user.username });
-            expect(mock.users.deleteManySpy).toBeCalledWith({ username: user.username });
-            expect(mock.posts.deleteManySpy).toBeCalledWith({ author: user.username });
-            expect(mock.users.data).not.toContain(user);
-            expect(mock.users.data.length).toBe(numOfOtherUsers);
-            expect(mock.posts.data).not.toEqual(expect.arrayContaining(userPosts));
-            expect(mock.posts.data.length).toBe(numOfOtherPosts);
-            expect(resp.payload).toStrictEqual<SuccessfulResponse>({ ok: true });
+            const response = await mock.runRouteHandler(deregister, { username: 'hello' });
+            expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
+            expect(response.payload).toStrictEqual<Deregister.Failed.NoUser>({
+                error: 'No User',
+                ok: false
+            });
 
             done();
         });
-        it('should return a internal error response when database actions fail', async done => {
-            const mock = new MockEnvironment({ userFill: 4, postFill: 5 });
-            const user = mock.createUser('Eldamar');
-            const userPosts = mock.generatePosts(5, user.username);
-            mock.users.forceDeleteMany = false;
-            mock.posts.forceDeleteMany = false;
+        it('should remove the user from the database', async done => {
+            const mock = new MockEnvironment();
+            const user = mock.createUser();
+            const keepUsers = mock.generateUsers(9);
 
-            let resp = await mock.runRouteHandler(deregister, { username: user.username });
-            expect(mock.users.data).toContain(user);
-            expect(mock.posts.data).toEqual(expect.arrayContaining(userPosts));
-            expect(resp.payload).toStrictEqual<DeregisterErrorResponse>({
-                error: 'User Removal',
-                ok: false
-            });
-
-            mock.users.forceDeleteMany = true;
-            resp = await mock.runRouteHandler(deregister, { username: user.username });
+            await mock.runRouteHandler(deregister, { username: user.username });
+            expect(mock.users.deleteManySpy).toBeCalledWith({ _id: user._id });
             expect(mock.users.data).not.toContain(user);
-            expect(mock.posts.data).toEqual(expect.arrayContaining(userPosts));
-            expect(resp.payload).toStrictEqual<DeregisterErrorResponse>({
-                error: 'Posts Removal',
-                ok: false
-            });
+            expect(mock.users.data).toEqual(expect.arrayContaining(keepUsers));
 
-            mock.posts.forceDeleteMany = true;
-            resp = await mock.runRouteHandler(deregister, { username: user.username });
-            expect(mock.users.data).not.toContain(user);
-            expect(mock.posts.data).not.toEqual(expect.arrayContaining(userPosts));
-            expect(resp.payload).toStrictEqual<SuccessfulResponse>({ ok: true });
+            done();
+        });
+        it('should remove the user\'s posts from the database', async done => {
+            const mock = new MockEnvironment();
+            const user = mock.createUser();
+            const removePosts = mock.generatePosts(5, user._id);
+            const keepPosts = mock.generatePosts(5);
+
+            await mock.runRouteHandler(deregister, { username: user.username });
+            expect(mock.posts.deleteManySpy).toBeCalledWith({ author: user._id });
+            expect(mock.users.data).not.toEqual(expect.arrayContaining(removePosts));
+            expect(mock.posts.data).toEqual(expect.arrayContaining(keepPosts));
+
+            done();
+        });
+        it('should return ok', async done => {
+            const mock = new MockEnvironment();
+            const user = mock.createUser();
+            mock.generatePosts(3, user._id);
+
+            const response = await mock.runRouteHandler(deregister, { username: user.username });
+            expect(response.payload).toStrictEqual<Deregister.Ok>({ ok: true });
 
             done();
         });
     });
     describe('patchUser', () => {
-        it('should update username', async done => {
-            const newUsername = 'new-username';
+        it('should check that the user exists', async done => {
+            const mock = new MockEnvironment();
 
+            const response = await mock.runRouteHandler(patchUser, { username: 'hello' });
+            expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
+            expect(response.payload).toStrictEqual<Patch.Failed.NoUser>({
+                error: 'No User',
+                ok: false
+            });
+
+            done();
+        });
+        it('should handle no updates provided', async done => {
             const mock = new MockEnvironment();
             const user = mock.createUser();
-            mock.request.body.username = newUsername;
 
+            const response = await mock.runRouteHandler(patchUser, { username: user.username });
+            expect(mock.users.updateManySpy).not.toBeCalled();
+            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
+                ok: true,
+                updated: []
+            });
+
+            done();
+        });
+        it('should update username in database and return updates', async done => {
+            const mock = new MockEnvironment();
+            const user = mock.createUser();
             const oldUsername = user.username;
+            const updatedUsername = 'Ghost Bath';
+            mock.request.body.username = updatedUsername;
 
-            const resp = await mock.runRouteHandler(patchUser, { username: oldUsername });
-            expect(mock.users.updateManySpy).toBeCalledWith({ username: oldUsername }, { $set: { username: newUsername } });
-            expect(user.username).toBe(newUsername);
-            expect(mock.users.data[0].username).toBe(newUsername);
-            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
+            const response = await mock.runRouteHandler(patchUser, { username: oldUsername });
+            expect(mock.users.updateManySpy).toBeCalledWith({ _id: user._id }, { $set: { username: updatedUsername } });
+            expect(mock.users.data).toContainEqual(expect.objectContaining({
+                _id: user._id,
+                username: updatedUsername
+            }));
+            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
                 ok: true,
                 updated: ['username']
             });
 
             done();
         });
-        it('should update password', async done => {
-            const newPassword = 'F4%43!&';
-            const oldPassword = 'password';
-
+        it('should update password in database and return updates', async done => {
             const mock = new MockEnvironment();
-            const mockUser = mock.createUser(null, oldPassword);
+            const oldPassword = 'password';
+            const newPassword = 'F4%43!&';
+            const user = mock.createUser(undefined, oldPassword);
             mock.request.body.password = newPassword;
 
-            const username = mockUser.username;
-
-            const resp = await mock.runRouteHandler(patchUser, { username });
-            expect(mock.users.updateManySpy).toBeCalled();
-            expect(
-                mock.actions.cipher.decrypt(mock.users.data[0].password.hash)
-            ).not.toBe(
-                hash(oldPassword, mock.users.data[0].password.salt).hash
-            );
-            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
+            const response = await mock.runRouteHandler(patchUser, { username: user.username });
+            const dbUser = mock.users.data[0];
+            expect(mock.users.findSpy).toBeCalledWith({ username: user.username });
+            expect(mock.users.updateManySpy).toBeCalledWith({ _id: user._id }, expect.anything());
+            expect(mock.commonActions.cipher.decrypt(dbUser.password.hash)).toBe(hash(newPassword, dbUser.password.salt).hash);
+            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
                 ok: true,
                 updated: ['password']
             });
 
             done();
         });
-        it('should update username and password', async done => {
-            const newUsername = 'Eldamar';
-            const newPassword = '!Galao*#&_Eldar';
-            const oldUsername = 'boringUsername';
-            const oldPassword = 'password';
-
-            const mock = new MockEnvironment();
-            const user = mock.createUser(oldUsername, oldPassword);
-            mock.request.body.username = newUsername;
-            mock.request.body.password = newPassword;
-
-            const resp = await mock.runRouteHandler(patchUser, { username: oldUsername });
-            expect(mock.users.updateManySpy).toBeCalledTimes(2);
-            expect(user.username).toBe(newUsername);
-            expect(
-                mock.actions.cipher.decrypt(user.password.hash)
-            ).not.toBe(
-                hash(oldPassword, user.password.salt).hash
-            );
-            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
-                ok: true,
-                updated: ['username', 'password']
-            });
-
-            done();
-        });
-        it('should update username in user\'s post', async done => {
-            const newUsername = 'new-username';
-
+        it('should update screenname in database and return updates', async done => {
             const mock = new MockEnvironment();
             const user = mock.createUser();
-            mock.request.body.username = newUsername;
+            const updatedScreenname = 'Tha';
+            mock.request.body.screenname = updatedScreenname;
 
-            const oldUsername = user.username;
-            mock.posts.data.push(...fillArray(4, () => new MockPost(oldUsername)));
-
-            const resp = await mock.runRouteHandler(patchUser, { username: oldUsername });
-            expect(mock.users.updateManySpy).toBeCalledWith({ username: oldUsername }, { $set: { username: newUsername } });
-            expect(mock.posts.updateManySpy).toBeCalledWith({ author: oldUsername }, { $set: { author: newUsername } });
-            expect(user.username).toBe(newUsername);
-            mock.posts.data.forEach(post => expect(post.author).toBe(newUsername));
-            expect(resp.payload).toStrictEqual<PatchUpdatedResponse>({
+            const response = await mock.runRouteHandler(patchUser, { username: user.username });
+            expect(mock.users.updateManySpy).toBeCalledWith({ _id: user._id }, { $set: { screenname: updatedScreenname } });
+            expect(mock.users.data).toContainEqual(expect.objectContaining({
+                _id: user._id,
+                screenname: updatedScreenname
+            }));
+            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
                 ok: true,
-                updated: ['username']
+                updated: ['screenname']
             });
 
             done();
