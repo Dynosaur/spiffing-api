@@ -2,9 +2,9 @@ import { Post } from 'interface/data-types';
 import { DbPost } from 'app/database/data-types';
 import { ObjectId } from 'mongodb';
 import { convertDbPost } from 'app/database/database-actions';
-import { MockEnvironment } from '../mock';
-import { getPost, getPosts, getUser, createPost } from '../../src/server/router/api-router';
-import { CreatePost, GetPostErrorResponse, GetPostFoundResponse, GetPosts, GetUser } from '../../src/server/interface/responses/api-responses';
+import { MockEnvironment } from 'tests/mock/mock-environment';
+import { getPost, getPosts, getUser, createPost } from 'server/router/api-router';
+import { CreatePost, GetPostErrorResponse, GetPostFoundResponse, GetPosts, GetUser } from 'interface/responses/api-responses';
 
 describe('api route handlers', () => {
     describe('getUser', () => {

@@ -1,5 +1,5 @@
-import { hash } from '../../src/tools/crypto';
-import { MockEnvironment } from '../mock/mock-environment';
+import { hash } from 'tools/crypto';
+import { MockEnvironment } from 'tests/mock/mock-environment';
 import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 import { authenticate, deregister, patchUser, register } from 'server/router/auth-router';
 
