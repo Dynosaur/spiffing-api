@@ -1,7 +1,9 @@
 import { hash } from 'tools/crypto';
 import { routes } from 'server/router/auth-router';
+import { convertDbUser } from 'app/database/data-types';
 import { MockEnvironment } from 'tests/mock';
 import { encodeBasicAuth } from 'tools/auth';
+import { AuthenticationError } from 'app/server/interface/responses/error-responses';
 import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 
 const register = routes[0];
@@ -20,11 +22,15 @@ describe('auth route handlers integration', () => {
             mock.request.params.username = username;
 
             await mock.integration(register.handler, register.requirements);
-            const resp = mock.request.res.internalResponse;
+            const response = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).toBeCalledWith(expect.objectContaining({ username }));
             expect(mock.users.data).toContainEqual(expect.objectContaining({ username }));
-            expect(resp).toMatchObject({ status: 'CREATED' });
+            expect(response).toStrictEqual<Register.Ok.Created>({
+                ok: true,
+                status: 'Created',
+                user: convertDbUser(mock.users.data[0])
+            });
 
             done();
         });
@@ -38,26 +44,13 @@ describe('auth route handlers integration', () => {
             mock.request.params.username = username;
 
             await mock.integration(register.handler, register.requirements);
-            const resp = mock.request.res.internalResponse;
+            const response = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp).toMatchObject({ status: 'E_USER_EXISTS' });
-
-            done();
-        });
-        it('should not create a user if the test qparam is provided', async done => {
-            const username = 'hello';
-            const password = 'world';
-
-            const mock = new MockEnvironment<Register.Tx>();
-            mock.request.headers.authorization = encodeBasicAuth(username, password);
-            mock.request.params.username = username;
-            mock.request.query.test = true;
-
-            await mock.integration(register.handler, register.requirements);
-            const resp = mock.request.res.internalResponse;
-            expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp).toMatchObject({ status: 'TEST_OK' });
+            expect(response).toStrictEqual<Register.Failed.UserExists>({
+                error: 'User Already Exists',
+                ok: false
+            });
 
             done();
         });
@@ -74,7 +67,9 @@ describe('auth route handlers integration', () => {
             await mock.integration(authenticate.handler, authenticate.requirements);
             const resp = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
-            expect(resp).toStrictEqual({ status: 'OK' });
+            expect(resp).toStrictEqual<Authenticate.Ok>({
+                ok: true
+            });
 
             done();
         });
@@ -88,7 +83,10 @@ describe('auth route handlers integration', () => {
             await mock.integration(authenticate.handler, authenticate.requirements);
             const resp = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
-            expect(resp).toStrictEqual({ status: 'E_AUTH_FAILED' });
+            expect(resp).toStrictEqual<Authenticate.Failed>({
+                error: 'Authorization Failed',
+                ok: false
+            });
 
             done();
         });
@@ -99,7 +97,10 @@ describe('auth route handlers integration', () => {
             await mock.integration(authenticate.handler, authenticate.requirements);
             const resp = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
-            expect(resp).toStrictEqual({ status: 'E_AUTH_NO_USER' });
+            expect(resp).toStrictEqual<Authenticate.Failed>({
+                error: 'Authorization Failed',
+                ok: false
+            });
 
             done();
         });
@@ -116,10 +117,10 @@ describe('auth route handlers integration', () => {
             mock.request.headers.authorization = encodeBasicAuth(username, password);
 
             await mock.integration(deregister.handler, deregister.requirements);
-            const resp = mock.request.res.internalResponse;
+            const response = mock.request.res.internalResponse;
             expect(mock.users.data.length).toBe(0);
             expect(mock.posts.data.length).toBe(0);
-            expect(resp).toStrictEqual({ status: 'DELETED' });
+            expect(response).toStrictEqual<Deregister.Ok>({ ok: true });
 
             done();
         });
@@ -131,10 +132,13 @@ describe('auth route handlers integration', () => {
             mock.request.headers.authorization = encodeBasicAuth('hello', 'password');
 
             await mock.integration(deregister.handler, deregister.requirements);
-            const resp = mock.request.res.internalResponse;
+            const response = mock.request.res.internalResponse;
             expect(mock.users.data.length).toBe(1);
             expect(mock.posts.data.length).toBe(5);
-            expect(resp).toStrictEqual({ status: 'E_AUTH_FAILED' });
+            expect(response).toStrictEqual<AuthenticationError.Failed>({
+                error: 'Authorization Failed',
+                ok: false
+            });
 
             done();
         });
@@ -144,8 +148,11 @@ describe('auth route handlers integration', () => {
             mock.request.headers.authorization = encodeBasicAuth('hello', 'world');
 
             await mock.integration(deregister.handler, deregister.requirements);
-            const resp = mock.request.res.internalResponse;
-            expect(resp).toStrictEqual({ status: 'E_AUTH_NO_USER' });
+            const response = mock.request.res.internalResponse;
+            expect(response).toStrictEqual<AuthenticationError.Failed>({
+                error: 'Authorization Failed',
+                ok: false
+            });
 
             done();
         });
@@ -156,7 +163,7 @@ describe('auth route handlers integration', () => {
             const password = 'world';
             const newUsername = 'new-username';
             const mock = new MockEnvironment<Patch.Tx>();
-            const user = await mock.createUser(oldUsername, password);
+            const user = mock.createUser(oldUsername, password);
             mock.request.body.username = newUsername;
             mock.request.headers.authorization = encodeBasicAuth(oldUsername, password);
             mock.request.params.username = oldUsername;
@@ -164,7 +171,10 @@ describe('auth route handlers integration', () => {
             await mock.integration(patch.handler, patch.requirements);
             const resp = mock.request.res.internalResponse;
             expect(user.username).toBe(newUsername);
-            expect(resp).toStrictEqual({ status: 'UPDATED', updated: ['username'] });
+            expect(resp).toStrictEqual<Patch.Ok.Updated>({
+                ok: true,
+                updated: ['username']
+            });
 
             done();
         });
@@ -172,7 +182,7 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
             const mock = new MockEnvironment<Patch.Tx>();
-            const user = await mock.createUser(username, password);
+            const user = mock.createUser(username, password);
             mock.request.body.password = 'secure-password';
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.username = username;
@@ -180,7 +190,10 @@ describe('auth route handlers integration', () => {
             await mock.integration(patch.handler, patch.requirements);
             const resp = mock.request.res.internalResponse;
             expect(mock.commonActions.cipher.decrypt(user.password.hash)).toBe(hash('secure-password', user.password.salt).hash);
-            expect(resp).toStrictEqual({ status: 'UPDATED', updated: ['password'] });
+            expect(resp).toStrictEqual<Patch.Ok.Updated>({
+                ok: true,
+                updated: ['password']
+            });
 
             done();
         });
