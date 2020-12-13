@@ -2,8 +2,7 @@ import { hash } from 'tools/crypto';
 import { routes } from 'server/router/auth-router';
 import { MockEnvironment } from 'tests/mock';
 import { encodeBasicAuth } from 'tools/auth';
-import { AuthenticateEndpoint, DeregisterEndpoint, PatchEndpoint, RegisterEndpoint }
-from 'interface/responses/auth-endpoints';
+import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 
 const register = routes[0];
 const authenticate = routes[1];
@@ -16,7 +15,7 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<RegisterEndpoint>();
+            const mock = new MockEnvironment<Register.Tx>();
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.username = username;
 
@@ -33,7 +32,7 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<RegisterEndpoint>();
+            const mock = new MockEnvironment<Register.Tx>();
             mock.createUser(username);
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.username = username;
@@ -50,7 +49,7 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<RegisterEndpoint>();
+            const mock = new MockEnvironment<Register.Tx>();
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.username = username;
             mock.request.query.test = true;
@@ -68,7 +67,7 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<AuthenticateEndpoint>();
+            const mock = new MockEnvironment<Authenticate.Tx>();
             mock.createUser(username, password);
             mock.request.headers.authorization = encodeBasicAuth(username, password);
 
@@ -82,7 +81,7 @@ describe('auth route handlers integration', () => {
         it('should return FAILED if the credentials are incorrect', async done => {
             const username = 'hello';
 
-            const mock = new MockEnvironment<AuthenticateEndpoint>();
+            const mock = new MockEnvironment<Authenticate.Tx>();
             mock.createUser(username, 'password');
             mock.request.headers.authorization = encodeBasicAuth(username, 'world');
 
@@ -94,7 +93,7 @@ describe('auth route handlers integration', () => {
             done();
         });
         it('should return NO_USER if the user does not exist', async done => {
-            const mock = new MockEnvironment<AuthenticateEndpoint>();
+            const mock = new MockEnvironment<Authenticate.Tx>();
             mock.request.headers.authorization = encodeBasicAuth('hello', 'world');
 
             await mock.integration(authenticate.handler, authenticate.requirements);
@@ -110,9 +109,9 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<DeregisterEndpoint>();
-            mock.createUser(username, password);
-            mock.generatePosts(5, username);
+            const mock = new MockEnvironment<Deregister.Tx>();
+            const user = mock.createUser(username, password);
+            mock.generatePosts(5, user._id);
             mock.request.params.username = username;
             mock.request.headers.authorization = encodeBasicAuth(username, password);
 
@@ -125,9 +124,9 @@ describe('auth route handlers integration', () => {
             done();
         });
         it('should not take action if credentials are incorrect', async done => {
-            const mock = new MockEnvironment<DeregisterEndpoint>();
-            mock.createUser('hello', 'world');
-            mock.generatePosts(5, 'hello');
+            const mock = new MockEnvironment<Deregister.Tx>();
+            const user = mock.createUser('hello', 'world');
+            mock.generatePosts(5, user._id);
             mock.request.params.username = 'hello';
             mock.request.headers.authorization = encodeBasicAuth('hello', 'password');
 
@@ -140,7 +139,7 @@ describe('auth route handlers integration', () => {
             done();
         });
         it('should return NO_USER if the user does not exist', async done => {
-            const mock = new MockEnvironment<DeregisterEndpoint>();
+            const mock = new MockEnvironment<Deregister.Tx>();
             mock.request.params.username = 'hello';
             mock.request.headers.authorization = encodeBasicAuth('hello', 'world');
 
@@ -156,8 +155,8 @@ describe('auth route handlers integration', () => {
             const oldUsername = 'old-username';
             const password = 'world';
             const newUsername = 'new-username';
-            const mock = new MockEnvironment<PatchEndpoint>();
-            const user = mock.createUser(oldUsername, password);
+            const mock = new MockEnvironment<Patch.Tx>();
+            const user = await mock.createUser(oldUsername, password);
             mock.request.body.username = newUsername;
             mock.request.headers.authorization = encodeBasicAuth(oldUsername, password);
             mock.request.params.username = oldUsername;
@@ -172,15 +171,15 @@ describe('auth route handlers integration', () => {
         it('should update password', async done => {
             const username = 'hello';
             const password = 'world';
-            const mock = new MockEnvironment<PatchEndpoint>();
-            const user = mock.createUser(username, password);
+            const mock = new MockEnvironment<Patch.Tx>();
+            const user = await mock.createUser(username, password);
             mock.request.body.password = 'secure-password';
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.username = username;
 
             await mock.integration(patch.handler, patch.requirements);
             const resp = mock.request.res.internalResponse;
-            expect(mock.actions.cipher.decrypt(user.password.hash)).toBe(hash('secure-password', user.password.salt).hash);
+            expect(mock.commonActions.cipher.decrypt(user.password.hash)).toBe(hash('secure-password', user.password.salt).hash);
             expect(resp).toStrictEqual({ status: 'UPDATED', updated: ['password'] });
 
             done();

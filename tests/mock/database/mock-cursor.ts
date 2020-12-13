@@ -1,8 +1,8 @@
-export class MockCursor {
+export class MockCursor<T> {
 
-    constructor(public internalArray: any[]) { }
+    constructor(public _data: T[]) { }
 
-    async forEach(fn): Promise<void> {
-        this.internalArray.forEach(fn);
+    async forEach(fn: (item: T) => void): Promise<void> {
+        this._data.forEach(fn);
     }
 }
