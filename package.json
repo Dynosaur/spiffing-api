@@ -10,6 +10,7 @@
     "test": "jest --bail",
     "test:unit": "jest ./tests/unit",
     "test:unit:mock": "jest ./tests/unit/mock-tests",
+    "test:unit:router": "jest ./tests/unit/router-tests",
     "test:int": "jest ./tests/integration",
     "test:valid": "jest ./tests/validation"
   },
