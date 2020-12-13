@@ -1,6 +1,6 @@
 import { ErrorResponse } from '../response';
 
-export interface MissingDataErrorResponse extends ErrorResponse<'Missing Requirements'> {
+export interface MissingDataError extends ErrorResponse<'Missing Requirements'> {
     missing: {
         possible: string[][];
         provided: string[];
@@ -13,7 +13,13 @@ export interface AuthParseErrorResponse extends ErrorResponse<'Authorization Hea
 }
 
 export type UnauthorizedErrorResponse = ErrorResponse<'Authorization Failed'>;
-export type AuthenticateErrorResponse =
-    AuthParseErrorResponse |
-    MissingDataErrorResponse |
-    UnauthorizedErrorResponse;
+export type AuthenticateErrorResponse = UnauthorizedErrorResponse | AuthParseErrorResponse | MissingDataError ;
+
+export namespace AuthenticationError {
+    export interface ParsingError extends ErrorResponse<'Authorization Header Parse'> {
+        field: 'username' | 'password' | 'type' | 'username param';
+    }
+    export type Failed = ErrorResponse<'Authorization Failed'>;
+
+    export type Tx = MissingDataError | ParsingError | Failed;
+}

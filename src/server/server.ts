@@ -1,16 +1,21 @@
 import cors from 'cors';
 import { chalk } from 'tools/chalk';
 import { Request } from 'express';
-import { RouteInfo } from 'server/route-handling/route-infra';
+import { UserAPI } from 'app/database/dbi/user-api';
+import { PostAPI } from 'app/database/dbi/post-actions';
+import { CommentAPI } from 'app/database/dbi/comment-actions';
 import { MongoClient } from 'database/mongo-client';
+import { CommonActions } from 'app/database/common-actions';
 import { prettyTimestamp } from 'tools/time';
-import { DatabaseActions } from 'database/database-actions';
 import { DeveloperActions } from 'app/dev/dev-actions';
 import express, { Response } from 'express';
+import { DatabaseInterface } from 'app/database/dbi/database-interface';
 import { routes as apiRoutes } from 'server/router/api-router';
+import { executeRouteHandler } from 'server/route-handling/route-handler';
 import { routes as authRoutes } from 'server/router/auth-router';
 import { RouteRegister, UrlPath } from 'server/routing';
-import { executeRouteHandler, RouteHandlerFunctions } from 'server/route-handling/route-handler';
+import { DbComment, DbPost, DbUser } from 'app/database/data-types';
+import { DatabaseActions, RouteInfo } from 'server/route-handling/route-infra';
 
 export class Server {
 
@@ -18,8 +23,16 @@ export class Server {
     mongo: MongoClient;
     routeRegister = new RouteRegister();
 
-    private dbActions: DatabaseActions;
-    private routeChecks: RouteHandlerFunctions;
+    private userDbi: DatabaseInterface<DbUser>;
+    private postDbi: DatabaseInterface<DbPost>;
+    private commentDbi: DatabaseInterface<DbComment>;
+
+    private actions: DatabaseActions;
+    private postApi: PostAPI;
+    private userApi: UserAPI;
+    private commonApi: CommonActions;
+    private commentApi: CommentAPI;
+
     private devActions = new DeveloperActions();
 
     constructor(private verbose = true) { }
@@ -44,11 +57,19 @@ export class Server {
         this.mongo = new MongoClient(dbUri, 'spiffing', this.verbose);
         await this.mongo.initialize();
 
-        this.dbActions = new DatabaseActions(
-            this.mongo.db.collection('users'),
-            this.mongo.db.collection('posts')
-        );
-        this.routeChecks = new RouteHandlerFunctions(this.dbActions);
+        this.userDbi = new DatabaseInterface<DbUser>(this.mongo.db.collection('users'));
+        this.postDbi = new DatabaseInterface<DbPost>(this.mongo.db.collection('posts'));
+
+        this.userApi = new UserAPI(this.userDbi, this.postApi);
+        this.commentApi = new CommentAPI(this.commentDbi);
+        this.postApi = new PostAPI(this.postDbi, this.commentApi);
+        this.commonApi = new CommonActions(this.userApi);
+        this.actions = {
+            comment: this.commentApi,
+            common: this.commonApi,
+            post: this.postApi,
+            user: this.userApi
+        };
         this.configureExpress();
     }
 
@@ -59,14 +80,7 @@ export class Server {
                 const path = new UrlPath(route.path);
                 if (path.doesMatch(request.path)) {
                     request.params = path.extractParams(request.path) as any;
-                    await executeRouteHandler(
-                        request,
-                        this.dbActions,
-                        this.routeChecks,
-                        route.handler,
-                        route.requirements,
-                        this.verbose
-                    );
+                    await executeRouteHandler(request, this.actions, route.handler, route.requirements, this.verbose);
                     return;
                 }
             }

@@ -3,19 +3,10 @@ import { Request } from 'express';
 import { checkScope } from 'server/route-handling/check-scope';
 import { unauthorized } from 'server/route-handling/response-functions';
 import { decodeBasicAuth } from 'tools/auth';
-import { DatabaseActions } from 'database/database-actions';
-import { AuthenticateErrorResponse, AuthParseErrorResponse } from 'interface/responses/error-responses';
-import { RegisterUserExistsErrorResponse } from 'interface/responses/auth-endpoints';
-import { RoutePayload, RouteHandler, RouteHandlerRequirements, payload } from 'server/route-handling/route-infra';
+import { DatabaseActions } from './route-infra';
+import { RoutePayload, RouteHandler, RouteHandlerRequirements } from 'server/route-handling/route-infra';
 
-export async function executeRouteHandler(
-    request: Request,
-    actions: DatabaseActions,
-    checks: RouteHandlerFunctions,
-    handler: RouteHandler<any>,
-    requirements?: RouteHandlerRequirements,
-    verbose = true
-): Promise<void> {
+export async function executeRouteHandler(request: Request, actions: DatabaseActions, handler: RouteHandler<any>, requirements?: RouteHandlerRequirements, verbose = true): Promise<void> {
     const routeHandlerArgs: any = {};
 
     if (requirements) {
@@ -55,7 +46,7 @@ export async function executeRouteHandler(
                     return;
                 }
             }
-            const authRes = await actions.authenticate(decoded.username, decoded.password);
+            const authRes = await actions.common.authenticate(decoded.username, decoded.password);
             switch (requirements.auth.method) {
                 case 'authenticate':
                     if (!authRes) {
@@ -79,7 +70,7 @@ export async function executeRouteHandler(
 
     let routePayload: RoutePayload<any>;
     try {
-        routePayload = await handler(request, actions, checks, routeHandlerArgs);
+        routePayload = await handler(request, actions, routeHandlerArgs);
     } catch (error) {
         if (verbose) {
             chalk.red(`ERROR: route handler "${handler.name}" threw an error. Responding with default 500 error.`);
@@ -110,63 +101,6 @@ function sendPayload(request: Request, payload: RoutePayload<any>, verbose = tru
             chalk.lime(`SUCCESS: ${message}`);
         } else {
             chalk.rust(`FAILED: ${message}`);
-        }
-    }
-}
-
-export class RouteHandlerFunctions {
-
-    constructor(private actions: DatabaseActions) { }
-
-    async authenticate(request: Request): Promise<{
-        state: 'error';
-        error: RoutePayload<AuthenticateErrorResponse>;
-    } | {
-        state: 'ok';
-        username: string;
-        password: string;
-    }> {
-        const decoded = decodeBasicAuth(request.headers.authorization);
-        if (decoded.status === 'error') {
-            return { state: 'error', error: decoded.error };
-        }
-
-        const username = decoded.username;
-        const password = decoded.password;
-
-        if (request.params.username && request.params.username !== username) {
-            return {
-                state: 'error',
-                error: payload<AuthParseErrorResponse>('No solution: param username is not equal to decoded username.', 500, false, {
-                    error: 'Authorization Header Parse',
-                    field: 'username param'
-                })
-            };
-        }
-
-        const authRes = await this.actions.authenticate(username, password);
-        if (authRes) {
-            return {
-                state: 'ok',
-                username,
-                password
-            };
-        } else {
-            return {
-                state: 'error',
-                error: payload<AuthenticateErrorResponse>('Prerequisite authentication failed', 401, false, null)
-            };
-        }
-    }
-
-    async userMustNotExist(username: string): Promise<RoutePayload<RegisterUserExistsErrorResponse>> {
-        const user = await this.actions.readUser(username);
-        if (user) {
-            return payload<RegisterUserExistsErrorResponse>(`Prerequisite user "${username}" must not exist failed.`, 200, false, {
-                error: 'User Already Exists'
-            });
-        } else {
-            return null;
         }
     }
 }

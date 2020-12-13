@@ -1,12 +1,12 @@
-export interface Response {
+export interface BaseResponse {
     ok: boolean;
 }
 
-export interface SuccessfulResponse extends Response {
+export interface OkResponse extends BaseResponse {
     ok: true;
 }
 
-export interface ErrorResponse<T> extends Response {
-    ok: false;
+export interface ErrorResponse<T> extends BaseResponse {
     error: T;
+    ok: false;
 }

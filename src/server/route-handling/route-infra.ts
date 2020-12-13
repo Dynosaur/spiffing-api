@@ -1,16 +1,18 @@
 import { Request } from 'express';
-import { Response } from 'interface/response';
-import { HttpMethod } from 'app/server/routing';
-import { DatabaseActions } from 'database/database-actions';
-import { RouteHandlerFunctions } from './route-handler';
+import { UserAPI } from 'database/dbi/user-api';
+import { PostAPI } from 'database/dbi/post-actions';
+import { HttpMethod } from 'server/routing';
+import { CommentAPI } from 'database/dbi/comment-actions';
+import { BaseResponse } from 'interface/response';
+import { CommonActions } from 'database/common-actions';
 
-export interface RoutePayload<T extends Response> {
+export interface RoutePayload<T extends BaseResponse> {
     httpCode: number;
     consoleMessage: string;
     payload: T;
 }
 
-export function payload<T extends Response>(message: string, code: number, ok: T['ok'], payload: Omit<T, 'ok'>): RoutePayload<T> {
+export function payload<T extends BaseResponse>(message: string, code: number, ok: T['ok'], payload: Omit<T, 'ok'>): RoutePayload<T> {
     return {
         consoleMessage: message,
         httpCode: code,
@@ -21,8 +23,15 @@ export function payload<T extends Response>(message: string, code: number, ok: T
     };
 }
 
-export interface RouteHandler<ResponseType extends Response> {
-    (request: Request<any, ResponseType>, actions: DatabaseActions, checks: RouteHandlerFunctions, args: any): Promise<RoutePayload<ResponseType>>
+export interface DatabaseActions {
+    comment: CommentAPI;
+    common: CommonActions;
+    post: PostAPI;
+    user: UserAPI;
+}
+
+export interface RouteHandler<ResponseType extends BaseResponse> {
+    (request: Request<any, ResponseType>, actions: DatabaseActions, args: any): Promise<RoutePayload<ResponseType>>
 }
 
 export type RequiredParam = { param: string; strategy?: 'AND' | 'OR'; } | { param: string; strategy: 'REPLACE'; replacement: any; };

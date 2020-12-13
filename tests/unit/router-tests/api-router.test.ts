@@ -1,7 +1,7 @@
 import { Post } from 'interface/data-types';
 import { DbPost } from 'app/database/data-types';
 import { ObjectId } from 'mongodb';
-import { convertDbPost } from 'app/database/database-actions';
+import { convertDbPost } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock/mock-environment';
 import { getPost, getPosts, getUser, createPost } from 'server/router/api-router';
 import { CreatePost, GetPostErrorResponse, GetPostFoundResponse, GetPosts, GetUser } from 'interface/responses/api-responses';

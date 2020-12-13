@@ -1,82 +1,54 @@
-import { convertDbUser } from 'database/database-actions';
-import { SuccessfulResponse } from 'interface/response';
-import { payload, RouteInfo, RouteHandler, RoutePayload }
-from 'server/route-handling/route-infra';
-import { AuthenticateEndpoint, DeregisterEndpoint, DeregisterErrorResponse,
-PatchEndpoint, PatchUpdatedResponse, RegisterCreatedResponse, RegisterEndpoint,
-RegisterTestResponse } from 'interface/responses/auth-endpoints';
+import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
+import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
 
-export const register: RouteHandler<RegisterEndpoint> =
-async function register(request, actions, checks, args): Promise<RoutePayload<RegisterEndpoint>> {
-    const check = await checks.userMustNotExist(args.username);
-    if (check) {
-        return check;
+export const register: RouteHandler<Register.Tx> = async function register(request, actions, args): Promise<RoutePayload<Register.Tx>> {
+    if (await actions.user.readUser({ username: args.username })) {
+        return payload<Register.Failed.UserExists>('User already exists with that username.', 200, false, {
+            error: 'User Already Exists'
+        });
     }
 
-    if (request.query.test) {
-        return payload<RegisterTestResponse>(
-            'Successful test registration, no user created.',
-            200, true, { status: 'Ok Test' }
-        );
-    } else {
-        return payload<RegisterCreatedResponse>(
-            `Successfully created new user ${args.username}`, 201, true, {
-                status: 'Ok',
-                user: convertDbUser(await actions.createUser(args.username, args.password))
-            }
-        );
-    }
+    const user = await actions.user.createUser(args.username, args.password);
+    return payload<Register.Ok.Created>(`Successfully created new user ${args.username}`, 201, true, {
+        status: 'Created',
+        user: user.toInterface()
+    });
 };
 
-export const authenticate: RouteHandler<AuthenticateEndpoint> =
-async function authenticate(): Promise<RoutePayload<AuthenticateEndpoint>> {
-    return payload<SuccessfulResponse>('Authentication successful.', 200, true, null);
+export const authenticate: RouteHandler<Authenticate.Tx> = async function authenticate(): Promise<RoutePayload<Authenticate.Tx>> {
+    return payload<Authenticate.Ok>('Authentication successful.', 200, true, null);
 };
 
-export const deregister: RouteHandler<DeregisterEndpoint> =
-async function deregister(request, actions, checks, args): Promise<RoutePayload<DeregisterEndpoint>> {
+export const deregister: RouteHandler<Deregister.Tx> = async function deregister(request, actions, args): Promise<RoutePayload<Deregister.Tx>> {
     const username = args.username;
-
-    if (!await actions.deleteUser(username)) {
-        return payload<DeregisterErrorResponse>(
-            `User ${username} was not deleted during deregistration.`,
-            500, false, { error: 'User Removal' }
-        );
+    const user = await actions.user.readUser({ username });
+    if (user) {
+        await user.delete();
+        return payload<Deregister.Ok>(`User ${username} and their posts have been removed.`, 200, true, null);
+    } else {
+        return payload<Deregister.Failed.NoUser>(`No user with the username ${username}.`, 200, false, { error: 'No User' });
     }
-    if (!await actions.deletePosts({ author: username })) {
-        return payload<DeregisterErrorResponse>(
-            `User ${username}'s post were not deleted during deregistration.`,
-            500, false, { error: 'Posts Removal' }
-        );
-    }
-
-    return payload<SuccessfulResponse>(
-        `User ${username} and their posts have been removed.`,
-        200, true, null
-    );
 };
 
-export const patchUser: RouteHandler<PatchEndpoint> =
-async function patchUser(request, actions, checks, args): Promise<RoutePayload<PatchEndpoint>> {
-    let currentUsername = args.username;
-    const proposedUsername = request.body.username;
-    const proposedPassword = request.body.password;
-
-    const updated: string[] = [];
-    if (proposedUsername && proposedUsername !== currentUsername) {
-        await actions.updateUsername(currentUsername, proposedUsername);
-        currentUsername = proposedUsername;
-        updated.push('username');
+export const patchUser: RouteHandler<Patch.Tx> = async function patchUser(request, actions, args): Promise<RoutePayload<Patch.Tx>> {
+    const user = await actions.user.readUser({ username: args.username });
+    if (user) {
+        const updated: string[] = [];
+        for (const key of ['username', 'password', 'screenname']) {
+            if (request.body[key]) {
+                if (key === 'password') {
+                    await user.update({ password: actions.common.securePassword(request.body.password) });
+                    updated.push(key);
+                    continue;
+                }
+                await user.update({ [key]: request.body[key] });
+                updated.push(key);
+            }
+        }
+        return payload<Patch.Ok.Updated>(updated.length ? `Updated ${updated.join(', ')}.` : 'No changes warranted.', 200, true, { updated });
+    } else {
+        return payload<Patch.Failed.NoUser>(`The user ${args.username} does not exist.`, 200, false, { error: 'No User' });
     }
-    if (proposedPassword) {
-        await actions.updatePassword(currentUsername, proposedPassword);
-        updated.push('password');
-    }
-
-    return payload<PatchUpdatedResponse>(
-        updated.length ? `Updated ${updated.join(', ')}.` : 'No changes warranted.',
-        200, true, { updated }
-    );
 };
 
 export const routes: RouteInfo[] = [

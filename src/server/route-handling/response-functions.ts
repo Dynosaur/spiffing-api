@@ -1,6 +1,5 @@
 import { payload, RoutePayload } from 'server/route-handling/route-infra';
-import { AuthParseErrorResponse, MissingDataErrorResponse, UnauthorizedErrorResponse }
-from 'interface/responses/error-responses';
+import { AuthParseErrorResponse, MissingDataError, UnauthorizedErrorResponse } from 'interface/responses/error-responses';
 
 export function couldNotParseRequest(field: 'username' | 'password' | 'type'): RoutePayload<AuthParseErrorResponse> {
     return payload<AuthParseErrorResponse>(`There was an error parsing the request's ${field}.`, 400, false, {
@@ -9,11 +8,11 @@ export function couldNotParseRequest(field: 'username' | 'password' | 'type'): R
     });
 }
 
-export function missingData(possible: string[][], provided: object, name: string): RoutePayload<MissingDataErrorResponse> {
+export function missingData(possible: string[][], provided: object, name: string): RoutePayload<MissingDataError> {
     const message = `Malformed request ${name}.
     \n\tRequired: [${possible.join(' OR ')}]
     \n\tProvided: [${Object.keys(provided)}]`;
-    return payload<MissingDataErrorResponse>(message, 400, false, {
+    return payload<MissingDataError>(message, 400, false, {
         error: 'Missing Requirements',
         missing: {
             possible,

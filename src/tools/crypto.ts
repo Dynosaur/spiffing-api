@@ -1,3 +1,4 @@
+import { Password } from 'app/database/data-types';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 
 export function interlace(buf1: Buffer, buf2: Buffer, strategy = Math.round(Math.random() * 3)): Buffer {
@@ -126,6 +127,7 @@ export class Cipher {
     }
 
     decrypt(encrypted: string): string {
+        if (!encrypted) throw new Error('Could not decrypt: Input was undefined / null');
         const result = deinterlace(Buffer.from(encrypted, 'hex'));
 
         const secret = result.buf1;
@@ -147,7 +149,7 @@ export class Cipher {
     }
 }
 
-export function hash(plain: string, salt = randomBytes(32).toString('hex')): { hash: string; salt: string; } {
+export function hash(plain: string, salt = randomBytes(32).toString('hex')): Password {
     const hash = createHash('sha256');
     hash.update(plain + salt);
     return {
