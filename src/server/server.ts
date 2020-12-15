@@ -60,9 +60,9 @@ export class Server {
         this.userDbi = new DatabaseInterface<DbUser>(this.mongo.db.collection('users'));
         this.postDbi = new DatabaseInterface<DbPost>(this.mongo.db.collection('posts'));
 
-        this.userApi = new UserAPI(this.userDbi, this.postApi);
         this.commentApi = new CommentAPI(this.commentDbi);
         this.postApi = new PostAPI(this.postDbi, this.commentApi);
+        this.userApi = new UserAPI(this.userDbi, this.postApi);
         this.commonApi = new CommonActions(this.userApi);
         this.actions = {
             comment: this.commentApi,
