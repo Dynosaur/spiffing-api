@@ -1,12 +1,23 @@
 const { compilerOptions } = require('./tsconfig');
 const { pathsToModuleNameMapper } = require('ts-jest/utils');
 
+function createProject(name, path, other) {
+    return {
+        displayName: name,
+        moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' }),
+        testMatch: [`<rootDir>/tests/${path}/**/*.ts`],
+        transform: { '^.+\\.(ts|tsx)$': 'ts-jest' },
+        verbose: true,
+        ...other
+    }
+}
+
 module.exports = {
-    moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' }),
-    roots: ['<rootDir>/tests'],
-    testMatch: ['**/?(*.)+(spec|test).+(ts|tsx|js)'],
-    transform: {
-        '^.+\\.(ts|tsx)$': 'ts-jest'
-    },
-    verbose: true
+    projects: [
+        createProject('unit-tests', 'unit'),
+        createProject('unit-tests/mock', 'unit/mock-tests'),
+        createProject('unit-tests/router', 'unit/router-tests'),
+        createProject('integration-tests', 'integration'),
+        createProject('validation-tests', 'validation', { runner: 'jest-serial-runner' })
+    ]
 };
