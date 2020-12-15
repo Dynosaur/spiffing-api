@@ -31,21 +31,8 @@ export const getPosts: RouteHandler<GetPosts.Tx> = async function getPosts(reque
 
 export const getPost: RouteHandler<GetPostEndpoint> = async function getPost(request, actions): Promise<RoutePayload<GetPostEndpoint>> {
     const post = await actions.post.readPosts({ _id: new ObjectId(request.params.id) });
-    if (post.length) {
-        return payload<GetPostFoundResponse>(
-            `Found post ${request.params.id}.`,
-            200,
-            true,
-            { post: convertDbPost(post[0]) }
-        );
-    } else {
-        return payload<GetPostErrorResponse>(
-            `Could not find post ${request.params.id}.`,
-            200,
-            false,
-            { error: 'Post Not Found' }
-        );
-    }
+    if (post.length) return payload<GetPostFoundResponse>(`Found post ${request.params.id}.`, 200, true, { post: convertDbPost(post[0]) });
+    else return payload<GetPostErrorResponse>(`Could not find post ${request.params.id}.`, 200, false, { error: 'Post Not Found' });
 };
 
 export const createPost: RouteHandler<CreatePostEndpoint> = async function createPost(request, actions): Promise<RoutePayload<CreatePostEndpoint>> {
