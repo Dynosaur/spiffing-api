@@ -2,18 +2,20 @@ import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
 import { randomBytes } from 'crypto';
-import { DeregisterEndpoint, PatchEndpoint, PatchUpdatedResponse, RegisterCreatedResponse } from 'app/server/interface/responses/auth-endpoints';
-import { GetUserErrorResponse, GetUserFoundResponse } from 'app/server/interface/responses/api-responses';
+import { Authenticate, Deregister, Patch, Register } from 'app/server/interface/responses/auth-endpoints';
+import { GetUser } from 'app/server/interface/responses/api-responses';
+import { AuthenticationError } from 'app/server/interface/responses/error-responses';
 
 process.env.environment = 'DEV';
 process.env.KEY = randomBytes(32).toString('hex');
 
-describe('authentication and authorization', () => {
+describe('auth router validation', () => {
 
     let app: Express;
     let server: Server;
 
     let username = 'hello';
+    let screenname = username;
     let password = 'world';
 
     beforeEach(async done => {
@@ -34,25 +36,28 @@ describe('authentication and authorization', () => {
                 .post(`/api/user/${username}`)
                 .auth(username, password)
                 .expect(201).then(res => {
-                    expect(res.body).toStrictEqual<RegisterCreatedResponse>({
+                    expect(res.body).toStrictEqual<Register.Ok.Created>({
                         ok: true,
-                        status: 'Ok',
-                        user: expect.objectContaining({
+                        status: 'Created',
+                        user: {
+                            _id: expect.stringMatching(/[a-f\d]{24}/),
+                            created: expect.any(Number),
                             screenname: username,
-                            username
-                        })
+                            username: username
+                        }
                     });
                 });
-
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUserFoundResponse>({
+                    expect(res.body).toStrictEqual<GetUser.Ok.UserFound>({
                         ok: true,
-                        user: expect.objectContaining({
+                        user: {
+                            _id: expect.stringMatching(/[a-f\d]{24}/),
+                            created: expect.any(Number),
                             screenname: username,
-                            username
-                        })
+                            username: username
+                        }
                     });
                 });
 
@@ -63,7 +68,10 @@ describe('authentication and authorization', () => {
                 .post(`/api/user/${username}`)
                 .auth(username, password)
                 .expect(200).then(res => {
-                    expect(res.body.ok).toBe(false);
+                    expect(res.body).toStrictEqual<Register.Failed.UserExists>({
+                        error: 'User Already Exists',
+                        ok: false
+                    });
                 });
 
             done();
@@ -76,7 +84,7 @@ describe('authentication and authorization', () => {
                 .post('/api/authenticate')
                 .auth(username, password)
                 .expect(200).then(res => {
-                    expect(res.body.ok).toBe(true);
+                    expect(res.body).toStrictEqual<Authenticate.Ok>({ ok: true });
                 });
             done();
         });
@@ -85,7 +93,10 @@ describe('authentication and authorization', () => {
                 .post('/api/authenticate')
                 .auth(username, randomBytes(16).toString('hex'))
                 .expect(200).then(res => {
-                    expect(res.body.ok).toBe(false);
+                    expect(res.body).toStrictEqual<Authenticate.Failed>({
+                        error: 'Authorization Failed',
+                        ok: false
+                    });
                 });
             done();
         });
@@ -98,7 +109,7 @@ describe('authentication and authorization', () => {
                 .auth(username, randomBytes(16).toString('hex'))
                 .send({ username: 'hard2explain' })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<PatchEndpoint>({
+                    expect(res.body).toStrictEqual<AuthenticationError.Failed>({
                         error: 'Authorization Failed',
                         ok: false
                     });
@@ -120,7 +131,7 @@ describe('authentication and authorization', () => {
                 .auth(username, password)
                 .send({ username: newUsername })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<PatchUpdatedResponse>({
+                    expect(res.body).toStrictEqual<Patch.Ok.Updated>({
                         ok: true,
                         updated: ['username']
                     });
@@ -143,7 +154,7 @@ describe('authentication and authorization', () => {
                 .auth(username, password)
                 .send({ password: newPassword })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<PatchUpdatedResponse>({
+                    expect(res.body).toStrictEqual<Patch.Ok.Updated>({
                         ok: true,
                         updated: ['password']
                     });
@@ -167,7 +178,7 @@ describe('authentication and authorization', () => {
                 .auth(username, password)
                 .send({ username: newUsername, password: newPassword })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<PatchUpdatedResponse>({
+                    expect(res.body).toStrictEqual<Patch.Ok.Updated>({
                         ok: true,
                         updated: ['username', 'password']
                     });
@@ -192,7 +203,7 @@ describe('authentication and authorization', () => {
                 .delete(`/api/user/${username}`)
                 .auth(username, randomBytes(16).toString('hex'))
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<DeregisterEndpoint>({
+                    expect(res.body).toStrictEqual<AuthenticationError.Failed>({
                         error: 'Authorization Failed',
                         ok: false
                     });
@@ -200,11 +211,14 @@ describe('authentication and authorization', () => {
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUserFoundResponse>({
+                    expect(res.body).toStrictEqual<GetUser.Ok.UserFound>({
                         ok: true,
-                        user: expect.objectContaining({
+                        user: {
+                            _id: expect.stringMatching(/[a-f\d]{24}/),
+                            created: expect.any(Number),
+                            screenname: screenname,
                             username
-                        })
+                        }
                     });
                 });
             done();
@@ -214,12 +228,12 @@ describe('authentication and authorization', () => {
                 .delete(`/api/user/${username}`)
                 .auth(username, password)
                 .expect(200).then(res => {
-                    expect(res.body.ok).toBe(true);
+                    expect(res.body).toStrictEqual<Deregister.Ok>({ ok: true });
                 });
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUserErrorResponse>({
+                    expect(res.body).toStrictEqual<GetUser.Failed.UserNotFound>({
                         error: 'User Not Found',
                         ok: false
                     });
