@@ -10,17 +10,20 @@ describe('api route handlers', () => {
     describe('getUser', () => {
         it('should return user data', async done => {
             const mock = new MockEnvironment({ userFill: 3 });
-            const user = mock.createUser();
-            mock.request.params.username = user.username;
+            const username = 'hello';
+            mock.createUser(username);
+            mock.request.params.username = username;
 
             const resp = await mock.runRouteHandler(getUser);
-            expect(mock.users.findSpy).toBeCalledWith({ username: user.username });
+            expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(resp.payload).toStrictEqual<GetUser.Ok.UserFound>({
                 ok: true,
-                user: expect.objectContaining({
-                    _id: user._id.toHexString(),
-                    username: user.username
-                })
+                user: {
+                    _id: expect.stringMatching(/[a-f\d]{24}/),
+                    created: expect.any(Number),
+                    screenname: username,
+                    username
+                }
             });
 
             done();
@@ -48,14 +51,14 @@ describe('api route handlers', () => {
             expect(response.payload).toStrictEqual<GetPosts.PostsFound>({
                 ok: true,
                 posts: expect.arrayContaining([expect.objectContaining<Post>({
-                    _id: expect.any(String),
-                    author: expect.any(String),
-                    comments: expect.any(Array),
-                    content: expect.any(String),
+                    _id: expect.stringMatching(/[a-f\d]{24}/),
+                    author: expect.stringMatching(/[a-f\d]{24}/),
+                    comments: [],
+                    content: MockEnvironment.defaultContent,
                     date: expect.any(Number),
-                    dislikes: expect.any(Number),
-                    likes: expect.any(Number),
-                    title: expect.any(String)
+                    dislikes: 0,
+                    likes: 0,
+                    title: MockEnvironment.defaultTitle
                 })])
             });
 
@@ -105,7 +108,16 @@ describe('api route handlers', () => {
             expect(mock.posts.findSpy).toBeCalledWith({ _id: post._id });
             expect(resp.payload).toStrictEqual<GetPostFoundResponse>({
                 ok: true,
-                post: convertDbPost(post)
+                post: {
+                    _id: expect.stringMatching(/[a-f\d]{24}/),
+                    author: expect.stringMatching(/[a-f\d]{24}/),
+                    comments: [],
+                    content: MockEnvironment.defaultContent,
+                    date: expect.any(Number),
+                    dislikes: 0,
+                    likes: 0,
+                    title: MockEnvironment.defaultTitle
+                }
             });
 
             done();
@@ -135,7 +147,7 @@ describe('api route handlers', () => {
             mock.request.body.content = content;
             mock.request.body.title = title;
 
-            const resp = await mock.runRouteHandler(createPost);
+            const response = await mock.runRouteHandler(createPost);
             expect(mock.posts.insertOneSpy).toBeCalled();
             expect(mock.posts.data[0]).toStrictEqual<DbPost>({
                 _id: expect.any(ObjectId),
@@ -146,7 +158,7 @@ describe('api route handlers', () => {
                 likes: 0,
                 title
             });
-            expect(resp.payload).toStrictEqual<CreatePost.Ok.Created>({
+            expect(response.payload).toStrictEqual<CreatePost.Ok.Created>({
                 ok: true,
                 post: {
                     _id: expect.stringMatching(/[a-f\d]{24}/),

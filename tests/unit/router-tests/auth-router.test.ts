@@ -1,7 +1,9 @@
 import { hash } from 'tools/crypto';
+import { DbUser } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock/mock-environment';
 import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 import { authenticate, deregister, patchUser, register } from 'server/router/auth-router';
+import { ObjectId } from 'mongodb';
 
 describe('auth unit tests', () => {
     describe('register', () => {
@@ -19,8 +21,16 @@ describe('auth unit tests', () => {
             const password = 'world';
 
             await mock.runRouteHandler(register, { username, password });
-            expect(mock.users.insertOneSpy).toBeCalledWith(expect.objectContaining({ username, password }));
-            expect(mock.users.data[0]).toEqual(expect.objectContaining({ username, password }));
+            expect(mock.users.insertOneSpy).toBeCalled();
+            expect(mock.users.data[0]).toStrictEqual<DbUser>({
+                _id: expect.any(ObjectId),
+                password: {
+                    hash: expect.stringMatching(/[a-f\d]{32}/),
+                    salt: expect.stringMatching(/[a-f\d]{32}/)
+                },
+                screenname: username,
+                username
+            });
 
             done();
         });
