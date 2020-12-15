@@ -1,6 +1,6 @@
 import { missingData } from './response-functions';
 import { RoutePayload } from './route-infra';
-import { MissingDataErrorResponse } from '../interface/responses/error-responses';
+import { MissingDataError } from '../interface/responses/error-responses';
 
 function keyCheck(keys: string[], object: object): string[] {
     const missing: string[] = [];
@@ -21,11 +21,11 @@ function replaceObject(replace: object, object: object): object {
     return object;
 }
 
-export function checkScope(required: string, replace: object, scope: object, name: string): RoutePayload<MissingDataErrorResponse>;
-export function checkScope(required: string[], replace: object, scope: object, name: string): RoutePayload<MissingDataErrorResponse>;
-export function checkScope(required: string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataErrorResponse>;
-export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataErrorResponse>;
-export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataErrorResponse> {
+export function checkScope(required: string, replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
+export function checkScope(required: string[], replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
+export function checkScope(required: string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
+export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
+export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataError> {
     if (required instanceof Array) {
         if (required[0] instanceof Array) {
             required = required as string[][];
