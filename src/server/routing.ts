@@ -92,11 +92,4 @@ export class RouteRegister {
         this.registered.push({ path: new UrlPath(path), methods: [method] });
     }
 
-    isPathRegistered(path: string): UrlPath {
-        for (const reg of this.registered) {
-            if (reg.path.original === path) {
-                return reg.path;
-            }
-        }
-    }
 }
