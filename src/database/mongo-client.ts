@@ -24,7 +24,14 @@ export class MongoClient {
             useNewUrlParser: true,
             useUnifiedTopology: true
         });
-        this.client = await client.connect();
+
+        try {
+            this.client = await client.connect();
+        } catch (error) {
+            if (error.message === 'Invalid connection string') throw new Error(`Could not connect using database url: ${this.databaseUrl}`);
+            throw new Error(error);
+        }
+
         if (this.verbose) chalk.lime('\tSuccessfully connected');
         this.db = this.client.db(this.databaseName);
         if (this.verbose) chalk.lime('\tMongoDB client successfully initialized');
