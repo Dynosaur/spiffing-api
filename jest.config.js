@@ -7,7 +7,6 @@ function createProject(name, path, other) {
         moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' }),
         testMatch: [`<rootDir>/tests/${path}/**/*.ts`],
         transform: { '^.+\\.(ts|tsx)$': 'ts-jest' },
-        verbose: true,
         ...other
     }
 }
