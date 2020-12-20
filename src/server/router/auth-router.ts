@@ -10,7 +10,6 @@ export const register: RouteHandler<Register.Tx> = async function register(reque
 
     const user = await actions.user.createUser(args.username, actions.common.securePassword(args.password));
     return payload<Register.Ok.Created>(`Successfully created new user ${args.username}`, 201, true, {
-        status: 'Created',
         user: user.toInterface()
     });
 };

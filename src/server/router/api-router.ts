@@ -1,8 +1,8 @@
 import { Post } from '../interface/data-types';
 import { ObjectId } from 'mongodb';
 import { convertDbPost } from 'database/data-types';
+import { CreatePost, GetPost, GetPosts, GetUser } from 'interface/responses/api-responses';
 import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
-import { CreatePostCreatedResponse, CreatePostEndpoint, GetPostEndpoint, GetPostErrorResponse, GetPostFoundResponse, GetPosts, GetUser } from 'interface/responses/api-responses';
 
 export const getUser: RouteHandler<GetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<GetUser.Tx>> {
     const username = request.params.username;
@@ -29,16 +29,24 @@ export const getPosts: RouteHandler<GetPosts.Tx> = async function getPosts(reque
     });
 };
 
-export const getPost: RouteHandler<GetPostEndpoint> = async function getPost(request, actions): Promise<RoutePayload<GetPostEndpoint>> {
+export const getPost: RouteHandler<GetPost.Tx> = async function getPost(request, actions): Promise<RoutePayload<GetPost.Tx>> {
     const post = await actions.post.readPosts({ _id: new ObjectId(request.params.id) });
-    if (post.length) return payload<GetPostFoundResponse>(`Found post ${request.params.id}.`, 200, true, { post: convertDbPost(post[0]) });
-    else return payload<GetPostErrorResponse>(`Could not find post ${request.params.id}.`, 200, false, { error: 'Post Not Found' });
+    if (post.length) return payload<GetPost.Ok.FoundPost>(`Found post ${request.params.id}.`, 200, true, { post: convertDbPost(post[0]) });
+    else return payload<GetPost.Failed.NoPost>(`Could not find post ${request.params.id}.`, 200, false, { error: 'Post Not Found' });
 };
 
-export const createPost: RouteHandler<CreatePostEndpoint> = async function createPost(request, actions): Promise<RoutePayload<CreatePostEndpoint>> {
-    const postAuthor = new ObjectId(request.body.author);
+export const createPost: RouteHandler<CreatePost.Tx> = async function createPost(request, actions): Promise<RoutePayload<CreatePost.Tx>> {
+    let postAuthor: ObjectId;
+    try {
+        postAuthor = new ObjectId(request.body.author);
+    } catch (e) {
+        return payload<CreatePost.Failed.Parse>(`Could not parse request author id "${request.body.author}" into ObjectId`, 400, false, {
+            error: 'Parsing Error',
+            path: { body: { author: request.body.author } }
+        });
+    }
     const post = await actions.post.createPost(postAuthor, request.body.title, request.body.content);
-    return payload<CreatePostCreatedResponse>('Successfully created post.', 201, true, { post: convertDbPost(post) });
+    return payload<CreatePost.Ok.Created>('Successfully created post.', 201, true, { post: convertDbPost(post) });
 };
 
 export const routes: RouteInfo[] = [
