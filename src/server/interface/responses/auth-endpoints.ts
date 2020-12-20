@@ -1,27 +1,25 @@
 import { User } from '../data-types';
-import { AuthenticationError } from './error-responses';
+import { Automated } from './error-responses';
 import { ErrorResponse, OkResponse } from '../response';
 
 export namespace Register {
     export namespace Failed {
         export interface UserExists extends ErrorResponse<'User Already Exists'> { }
-        export type Tx = AuthenticationError.Tx | UserExists;
+        export type Tx = Automated.Tx | UserExists;
     }
 
     export namespace Ok {
         export interface Created extends OkResponse {
-            status: 'Created';
             user: User;
         }
-        export interface Test extends OkResponse { status: 'Test'; }
-        export type Tx = Created | Test;
+        export type Tx = Created;
     }
 
     export type Tx = Failed.Tx | Ok.Tx;
 }
 
 export namespace Authenticate {
-    export type Failed = AuthenticationError.Tx;
+    export type Failed = Automated.Tx;
     export type Ok = OkResponse;
     export type Tx = Failed | Ok;
 }
@@ -29,7 +27,7 @@ export namespace Authenticate {
 export namespace Deregister {
     export namespace Failed {
         export interface NoUser extends ErrorResponse<'No User'> { }
-        export type Tx = AuthenticationError.Tx | NoUser;
+        export type Tx = Automated.Tx | NoUser;
     }
 
     export type Ok = OkResponse;
@@ -40,7 +38,7 @@ export namespace Deregister {
 export namespace Patch {
     export namespace Failed {
         export interface NoUser extends ErrorResponse<'No User'> { }
-        export type Tx = AuthenticationError.Tx | NoUser;
+        export type Tx = Automated.Tx | NoUser;
     }
 
     export namespace Ok {

@@ -1,25 +1,33 @@
 import { ErrorResponse } from '../response';
 
-export interface MissingDataError extends ErrorResponse<'Missing Requirements'> {
-    missing: {
-        possible: string[][];
-        provided: string[];
-        scope: string;
-    };
-}
+export namespace Automated {
+    export namespace Failed {
+        export namespace Database {
+            export interface NoConnection extends ErrorResponse<'No Connection to Database'> { }
 
-export interface AuthParseErrorResponse extends ErrorResponse<'Authorization Header Parse'> {
-    field: 'username' | 'password' | 'type' | 'username param';
-}
+            export type Tx = NoConnection;
+        }
 
-export type UnauthorizedErrorResponse = ErrorResponse<'Authorization Failed'>;
-export type AuthenticateErrorResponse = UnauthorizedErrorResponse | AuthParseErrorResponse | MissingDataError ;
+        export interface Parse extends ErrorResponse<'Authorization Header Parse'> {
+            field: 'username' | 'password' | 'type' | 'username param';
+        }
 
-export namespace AuthenticationError {
-    export interface ParsingError extends ErrorResponse<'Authorization Header Parse'> {
-        field: 'username' | 'password' | 'type' | 'username param';
+        export interface MissingData extends ErrorResponse<'Missing Requirements'> {
+            missing: {
+                possible: string[][];
+                provided: string[];
+                scope: string;
+            };
+        }
+
+        export interface Unauthorized extends ErrorResponse<'Authorization Failed'> { }
+
+        export interface Unknown extends ErrorResponse<'Unknown'> {
+            errorObject: object;
+        }
+
+        export type Tx = Database.Tx | MissingData | Parse | Unauthorized | Unknown;
     }
-    export type Failed = ErrorResponse<'Authorization Failed'>;
 
-    export type Tx = MissingDataError | ParsingError | Failed;
+    export type Tx = Failed.Tx;
 }

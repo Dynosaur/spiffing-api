@@ -1,21 +1,6 @@
+import { Automated } from './error-responses';
 import { Post, User } from '../data-types';
-import { AuthenticateErrorResponse } from './error-responses';
 import { ErrorResponse, OkResponse } from '../response';
-
-export interface GetPostFoundResponse extends OkResponse {
-    post: Post;
-}
-export interface GetPostErrorResponse extends ErrorResponse<'Post Not Found'> { }
-export type GetPostEndpoint =
-    GetPostErrorResponse |
-    GetPostFoundResponse;
-
-export interface CreatePostCreatedResponse extends OkResponse {
-    post: Post;
-}
-export type CreatePostEndpoint =
-    AuthenticateErrorResponse |
-    CreatePostCreatedResponse;
 
 export namespace GetUser {
     export namespace Failed {
@@ -33,6 +18,24 @@ export namespace GetUser {
     export type Tx = Failed.Tx | Ok.Tx;
 }
 
+export namespace GetPost {
+    export namespace Failed {
+        export interface NoPost extends ErrorResponse<'Post Not Found'> { }
+
+        export type Tx = NoPost;
+    }
+
+    export namespace Ok {
+        export interface FoundPost extends OkResponse {
+            post: Post;
+        }
+
+        export type Tx = FoundPost;
+    }
+
+    export type Tx = Failed.Tx | Ok.Tx;
+}
+
 export namespace GetPosts {
     export interface PostsFound extends OkResponse {
         posts: Post[];
@@ -45,7 +48,11 @@ export namespace GetPosts {
 
 export namespace CreatePost {
     export namespace Failed {
-        export type Tx = AuthenticateErrorResponse;
+        export interface Parse extends ErrorResponse<'Parsing Error'> {
+            path: object;
+        }
+
+        export type Tx = Automated.Tx | Parse;
     }
 
     export namespace Ok {
