@@ -12,6 +12,7 @@ import express, { Response } from 'express';
 import { DatabaseInterface } from 'app/database/dbi/database-interface';
 import { routes as apiRoutes } from 'server/router/api-router';
 import { executeRouteHandler } from 'server/route-handling/route-handler';
+import { Server as NodeServer } from 'http';
 import { routes as authRoutes } from 'server/router/auth-router';
 import { RouteRegister, UrlPath } from 'server/routing';
 import { DbComment, DbPost, DbUser } from 'app/database/data-types';
@@ -20,6 +21,7 @@ import { DatabaseActions, RouteInfo } from 'server/route-handling/route-infra';
 export class Server {
 
     app = express();
+    server: NodeServer;
     mongo: MongoClient;
     routeRegister = new RouteRegister();
 
@@ -51,7 +53,11 @@ export class Server {
                 dbUri = process.env.DB_URL;
                 break;
             default:
-                throw new Error('Unknown environment: ' + process.env.environment);
+                throw new Error(`process.env.environment key is ${process.env.environment}, please use "DEV" or "PROD"`);
+        }
+
+        if (!process.env.KEY || !/[a-f\d]{32}/.test(process.env.key)) {
+            throw new Error(`Expected process.env.environment to be a string of 64 bits in hexadecimal. Received: ${process.env.key} of type ${typeof process.env.KEY}`);
         }
 
         this.mongo = new MongoClient(dbUri, 'spiffing', this.verbose);
@@ -121,9 +127,8 @@ export class Server {
         });
     }
 
-    start(port: number): void {
-        this.initialize().then(() => {
-            this.app.listen(port, () => chalk.yellow(`Listening on port ${port}\n`));
-        }).catch(e => { throw e; });
+    async start(port: number): Promise<void> {
+        await this.initialize();
+        this.server = this.app.listen(port, () => chalk.yellow(`Listening on port ${port}\n`));
     }
 }
