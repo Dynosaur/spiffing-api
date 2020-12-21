@@ -1,22 +1,23 @@
 import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
+import { GetUser } from 'interface/responses/api-responses';
+import { Automated } from 'interface/responses/error-responses';
 import { randomBytes } from 'crypto';
-import { Authenticate, Deregister, Patch, Register } from 'app/server/interface/responses/auth-endpoints';
-import { GetUser } from 'app/server/interface/responses/api-responses';
-import { AuthenticationError } from 'app/server/interface/responses/error-responses';
+import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 
-process.env.environment = 'DEV';
-process.env.KEY = randomBytes(32).toString('hex');
 
 describe('auth router validation', () => {
-
     let app: Express;
     let server: Server;
-
     let username = 'hello';
     let screenname = username;
     let password = 'world';
+
+    beforeAll(() => {
+        process.env.environment = 'DEV';
+        process.env.KEY = randomBytes(32).toString('hex');
+    });
 
     beforeEach(async done => {
         server = new Server(false);
@@ -35,10 +36,9 @@ describe('auth router validation', () => {
             await supertest(app)
                 .post(`/api/user/${username}`)
                 .auth(username, password)
-                .expect(201).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<Register.Ok.Created>({
                         ok: true,
-                        status: 'Created',
                         user: {
                             _id: expect.stringMatching(/[a-f\d]{24}/),
                             created: expect.any(Number),
@@ -109,7 +109,7 @@ describe('auth router validation', () => {
                 .auth(username, randomBytes(16).toString('hex'))
                 .send({ username: 'hard2explain' })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<AuthenticationError.Failed>({
+                    expect(res.body).toStrictEqual<Automated.Failed.Unauthorized>({
                         error: 'Authorization Failed',
                         ok: false
                     });
@@ -203,7 +203,7 @@ describe('auth router validation', () => {
                 .delete(`/api/user/${username}`)
                 .auth(username, randomBytes(16).toString('hex'))
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<AuthenticationError.Failed>({
+                    expect(res.body).toStrictEqual<Automated.Failed.Unauthorized>({
                         error: 'Authorization Failed',
                         ok: false
                     });
