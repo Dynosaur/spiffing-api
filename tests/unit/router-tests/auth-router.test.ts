@@ -1,9 +1,9 @@
 import { hash } from 'tools/crypto';
 import { DbUser } from 'database/data-types';
+import { ObjectId } from 'mongodb';
 import { MockEnvironment } from 'tests/mock/mock-environment';
 import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 import { authenticate, deregister, patchUser, register } from 'server/router/auth-router';
-import { ObjectId } from 'mongodb';
 
 describe('auth unit tests', () => {
     describe('register', () => {
@@ -42,7 +42,6 @@ describe('auth unit tests', () => {
             const resp = await mock.runRouteHandler(register, { username, password });
             expect(resp.payload).toStrictEqual<Register.Ok.Created>({
                 ok: true,
-                status: 'Created',
                 user: expect.objectContaining({ username })
             });
 
