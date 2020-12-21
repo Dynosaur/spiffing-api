@@ -1,4 +1,4 @@
-import { couldNotParseRequest } from '../../src/server/route-handling/response-functions';
+import { parsingError } from '../../src/server/route-handling/response-functions';
 import { decodeBasicAuth, decodeHttp, DecodeResult, encodeBasicAuth, encodeHttp } from '../../src/tools/auth';
 
 describe('auth tools', () => {
@@ -29,32 +29,32 @@ describe('auth tools', () => {
 
     it('decodeBasicAuth', () => {
         expect(decodeBasicAuth('Basic aGVsbG86d29ybGQ=')).toStrictEqual<DecodeResult>({
-            status: 'ok',
+            ok: true,
             username: 'hello',
             password: 'world'
         });
         expect(decodeBasicAuth('Basic ZGlmZmljdWx0JTIwdG8lM0FQYXJzZTpJJTIwSEFURSUzQVBBU1NXT1JEUyUyMCUyMA==')).toStrictEqual<DecodeResult>({
-            status: 'ok',
+            ok: true,
             username: 'difficult to:Parse',
             password: 'I HATE:PASSWORDS  '
         });
         expect(decodeBasicAuth('Basic JTNBJTNBTWFrZSUyMGluZyUyMCUzQSUzQUlUJTNBRElGRklDVUxUJTIwJTIwJTNBJTNBJTNBOiUzQSUzQUxPTCUyMCUyMA==')).toStrictEqual<DecodeResult>({
-            status: 'ok',
+            ok: true,
             username: '::Make ing ::IT:DIFFICULT  :::',
             password: '::LOL  '
         });
 
         expect(decodeBasicAuth('')).toStrictEqual<DecodeResult>({
-            status: 'error',
-            error: couldNotParseRequest('type')
+            ok: false,
+            error: parsingError('type')
         });
         expect(decodeBasicAuth('Basic ')).toStrictEqual<DecodeResult>({
-            status: 'error',
-            error: couldNotParseRequest('username')
+            ok: false,
+            error: parsingError('username')
         });
         expect(decodeBasicAuth('Basic dXNlcm5hbWU6')).toStrictEqual<DecodeResult>({
-            status: 'error',
-            error: couldNotParseRequest('password')
+            ok: false,
+            error: parsingError('password')
         });
     });
 

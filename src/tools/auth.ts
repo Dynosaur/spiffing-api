@@ -1,6 +1,6 @@
-import { RoutePayload } from '../server/route-handling/route-infra';
-import { couldNotParseRequest } from '../server/route-handling/response-functions';
-import { AuthParseErrorResponse } from '../server/interface/responses/error-responses';
+import { Automated } from 'interface/responses/error-responses';
+import { RoutePayload } from 'server/route-handling/route-infra';
+import { parsingError } from 'server/route-handling/response-functions';
 
 const encodeMap = new Map();
 encodeMap.set(' ', '%20');
@@ -21,18 +21,18 @@ export function encodeHttp(s: string): string {
 }
 
 export type DecodeResult = {
-    status: 'ok';
+    ok: true;
     username: string;
     password: string;
 } | {
-    status: 'error';
-    error: RoutePayload<AuthParseErrorResponse>;
+    ok: false;
+    error: RoutePayload<Automated.Failed.Tx>;
 }
 
 export function decodeBasicAuth(authorizationHeader: string): DecodeResult {
     const basicRegex = authorizationHeader.match(/^Basic /);
     if (!basicRegex) {
-        return { status: 'error', error: couldNotParseRequest('type') };
+        return { ok: false, error: parsingError('type') };
     }
 
     const base64 = authorizationHeader.substring(6);
@@ -40,20 +40,20 @@ export function decodeBasicAuth(authorizationHeader: string): DecodeResult {
 
     const usernameRegex = httpEncoded.match(/^(.+):/);
     if (!usernameRegex) {
-        return { status: 'error', error: couldNotParseRequest('username') };
+        return { ok: false, error: parsingError('username') };
     }
     const username = decodeHttp(usernameRegex[1]);
 
     const passwordRegex = httpEncoded.match(/:(.+)$/);
     if (!passwordRegex) {
-        return { status: 'error', error: couldNotParseRequest('password') };
+        return { ok: false, error: parsingError('password') };
     }
     const password = decodeHttp(passwordRegex[1]);
 
-    return { status: 'ok', username, password };
+    return { ok: true, username, password };
 }
 
-export function encodeBasicAuth(username:string, password:string):string {
+export function encodeBasicAuth(username: string, password: string): string {
     username = encodeHttp(username);
     password = encodeHttp(password);
 
