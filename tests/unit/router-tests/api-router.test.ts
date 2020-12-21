@@ -3,8 +3,8 @@ import { DbPost } from 'app/database/data-types';
 import { ObjectId } from 'mongodb';
 import { convertDbPost } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock/mock-environment';
-import { getPost, getPosts, getUser, createPost } from 'server/router/api-router';
-import { CreatePost, GetPostErrorResponse, GetPostFoundResponse, GetPosts, GetUser } from 'interface/responses/api-responses';
+import { createPost, getPost, getPosts, getUser } from 'server/router/api-router';
+import { CreatePost, GetPosts, GetPost, GetUser } from 'interface/responses/api-responses';
 
 describe('api route handlers', () => {
     describe('getUser', () => {
@@ -104,9 +104,9 @@ describe('api route handlers', () => {
             const post = mock.createPost();
             mock.request.params.id = post._id.toHexString();
 
-            const resp = await mock.runRouteHandler(getPost);
+            const response = await mock.runRouteHandler(getPost);
             expect(mock.posts.findSpy).toBeCalledWith({ _id: post._id });
-            expect(resp.payload).toStrictEqual<GetPostFoundResponse>({
+            expect(response.payload).toStrictEqual<GetPost.Ok.FoundPost>({
                 ok: true,
                 post: {
                     _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -129,7 +129,7 @@ describe('api route handlers', () => {
 
             const response = await mock.runRouteHandler(getPost);
             expect(mock.posts.findSpy).toBeCalledWith({ _id: id });
-            expect(response.payload).toStrictEqual<GetPostErrorResponse>({
+            expect(response.payload).toStrictEqual<GetPost.Failed.NoPost>({
                 error: 'Post Not Found',
                 ok: false
             });
