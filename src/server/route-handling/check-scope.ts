@@ -1,6 +1,6 @@
-import { missingData } from './response-functions';
-import { RoutePayload } from './route-infra';
-import { MissingDataError } from '../interface/responses/error-responses';
+import { Automated } from 'interface/responses/error-responses';
+import { missingData } from 'server/route-handling/response-functions';
+import { RoutePayload } from 'server/route-handling/route-infra';
 
 function keyCheck(keys: string[], object: object): string[] {
     const missing: string[] = [];
@@ -21,11 +21,11 @@ function replaceObject(replace: object, object: object): object {
     return object;
 }
 
-export function checkScope(required: string, replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
-export function checkScope(required: string[], replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
-export function checkScope(required: string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
-export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataError>;
-export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<MissingDataError> {
+export function checkScope(required: string, replace: object, scope: object, name: string): RoutePayload<Automated.Failed.MissingData>;
+export function checkScope(required: string[], replace: object, scope: object, name: string): RoutePayload<Automated.Failed.MissingData>;
+export function checkScope(required: string[][], replace: object, scope: object, name: string): RoutePayload<Automated.Failed.MissingData>;
+export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<Automated.Failed.MissingData>;
+export function checkScope(required: string | string[] | string[][], replace: object, scope: object, name: string): RoutePayload<Automated.Failed.MissingData> {
     if (required instanceof Array) {
         if (required[0] instanceof Array) {
             required = required as string[][];
