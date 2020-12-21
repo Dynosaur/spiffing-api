@@ -111,9 +111,7 @@ export class Cipher {
     private algorithm = 'aes-256-cbc';
 
     constructor(public key = randomBytes(32)) {
-        if (key.length !== 32) {
-            throw new Error(`Key must be 32 bytes long! Provided length: ${key.length}`);
-        }
+        if (key.length !== 32) throw new Error(`Key must be 32 bytes long! Provided length: ${key.length}`);
     }
 
     encrypt(plain: string): string {
@@ -138,11 +136,9 @@ export class Cipher {
 
         try {
             plain = Buffer.concat([plain, decipher.final()]);
-        } catch (e) {
-            if (e?.reason === 'bad decrypt') {
-                throw new Error('Bad decrypt: this is usually caused by mismatched keys.');
-            }
-            throw new Error();
+        } catch (error) {
+            if (error.reason === 'bad decrypt') throw new Error('Bad decrypt: this is usually caused by mismatched keys.');
+            throw error;
         }
 
         return plain.toString();
