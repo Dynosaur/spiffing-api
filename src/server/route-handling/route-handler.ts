@@ -1,12 +1,25 @@
 import { chalk } from 'tools/chalk';
 import { Request } from 'express';
+import { Automated } from 'interface/responses/error-responses';
 import { checkScope } from 'server/route-handling/check-scope';
-import { unauthorized } from 'server/route-handling/response-functions';
 import { decodeBasicAuth } from 'tools/auth';
-import { DatabaseActions } from './route-infra';
+import { DatabaseActions } from 'server/route-handling/route-infra';
 import { RoutePayload, RouteHandler, RouteHandlerRequirements } from 'server/route-handling/route-infra';
+import { noDatabaseConnection, paramAuthMismatch, unauthorized, unknown } from 'server/route-handling/response-functions';
 
 export async function executeRouteHandler(request: Request, actions: DatabaseActions, handler: RouteHandler<any>, requirements?: RouteHandlerRequirements, verbose = true): Promise<void> {
+    function sendPayload(request: Request, payload: RoutePayload<Automated.Tx>, verbose = true): void {
+        request.res.status(payload.httpCode).send(payload.payload);
+        if (verbose) {
+            const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
+            if (payload.payload.ok) {
+                chalk.lime(`SUCCESS: ${message}`);
+            } else {
+                chalk.rust(`FAILED: ${message}`);
+            }
+        }
+    }
+
     const routeHandlerArgs: any = {};
 
     if (requirements) {
@@ -33,16 +46,13 @@ export async function executeRouteHandler(request: Request, actions: DatabaseAct
                 }
             }
             const decoded = decodeBasicAuth(request.headers.authorization);
-            if (decoded.status === 'error') {
+            if (decoded.ok === false) {
                 sendPayload(request, decoded.error, verbose);
                 return;
             }
             if (requirements.auth.checkParamUsername) {
                 if (request.params.username !== decoded.username) {
-                    if (verbose) {
-                        chalk.rust('Request failed authentication:\nRequest params username does not match decoded header username.');
-                    }
-                    request.res.status(400).send({ status: 'BAD_REQUEST' });
+                    sendPayload(request, paramAuthMismatch(), verbose);
                     return;
                 }
             }
@@ -72,11 +82,12 @@ export async function executeRouteHandler(request: Request, actions: DatabaseAct
     try {
         routePayload = await handler(request, actions, routeHandlerArgs);
     } catch (error) {
-        if (verbose) {
-            chalk.red(`ERROR: route handler "${handler.name}" threw an error. Responding with default 500 error.`);
-            chalk.red(error);
+        if (verbose) chalk.red(`ERROR: route handler "${handler.name}" threw an error: ${error.message}`);
+        if (error.message === 'Topology is closed, please connect') {
+            sendPayload(request, noDatabaseConnection(), verbose);
+            return;
         }
-        request.res.status(500).send({ status: 'ERROR', message: 'An error occurred while responding to the request.', error });
+        sendPayload(request, unknown(error), verbose);
         return;
     }
 
@@ -89,18 +100,5 @@ export async function executeRouteHandler(request: Request, actions: DatabaseAct
 
     if (verbose) {
         console.log(''); // eslint-disable-line
-    }
-}
-
-function sendPayload(request: Request, payload: RoutePayload<any>, verbose = true): void {
-    request.res.status(payload.httpCode).send(payload.payload);
-
-    if (verbose) {
-        const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
-        if (payload.payload.ok) {
-            chalk.lime(`SUCCESS: ${message}`);
-        } else {
-            chalk.rust(`FAILED: ${message}`);
-        }
     }
 }
