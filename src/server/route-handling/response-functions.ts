@@ -34,3 +34,14 @@ export function paramAuthMismatch(): RoutePayload<Automated.Failed.Parse> {
         field: 'username param'
     });
 }
+
+export function noDatabaseConnection(): RoutePayload<Automated.Failed.Database.NoConnection> {
+    return payload<Automated.Failed.Database.NoConnection>('No connection to database.', 200, false, { error: 'No Connection to Database' });
+}
+
+export function unknown(errorObject: Error): RoutePayload<Automated.Failed.Unknown> {
+    return payload<Automated.Failed.Unknown>(`An error that not expected occurred: ${errorObject.message}`, 200, false, {
+        error: 'Unknown',
+        errorObject
+    });
+}
