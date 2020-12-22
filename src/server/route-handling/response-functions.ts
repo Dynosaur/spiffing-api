@@ -42,6 +42,9 @@ export function noDatabaseConnection(): RoutePayload<Automated.Failed.Database.N
 export function unknown(errorObject: Error): RoutePayload<Automated.Failed.Unknown> {
     return payload<Automated.Failed.Unknown>(`An error that not expected occurred: ${errorObject.message}`, 200, false, {
         error: 'Unknown',
-        errorObject
+        errorObject: {
+            message: errorObject.message,
+            name: errorObject.name
+        }
     });
 }
