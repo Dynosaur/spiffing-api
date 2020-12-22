@@ -22,7 +22,9 @@ export namespace GetPost {
     export namespace Failed {
         export interface NoPost extends ErrorResponse<'Post Not Found'> { }
 
-        export type Tx = NoPost;
+        export interface IDParse extends ErrorResponse<'Could Not Parse ID'> { }
+
+        export type Tx = IDParse | NoPost;
     }
 
     export namespace Ok {
