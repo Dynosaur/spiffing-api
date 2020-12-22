@@ -1,6 +1,5 @@
 import { Post } from '../interface/data-types';
 import { ObjectId } from 'mongodb';
-import { convertDbPost } from 'database/data-types';
 import { CreatePost, GetPost, GetPosts, GetUser } from 'interface/responses/api-responses';
 import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
 
@@ -30,8 +29,16 @@ export const getPosts: RouteHandler<GetPosts.Tx> = async function getPosts(reque
 };
 
 export const getPost: RouteHandler<GetPost.Tx> = async function getPost(request, actions): Promise<RoutePayload<GetPost.Tx>> {
-    const post = await actions.post.readPosts({ _id: new ObjectId(request.params.id) });
-    if (post.length) return payload<GetPost.Ok.FoundPost>(`Found post ${request.params.id}.`, 200, true, { post: convertDbPost(post[0]) });
+    let _id: ObjectId;
+    try {
+        _id = new ObjectId(request.params.id);
+    } catch (error) {
+        if (error.message === 'Argument passed in must be a single String of 12 bytes or a string of 24 hex characters')
+            return payload<GetPost.Failed.IDParse>('Could not parse ID param', 200, false, { error: 'Could Not Parse ID' });
+        else throw error;
+    }
+    const post = await actions.post.readPosts({ _id });
+    if (post.length) return payload<GetPost.Ok.FoundPost>(`Found post ${request.params.id}.`, 200, true, { post: post[0].toInterface() });
     else return payload<GetPost.Failed.NoPost>(`Could not find post ${request.params.id}.`, 200, false, { error: 'Post Not Found' });
 };
 
@@ -46,7 +53,7 @@ export const createPost: RouteHandler<CreatePost.Tx> = async function createPost
         });
     }
     const post = await actions.post.createPost(postAuthor, request.body.title, request.body.content);
-    return payload<CreatePost.Ok.Created>('Successfully created post.', 201, true, { post: convertDbPost(post) });
+    return payload<CreatePost.Ok.Created>('Successfully created post.', 201, true, { post: post.toInterface() });
 };
 
 export const routes: RouteInfo[] = [
