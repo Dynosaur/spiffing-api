@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb';
 import { Automated } from 'interface/responses/error-responses';
 import { Deregister } from 'interface/responses/auth-endpoints';
 import { randomBytes } from 'crypto';
-import { CreatePost, GetPost, GetPosts, GetUser } from 'interface/responses/api-responses';
+import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
 
 describe('api router validation', () => {
     let app: Express;
@@ -257,6 +257,60 @@ describe('api router validation', () => {
                     posts: [],
                     'query-allowed': ['author'],
                     'query-blocked': ['random', 'tag']
+                });
+            });
+            done();
+        });
+    });
+
+    describe('rate post', () => {
+        it('should required a rating field in the request body', async done => {
+            await supertest(app).post(`/api/rate/post/${postIds[0]}`).then(response => {
+                expect(response.body).toStrictEqual<Automated.Failed.MissingData>({
+                    error: 'Missing Requirements',
+                    missing: {
+                        possible: [['rating']],
+                        provided: [],
+                        scope: 'body'
+                    },
+                    ok: false
+                });
+            });
+            done();
+        });
+        it('should require authorization', async done => {
+            await supertest(app).post(`/api/rate/post/${postIds[0]}`).send({ rating: 1 }).then(response => {
+                expect(response.body).toStrictEqual<Automated.Failed.MissingData>({
+                    error: 'Missing Requirements',
+                    missing: {
+                        possible: [['authorization']],
+                        provided: expect.any(Array),
+                        scope: 'headers'
+                    },
+                    ok: false
+                });
+            });
+            done();
+        });
+        it('should rate', async done => {
+            await supertest(app)
+            .post(`/api/rate/post/${postIds[0]}`)
+            .send({ rating: 1 })
+            .auth(testUser.username, testUser.password)
+            .then(response => {
+                expect(response.body).toStrictEqual<RatePost.Ok>({ ok: true });
+            });
+            done();
+        });
+        it('should return an error with bad id', async done => {
+            await supertest(app)
+            .post(`/api/rate/post/${randomBytes(12).toString('hex')}`)
+            .send({ rating: 1 })
+            .auth(testUser.username, testUser.password)
+            .then(response => {
+                expect(response.body).toStrictEqual<RatePost.Failed.NoPost>({
+                    error: 'No Post',
+                    ok: false
                 });
             });
             done();
