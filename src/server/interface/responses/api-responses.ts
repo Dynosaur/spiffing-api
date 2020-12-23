@@ -67,3 +67,15 @@ export namespace CreatePost {
 
     export type Tx = Failed.Tx | Ok.Tx;
 }
+
+export namespace RatePost {
+    export namespace Failed {
+        export interface NoPost extends ErrorResponse<'No Post'> { }
+
+        export type Tx = Automated.Tx | NoPost;
+    }
+
+    export interface Ok extends OkResponse { }
+
+    export type Tx = Failed.Tx | Ok;
+}
