@@ -3,8 +3,8 @@ import { DbPost } from 'app/database/data-types';
 import { ObjectId } from 'mongodb';
 import { convertDbPost } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock/mock-environment';
-import { createPost, getPost, getPosts, getUser } from 'server/router/api-router';
-import { CreatePost, GetPosts, GetPost, GetUser } from 'interface/responses/api-responses';
+import { createPost, getPost, getPosts, getUser, ratePost } from 'server/router/api-router';
+import { CreatePost, GetPosts, GetPost, GetUser, RatePost } from 'interface/responses/api-responses';
 
 describe('api route handlers', () => {
     describe('getUser', () => {
@@ -171,6 +171,71 @@ describe('api route handlers', () => {
                     title
                 }
             });
+
+            done();
+        });
+    });
+    describe('ratePost', () => {
+        it('should check if the post exists', async done => {
+            const mock = new MockEnvironment();
+            const id = new ObjectId();
+            mock.request.params.id = id.toHexString();
+
+            await mock.runRouteHandler(ratePost);
+            expect(mock.posts.findSpy).toBeCalledWith({ _id: id });
+
+            done();
+        });
+        it('should be able to like posts', async done => {
+            const mock = new MockEnvironment();
+            const post = mock.createPost();
+            mock.request.params.id = post._id.toHexString();
+            mock.request.body.rating = 1;
+
+            const response = await mock.runRouteHandler(ratePost);
+            expect(mock.posts.updateManySpy).toBeCalledWith({ _id: post._id }, { $set: { likes: 1 } });
+            expect(mock.posts.data[0].likes).toBe(1);
+            expect(response.payload).toStrictEqual<RatePost.Ok>({ ok: true });
+
+            done();
+        });
+        it('should be able to dislike posts', async done => {
+            const mock = new MockEnvironment();
+            const post = mock.createPost();
+            mock.request.params.id = post._id.toHexString();
+            mock.request.body.rating = -1;
+
+            const response = await mock.runRouteHandler(ratePost);
+            expect(mock.posts.updateManySpy).toBeCalledWith({ _id: post._id }, { $set: { dislikes: -1 } });
+            expect(mock.posts.data[0].dislikes).toBe(-1);
+            expect(response.payload).toStrictEqual<RatePost.Ok>({ ok: true });
+
+            done();
+        });
+        it('should be able to handle extraneous values', async done => {
+            const mock = new MockEnvironment();
+            const post = mock.createPost();
+            mock.request.params.id = post._id.toHexString();
+            mock.request.body.rating = 1534;
+
+            let response = await mock.runRouteHandler(ratePost);
+            expect(mock.posts.data[0].likes).toBe(1);
+            expect(response.payload).toStrictEqual<RatePost.Ok>({ ok: true });
+
+            mock.request.body.rating = 873498573049857349087590348759043509087098572934752934759342875039487034957848532405730924573940287593248719628374698127462813401230534205;
+            response = await mock.runRouteHandler(ratePost);
+            expect(mock.posts.data[0].likes).toBe(2);
+            expect(response.payload).toStrictEqual<RatePost.Ok>({ ok: true });
+
+            mock.request.body.rating = -20394;
+            response = await mock.runRouteHandler(ratePost);
+            expect(mock.posts.data[0].dislikes).toBe(-1);
+            expect(response.payload).toStrictEqual<RatePost.Ok>({ ok: true });
+
+            mock.request.body.rating = -32475093847590238475092347509234875423593487502394875092348572938475093248750239485732904857302948570293485703924857032948570349285703948570983494;
+            response = await mock.runRouteHandler(ratePost);
+            expect(mock.posts.data[0].dislikes).toBe(-2);
+            expect(response.payload).toStrictEqual<RatePost.Ok>({ ok: true });
 
             done();
         });
