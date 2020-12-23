@@ -45,6 +45,21 @@ export class BoundPost implements DbPost {
         this.comments.push(comment._id);
         return comment;
     }
+
+    async like(): Promise<void> {
+        this.likes++;
+        await this.postApi.updatePost(this.id, {
+            likes: this.likes
+        });
+    }
+
+    async dislike(): Promise<void> {
+        this.dislikes--;
+        await this.postApi.updatePost(this.id, {
+            dislikes: this.dislikes
+        });
+    }
+
 }
 
 export class PostAPI {
