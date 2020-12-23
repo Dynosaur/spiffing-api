@@ -6,7 +6,6 @@ import { Automated } from 'interface/responses/error-responses';
 import { randomBytes } from 'crypto';
 import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 
-
 describe('auth router validation', () => {
     let app: Express;
     let server: Server;
