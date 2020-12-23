@@ -1,6 +1,6 @@
 import { Post } from '../interface/data-types';
 import { ObjectId } from 'mongodb';
-import { CreatePost, GetPost, GetPosts, GetUser } from 'interface/responses/api-responses';
+import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
 import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
 
 export const getUser: RouteHandler<GetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<GetUser.Tx>> {
@@ -56,6 +56,18 @@ export const createPost: RouteHandler<CreatePost.Tx> = async function createPost
     return payload<CreatePost.Ok.Created>('Successfully created post.', 201, true, { post: post.toInterface() });
 };
 
+export const ratePost: RouteHandler<RatePost.Tx> = async function ratePost(request, actions): Promise<RoutePayload<RatePost.Tx>> {
+    const rating = Math.sign(request.body.rating);
+    const post = await actions.post.readPost(request.params.id);
+    if (post) {
+        if (rating === 1) await post.like();
+        else if (rating === -1) await post.dislike();
+        return payload<RatePost.Ok>(`Rated post ${request.params.id} with ${rating}`, 200, true, {});
+    } else {
+        return payload<RatePost.Failed.NoPost>(`Could not find post ${request.params.id}`, 200, false, { error: 'No Post' });
+    }
+};
+
 export const routes: RouteInfo[] = [
     { method: 'GET', path: '/api/user/:username', handler: getUser },
     { method: 'GET',  path: '/api/posts', handler: getPosts },
@@ -71,5 +83,19 @@ export const routes: RouteInfo[] = [
             }
         }
     },
-    { method: 'GET',  path: '/api/post/:id', handler: getPost }
+    { method: 'GET',  path: '/api/post/:id', handler: getPost },
+    {
+        handler: ratePost,
+        method: 'POST',
+        path: '/api/rate/post/:id',
+        requirements: {
+            auth: {
+                checkParamUsername: false,
+                method: 'authenticate'
+            },
+            scope: {
+                body: { required: ['rating'], replacements: [] }
+            }
+        }
+    }
 ];
