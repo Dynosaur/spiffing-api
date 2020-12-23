@@ -17,6 +17,6 @@ module.exports = {
         createProject('unit-tests/mock', 'unit/mock-tests'),
         createProject('unit-tests/router', 'unit/router-tests'),
         createProject('integration-tests', 'integration'),
-        createProject('validation-tests', 'validation', { runner: 'jest-serial-runner' })
+        createProject('validation-tests', 'validation')
     ]
 };
