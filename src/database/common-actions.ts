@@ -1,6 +1,6 @@
-import { Cipher, hash } from 'tools/crypto';
-import { UserAPI } from './dbi/user-api';
 import { Password } from './data-types';
+import { Cipher, hash } from 'tools/crypto';
+import { BoundUser, UserAPI } from './dbi/user-api';
 
 export class CommonActions {
 
@@ -8,17 +8,17 @@ export class CommonActions {
 
     constructor(private userAPI: UserAPI) { }
 
-    async authenticate(username: string, password: string): Promise<boolean> {
+    async authenticate(username: string, password: string): Promise<{ ok: true; user: BoundUser; } | { ok: false; }> {
         const user = await this.userAPI.readUser({ username });
         if (user) {
             try {
-                return this.cipher.decrypt(user.password.hash) === hash(password, user.password.salt).hash;
+                const authorized = this.cipher.decrypt(user.password.hash) === hash(password, user.password.salt).hash;
+                if (authorized) return { ok: true, user };
             } catch (error) {
-                return false;
+                return { ok: false };
             }
-        } else {
-            return false;
         }
+        return { ok: false };
     }
 
     securePassword(password: string): Password {
