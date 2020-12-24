@@ -39,13 +39,21 @@ export namespace GetPost {
 }
 
 export namespace GetPosts {
+    export namespace Failed {
+        export interface AuthorParse extends ErrorResponse<'Author Parse'> {
+            provided: string;
+        }
+
+        export type Tx = AuthorParse;
+    }
+
     export interface PostsFound extends OkResponse {
         posts: Post[];
         'query-blocked'?: string[];
         'query-allowed'?: string[];
     }
 
-    export type Tx = PostsFound;
+    export type Tx = Failed.Tx | PostsFound;
 }
 
 export namespace CreatePost {
