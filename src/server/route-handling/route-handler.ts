@@ -59,7 +59,7 @@ export async function executeRouteHandler(request: Request, actions: DatabaseAct
             const authRes = await actions.common.authenticate(decoded.username, decoded.password);
             switch (requirements.auth.method) {
                 case 'authenticate':
-                    if (!authRes) {
+                    if (authRes.ok === false) {
                         sendPayload(request, unauthorized(), verbose);
                         return;
                     }
@@ -69,6 +69,7 @@ export async function executeRouteHandler(request: Request, actions: DatabaseAct
             }
             routeHandlerArgs.username = decoded.username;
             routeHandlerArgs.password = decoded.password;
+            if (authRes.ok === true) routeHandlerArgs.id = authRes.user._id;
         }
     } else if (verbose) {
         chalk.lime('Route handler has no requirements.');
