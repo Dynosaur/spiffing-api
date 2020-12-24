@@ -18,7 +18,20 @@ export const getPosts: RouteHandler<GetPosts.Tx> = async function getPosts(reque
         if (!allowedKeys.includes(queryKey as any)) {
             delete request.query[queryKey];
             blocked.push(queryKey);
-        } else allowed.push(queryKey);
+        } else {
+            allowed.push(queryKey);
+            if (queryKey === 'author') {
+                try {
+                    request.query.author = new ObjectId(request.query.author as string) as any;
+                } catch (error) {
+                    if (error.message === 'Argument passed in must be a single String of 12 bytes or a string of 24 hex characters')
+                        return payload<GetPosts.Failed.AuthorParse>('Could not parse ID param', 200, false, {
+                            error: 'Author Parse',
+                            provided: request.query.author as string
+                        });
+                }
+            }
+        }
     }
     const posts = await actions.post.readPosts(request.query);
     return payload<GetPosts.PostsFound>(`Successfully found ${posts.length} posts.`, 200, true, {
