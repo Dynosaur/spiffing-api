@@ -111,7 +111,7 @@ export class MockEnvironment<RequestType> {
     }
 
     async integration<T extends BaseResponse = any>(handler: RouteHandler<T>, requirements?: object): Promise<void> {
-        await executeRouteHandler(this.request as any, this.actions, handler, requirements, false);
+        await executeRouteHandler(this.request as any, this.actions, handler, 'test', requirements, false);
     }
 
 }
