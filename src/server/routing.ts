@@ -1,95 +1,84 @@
-type SegmentType = 'path' | 'param';
+import { Request } from 'express';
+import { RouteInfo } from './route-handling/route-infra';
+
 export interface PathSegment {
     name: string;
-    type: SegmentType;
+    type: 'path' | 'param';
 }
 
-export class UrlPath {
-
-    static deinterpolate(path: string): string[] {
-        return path.match(/\/[^\/]+/g);
-    }
-
-    static convertPath(path: string): PathSegment[] {
-        let elements = UrlPath.deinterpolate(path);
-        const sorted: PathSegment[] = [];
-        if (elements) {
-            elements.forEach(element => {
-                if (element.startsWith('/:')) {
-                    sorted.push({
-                        name: /:([^\/]+)/.exec(element)[1],
-                        type: 'param'
-                    });
-                } else {
-                    sorted.push({
-                        name: element.substring(1),
-                        type: 'path'
-                    });
-                }
+export function convertPath(path: string): PathSegment[] {
+    const nodes = path.match(/\/[^\/]+/g) || [];
+    const assigned: PathSegment[] = [];
+    for (const node of nodes) {
+        if (node.startsWith('/:')) {
+            assigned.push({
+                name: /:([^\/]+)/.exec(node)[1],
+                type: 'param'
             });
-            return sorted;
         } else {
-            return null;
+            assigned.push({
+                name: node.substring(1),
+                type: 'path'
+            });
         }
     }
+    return assigned;
+}
 
-    original: string;
-    segments: PathSegment[];
-
-    constructor(path: string) {
-        this.original = path;
-        this.segments = UrlPath.convertPath(path);
-    }
-
-    doesMatch(path: string): boolean {
-        const compare = UrlPath.convertPath(path);
-        if (compare.length !== this.segments.length) {
-            return false;
-        }
-        for (let i = 0; i < this.segments.length; i++) {
-            if (this.segments[i].type === 'path') {
-                if (this.segments[i].name !== compare[i].name) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    extractParams(path: string): object {
-        const deinterpolated = UrlPath.deinterpolate(path);
-        const params: object = { };
-        for (let i = 0; i < this.segments.length; i++) {
-            if (this.segments[i].type === 'param') {
-                params[this.segments[i].name] = deinterpolated[i].substring(1);
-            }
-        }
-        return params;
-    }
+export function pathMatches(fit: PathSegment[], path: string): { matches: false; } | { matches: true; params: object; } {
+    const nodes = path.match(/\/([^\/]+)/g) || [];
+    if (fit.length !== nodes.length) return { matches: false };
+    const params: object = {};
+    for (let i = 0; i < fit.length; i++)
+        if (fit[i].type === 'path') {
+            if (fit[i].name !== nodes[i].substring(1))
+                return { matches: false };
+        } else params[fit[i].name] = nodes[i].substring(1);
+    return {
+        matches: true,
+        params
+    };
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
-interface RegisteredPath {
-    path: UrlPath;
-    methods: HttpMethod[];
+
+interface RegisteredRoute {
+    path: PathSegment[];
+    methods: Map<HttpMethod, RouteInfo>;
 }
 
 export class RouteRegister {
+    paths: RegisteredRoute[] = [];
 
-    registered: RegisteredPath[] = [];
-
-    constructor() { }
-
-    register(path: string, method: HttpMethod): void {
-        for (const reg of this.registered) {
-            if (reg.path.original === path) {
-                if (!reg.methods.includes(method)) {
-                    reg.methods.push(method);
+    register(path: string, method: HttpMethod, info: RouteInfo): void {
+        if (path === undefined || path === null ) throw new Error(`Path must be a string: received: ${typeof path}`);
+        for (const registeredPath of this.paths) {
+            if (pathMatches(registeredPath.path, path).matches)
+                if (registeredPath.methods.has(method))
+                    throw new Error(`Handlers ${registeredPath.methods.get(method).handler.name} and ${info.handler.name} have the same path and method.`);
+                else {
+                    registeredPath.methods.set(method, info);
+                    return;
                 }
-                return;
-            }
         }
-        this.registered.push({ path: new UrlPath(path), methods: [method] });
+        this.paths.push({
+            path: convertPath(path),
+            methods: new Map<HttpMethod, RouteInfo>().set(method, info)
+        });
+    }
+
+    isRegistered(request: Request): RouteInfo {
+        const method = <HttpMethod> request.method;
+        for (const registeredPath of this.paths) {
+            const result = pathMatches(registeredPath.path, request.path);
+            if (result.matches)
+                if (registeredPath.methods.has(method)) {
+                    Object.assign(request.params, result.params);
+                    return registeredPath.methods.get(method);
+                }
+                else return null;
+        }
+        return null;
     }
 
 }
