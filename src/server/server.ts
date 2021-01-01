@@ -1,22 +1,23 @@
 import cors from 'cors';
+import express from 'express';
 import { chalk } from 'tools/chalk';
-import { Request } from 'express';
 import { UserAPI } from 'app/database/dbi/user-api';
 import { PostAPI } from 'app/database/dbi/post-actions';
+import { indexRoute } from './router/misc-router';
 import { CommentAPI } from 'app/database/dbi/comment-actions';
+import { randomBytes } from 'crypto';
 import { MongoClient } from 'database/mongo-client';
+import { RouteRegister } from 'server/routing';
 import { CommonActions } from 'app/database/common-actions';
 import { prettyTimestamp } from 'tools/time';
+import { DatabaseActions } from 'server/route-handling/route-infra';
 import { DeveloperActions } from 'app/dev/dev-actions';
-import express, { Response } from 'express';
 import { DatabaseInterface } from 'app/database/dbi/database-interface';
 import { routes as apiRoutes } from 'server/router/api-router';
 import { executeRouteHandler } from 'server/route-handling/route-handler';
 import { Server as NodeServer } from 'http';
 import { routes as authRoutes } from 'server/router/auth-router';
-import { RouteRegister, UrlPath } from 'server/routing';
 import { DbComment, DbPost, DbUser } from 'app/database/data-types';
-import { DatabaseActions, RouteInfo } from 'server/route-handling/route-infra';
 
 export class Server {
 
@@ -36,6 +37,8 @@ export class Server {
     private commentApi: CommentAPI;
 
     private devActions = new DeveloperActions();
+
+    private requestFingerprintSize = 3;
 
     constructor(private verbose = true) { }
 
@@ -79,40 +82,26 @@ export class Server {
         this.configureExpress();
     }
 
-    private registerRoute(route: RouteInfo): void {
-        this.routeRegister.register(route.path, route.method);
-        this.app.use(async (request: Request, response: Response, next) => {
-            if (request.method === route.method) {
-                const path = new UrlPath(route.path);
-                if (path.doesMatch(request.path)) {
-                    request.params = path.extractParams(request.path) as any;
-                    await executeRouteHandler(request, this.actions, route.handler, route.requirements, this.verbose);
-                    return;
-                }
-            }
-            next();
-        });
-    }
-
-    private attachRoutes(routes: RouteInfo[]): void {
-        routes.forEach(route => this.registerRoute(route));
-    }
-
     private configureExpress(): void {
         this.app.use(express.json());
-        this.app.use((request: Request, res, next) => {
-            if (this.verbose) {
-                chalk.yellow(prettyTimestamp() + ' ' + request.method + ' ' + request.url);
-            }
-            next();
-        });
         this.app.use(cors({ origin: '*' }));
         this.app.use(express.urlencoded({ extended: true }));
 
-        this.attachRoutes(apiRoutes);
-        this.attachRoutes(authRoutes);
+        this.app.use((request, response) => {
+            const fingerprint = randomBytes(this.requestFingerprintSize).toString('hex');
+            if (this.verbose) chalk.yellow(`${fingerprint} ${prettyTimestamp()} ${request.method} ${request.url}`);
+            const info = this.routeRegister.isRegistered(request);
+            if (info) {
+                executeRouteHandler(request, this.actions, info.handler, fingerprint, info.requirements, this.verbose);
+            } else {
+                response.status(404).json({ message: 'Path not supported.' });
+                chalk.yellow(`${fingerprint} Path is not supported.\n`);
+            }
+        });
 
-        this.app.get('/', req => req.res.json({ message: 'Hello! Please use the /api path' }));
+        apiRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
+        authRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
+        this.routeRegister.register('', 'GET', indexRoute);
 
         this.app.get('/dev/response', (req, res) => this.devActions.streamResponse().pipe(res));
         this.app.get('/dev/endpoints', (req, res) => this.devActions.streamEndpoints().pipe(res));
@@ -120,11 +109,6 @@ export class Server {
         this.app.get('/dev/responses/api', (req, res) => this.devActions.streamResponsesApi().pipe(res));
         this.app.get('/dev/responses/auth', (req, res) => this.devActions.streamResponsesAuth().pipe(res));
         this.app.get('/dev/responses/error', (req, res) => this.devActions.streamResponsesError().pipe(res));
-
-        this.app.get('*', request => {
-            chalk.rust(`No route handlers for ${request.path}.\n`);
-            request.res.status(404).json({ message: 'Path not supported.' });
-        });
     }
 
     async start(port: number): Promise<void> {
