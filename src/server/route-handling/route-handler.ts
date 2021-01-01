@@ -7,15 +7,21 @@ import { DatabaseActions } from 'server/route-handling/route-infra';
 import { RoutePayload, RouteHandler, RouteHandlerRequirements } from 'server/route-handling/route-infra';
 import { noDatabaseConnection, paramAuthMismatch, unauthorized, unknown } from 'server/route-handling/response-functions';
 
-export async function executeRouteHandler(request: Request, actions: DatabaseActions, handler: RouteHandler<any>, requirements?: RouteHandlerRequirements, verbose = true): Promise<void> {
+export async function executeRouteHandler(
+    request: Request,
+    actions: DatabaseActions,
+    handler: RouteHandler<any>,
+    fingerprint: string,
+    requirements?: RouteHandlerRequirements,
+    verbose = true): Promise<void> {
     function sendPayload(request: Request, payload: RoutePayload<Automated.Tx>, verbose = true): void {
         request.res.status(payload.httpCode).send(payload.payload);
         if (verbose) {
             const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
             if (payload.payload.ok) {
-                chalk.lime(`SUCCESS: ${message}`);
+                chalk.lime(`${fingerprint} SUCCESS: ${message}`);
             } else {
-                chalk.rust(`FAILED: ${message}`);
+                chalk.rust(`${fingerprint} FAILED: ${message}`);
             }
         }
     }
@@ -24,7 +30,7 @@ export async function executeRouteHandler(request: Request, actions: DatabaseAct
 
     if (requirements) {
         if (verbose) {
-            chalk.sky(`Checking route handler ${handler.name} requirements.`);
+            chalk.sky(`${fingerprint} Checking route handler ${handler.name} requirements.`);
         }
         const presentHeaders: any = {};
         if (requirements.scope) {
@@ -72,11 +78,11 @@ export async function executeRouteHandler(request: Request, actions: DatabaseAct
             if (authRes.ok === true) routeHandlerArgs.id = authRes.user._id;
         }
     } else if (verbose) {
-        chalk.lime('Route handler has no requirements.');
+        chalk.lime(`${fingerprint} Route handler has no requirements.`);
     }
 
     if (verbose) {
-        chalk.sky(`Executing route handler "${handler.name}".`);
+        chalk.sky(`${fingerprint} Executing route handler "${handler.name}".`);
     }
 
     let routePayload: RoutePayload<any>;
