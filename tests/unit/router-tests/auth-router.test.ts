@@ -9,8 +9,9 @@ describe('auth unit tests', () => {
     describe('register', () => {
         it('should check if the user exists already', async done => {
             const mock = new MockEnvironment();
+            mock.request.params.id = 'hello';
 
-            await mock.runRouteHandler(register, { username: 'hello', password: 'world' });
+            await mock.runRouteHandler(register, { password: 'world' });
             expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
 
             done();
@@ -49,11 +50,10 @@ describe('auth unit tests', () => {
         });
         it('should return an error if the username is taken', async done => {
             const mock = new MockEnvironment();
-            const username = 'hello';
-            mock.createUser(username);
-            mock.request.params.username = username;
+            const user = mock.createUser();
+            mock.request.params.id = user.username;
 
-            const resp = await mock.runRouteHandler(register, { username });
+            const resp = await mock.runRouteHandler(register);
             expect(mock.users.insertOneSpy).not.toBeCalled();
             expect(resp.payload).toStrictEqual<Register.Failed.UserExists>({
                 error: 'User Already Exists',
@@ -75,8 +75,9 @@ describe('auth unit tests', () => {
     describe('deregister', () => {
         it('should return an error if the user does not exist', async done => {
             const mock = new MockEnvironment();
+            mock.request.params.id = 'hello';
 
-            const response = await mock.runRouteHandler(deregister, { username: 'hello' });
+            const response = await mock.runRouteHandler(deregister);
             expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
             expect(response.payload).toStrictEqual<Deregister.Failed.NoUser>({
                 error: 'No User',
@@ -88,9 +89,10 @@ describe('auth unit tests', () => {
         it('should remove the user from the database', async done => {
             const mock = new MockEnvironment();
             const user = mock.createUser();
+            mock.request.params.id = user.username;
             const keepUsers = mock.generateUsers(9);
 
-            await mock.runRouteHandler(deregister, { username: user.username });
+            await mock.runRouteHandler(deregister);
             expect(mock.users.deleteManySpy).toBeCalledWith({ _id: user._id });
             expect(mock.users.data).not.toContain(user);
             expect(mock.users.data).toEqual(expect.arrayContaining(keepUsers));
@@ -100,10 +102,11 @@ describe('auth unit tests', () => {
         it('should remove the user\'s posts from the database', async done => {
             const mock = new MockEnvironment();
             const user = mock.createUser();
+            mock.request.params.id = user.username;
             const removePosts = mock.generatePosts(5, user._id);
             const keepPosts = mock.generatePosts(5);
 
-            await mock.runRouteHandler(deregister, { username: user.username });
+            await mock.runRouteHandler(deregister);
             expect(mock.posts.deleteManySpy).toBeCalledWith({ author: user._id });
             expect(mock.users.data).not.toEqual(expect.arrayContaining(removePosts));
             expect(mock.posts.data).toEqual(expect.arrayContaining(keepPosts));
@@ -113,9 +116,10 @@ describe('auth unit tests', () => {
         it('should return ok', async done => {
             const mock = new MockEnvironment();
             const user = mock.createUser();
+            mock.request.params.id = user.username;
             mock.generatePosts(3, user._id);
 
-            const response = await mock.runRouteHandler(deregister, { username: user.username });
+            const response = await mock.runRouteHandler(deregister);
             expect(response.payload).toStrictEqual<Deregister.Ok>({ ok: true });
 
             done();

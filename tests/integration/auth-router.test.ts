@@ -40,7 +40,7 @@ describe('auth route handlers integration', () => {
             const mock = new MockEnvironment<Register.Tx>();
             mock.createUser(username);
             mock.request.headers.authorization = encodeBasicAuth(username, password);
-            mock.request.params.username = username;
+            mock.request.params.id = username;
 
             await mock.integration(register.handler, register.requirements);
             const response = mock.request.res.internalResponse;
@@ -112,7 +112,7 @@ describe('auth route handlers integration', () => {
             const mock = new MockEnvironment<Deregister.Tx>();
             const user = mock.createUser(username, password);
             mock.generatePosts(5, user._id);
-            mock.request.params.username = username;
+            mock.request.params.id = username;
             mock.request.headers.authorization = encodeBasicAuth(username, password);
 
             await mock.integration(deregister.handler, deregister.requirements);

@@ -2,7 +2,7 @@ import { Authenticate, Deregister, Patch, Register } from 'interface/responses/a
 import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
 
 export const register: RouteHandler<Register.Tx> = async function register(request, actions, args): Promise<RoutePayload<Register.Tx>> {
-    if (await actions.user.readUser({ username: args.username })) {
+    if (await actions.user.readUser({ username: request.params.id })) {
         return payload<Register.Failed.UserExists>('User already exists with that username.', 200, false, {
             error: 'User Already Exists'
         });
@@ -19,7 +19,7 @@ export const authenticate: RouteHandler<Authenticate.Tx> = async function authen
 };
 
 export const deregister: RouteHandler<Deregister.Tx> = async function deregister(request, actions, args): Promise<RoutePayload<Deregister.Tx>> {
-    const username = args.username;
+    const username = request.params.id;
     const user = await actions.user.readUser({ username });
     if (user) {
         await user.delete();
@@ -52,10 +52,9 @@ export const patchUser: RouteHandler<Patch.Tx> = async function patchUser(reques
 
 export const routes: RouteInfo[] = [
     {
-        method: 'POST', path: '/api/user/:username', handler: register,
+        method: 'POST', path: '/api/user/:id', handler: register,
         requirements: {
             auth: {
-                checkParamUsername: true,
                 method: 'pass'
             },
             scope: {
@@ -72,22 +71,20 @@ export const routes: RouteInfo[] = [
         method: 'POST', path: '/api/authenticate', handler: authenticate,
         requirements: {
             auth: {
-                checkParamUsername: false,
                 method: 'authenticate'
             }
         }
     },
     {
-        method: 'DELETE', path: '/api/user/:username', handler: deregister,
+        method: 'DELETE', path: '/api/user/:id', handler: deregister,
         requirements: {
             auth: {
-                checkParamUsername: true,
                 method: 'authenticate'
             }
         }
     },
     {
-        method: 'PATCH', path: '/api/user/:username', handler: patchUser,
+        method: 'PATCH', path: '/api/user/:id', handler: patchUser,
         requirements: {
             scope: {
                 body: {
@@ -98,7 +95,6 @@ export const routes: RouteInfo[] = [
                 }
             },
             auth: {
-                checkParamUsername: true,
                 method: 'authenticate'
             }
         }
