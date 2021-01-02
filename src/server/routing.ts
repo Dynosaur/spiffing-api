@@ -40,6 +40,29 @@ export function pathMatches(fit: PathSegment[], path: string): { matches: false;
     };
 }
 
+class ParamMismatch extends Error {
+    constructor(public existing: string, public attempted: string) {
+        super('Param Mismatch');
+    }
+}
+
+export function registerMatch(fit: PathSegment[], path: string): boolean {
+    const nodes = convertPath(path);
+    if (fit.length !== nodes.length) return false;
+    for (let i = 0; i < fit.length; i++) {
+        const f = fit[i];
+        const node = nodes[i];
+        if (f.type === 'path') {
+            if (node.type !== 'path') return false;
+            if (node.name !== f.name) return false;
+        } else {
+            if (node.type !== 'param') return false;
+            if (node.name !== f.name) throw new ParamMismatch(f.name, node.name);
+        }
+    }
+    return true;
+}
+
 export type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
 interface RegisteredRoute {
@@ -53,7 +76,22 @@ export class RouteRegister {
     register(path: string, method: HttpMethod, info: RouteInfo): void {
         if (path === undefined || path === null ) throw new Error(`Path must be a string: received: ${typeof path}`);
         for (const registeredPath of this.paths) {
-            if (pathMatches(registeredPath.path, path).matches)
+            let pathsMatch: boolean;
+            try {
+                pathsMatch = registerMatch(registeredPath.path, path);
+            } catch (error) {
+                if (error instanceof ParamMismatch) {
+                    const existingHandlers: string[] = [];
+                    registeredPath.methods.forEach(rInfo => existingHandlers.push(`${rInfo.method}  ${rInfo.path} => ${rInfo.handler.name}`));
+                    const existingPath = '/' + registeredPath.path.map(p => (p.type === 'path') ? p.name : ':' + p.name).join('/');
+                    throw new Error(`handler "${info.handler.name}" has a different path param name than others of the same path: ${error.attempted}\n
+                                     \nstandard path: ${existingPath}
+                                     \nattempted path: ${info.path}
+                                     \texisting handlers:\n\t${existingHandlers.join('\n\t')}
+                                     \tmalformed handler: ${method} => ${info.handler.name}`);
+                } else throw error;
+            }
+            if (pathsMatch)
                 if (registeredPath.methods.has(method))
                     throw new Error(`Handlers ${registeredPath.methods.get(method).handler.name} and ${info.handler.name} have the same path and method.`);
                 else {

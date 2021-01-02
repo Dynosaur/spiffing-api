@@ -1,6 +1,6 @@
 import { Request } from 'express';
 import { RouteInfo } from 'app/server/route-handling/route-infra';
-import { convertPath, pathMatches, PathSegment, RouteRegister } from 'app/server/routing';
+import { convertPath, pathMatches, PathSegment, registerMatch, RouteRegister } from 'app/server/routing';
 
 function fakeRequest(path: string, method: string): Request {
     return {
@@ -48,6 +48,17 @@ describe('routing unit', () => {
         });
         it('should throw an error if params are null', () => {
             expect(() => register.register(null, 'GET', routeInfo)).toThrowError('Path must be a string: received: object');
+        });
+    });
+    describe('registerMatch', () => {
+        it('should match', () => {
+            expect(registerMatch(convertPath('/api/user/:id'), '/api/user/:id')).toBe(true);
+        });
+        it('should not match', () => {
+            expect(registerMatch(convertPath('/api/user/:id'), '/api/post/:id')).toBe(false);
+        });
+        it('should throw an error', () => {
+            expect(() => registerMatch(convertPath('/api/user/:id'), '/api/user/:username')).toThrowError('Param Mismatch');
         });
     });
 });
