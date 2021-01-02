@@ -1,8 +1,8 @@
 import { Post } from '../interface/data-types';
 import { ObjectId } from 'mongodb';
 import { BoundUser } from 'app/database/dbi/user-api';
-import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
 import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
+import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
 
 export const getUser: RouteHandler<GetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<GetUser.Tx>> {
     const unparsedId: string = request.params.id;
@@ -25,7 +25,7 @@ export const getUser: RouteHandler<GetUser.Tx> = async function getUser(request,
     if (user)
         return payload<GetUser.Ok.UserFound>(`Successfully found user "${unparsedId}".`, 200, true, { user: user.toInterface() });
     else {
-        const message = typeof parsedId === 'string' ? `Could not find user "${unparsedId}".` : `A user with the id of "${unparsedId}".`;
+        const message = typeof parsedId === 'string' ? `Could not find user "${unparsedId}".` : `No user with the id of "${unparsedId}".`;
         return payload<GetUser.Failed.UserNotFound>(message, 200, false, { error: 'User Not Found' });
     }
 };
@@ -105,12 +105,9 @@ export const routes: RouteInfo[] = [
     { method: 'GET', path: '/api/user/:id', handler: getUser },
     { method: 'GET',  path: '/api/posts', handler: getPosts },
     {
-        method: 'POST', path: '/api/:username/post', handler: createPost,
+        method: 'POST', path: '/api/post', handler: createPost,
         requirements: {
-            auth: {
-                checkParamUsername: true,
-                method: 'authenticate'
-            },
+            auth: { method: 'authenticate' },
             scope: {
                 body: { required: ['author', 'content', 'title'], replacements: [] }
             }
