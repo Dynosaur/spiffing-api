@@ -1,11 +1,23 @@
+import { User } from 'app/server/interface/data-types';
 import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
 import { ObjectId } from 'mongodb';
 import { Automated } from 'interface/responses/error-responses';
-import { Deregister } from 'interface/responses/auth-endpoints';
 import { randomBytes } from 'crypto';
+import { Deregister, Register } from 'interface/responses/auth-endpoints';
 import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
+
+function expectUser(username: string): User {
+    if (!username.length)
+        username = expect.any(String);
+    return {
+        _id: expect.stringMatching(/[a-f\d]{24}/),
+        created: expect.any(Number),
+        screenname: username,
+        username: username
+    };
+}
 
 describe('api router validation', () => {
     let app: Express;
@@ -29,8 +41,12 @@ describe('api router validation', () => {
         .post(`/api/user/${testUser.username}`)
         .auth(testUser.username, testUser.password)
         .then(response => {
+            expect(response.body).toStrictEqual<Register.Ok.Created>({
+                ok: true,
+                user: expectUser(testUser.username)
+            });
             testUser.id = new ObjectId(response.body.user?._id);
-        });
+        }).catch(() => process.exit(1));
 
         done();
     });
@@ -41,8 +57,7 @@ describe('api router validation', () => {
         .auth(testUser.username, testUser.password)
         .then(response => {
             expect(response.body).toStrictEqual<Deregister.Ok>({ ok: true });
-        });
-
+        }).catch(() => process.exit(1));
 
         await server.mongo.client.close();
         done();
