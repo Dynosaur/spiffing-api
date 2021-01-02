@@ -1,13 +1,33 @@
 import { Post } from '../interface/data-types';
 import { ObjectId } from 'mongodb';
+import { BoundUser } from 'app/database/dbi/user-api';
 import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
 import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
 
 export const getUser: RouteHandler<GetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<GetUser.Tx>> {
-    const username = request.params.username;
-    const user = await actions.user.readUser({ username });
-    if (user) return payload<GetUser.Ok.UserFound>(`Successfully found user "${username}".`, 200, true, { user: user.toInterface() });
-    else return payload<GetUser.Failed.UserNotFound>(`Could not find user "${username}".`, 200, false, { error: 'User Not Found' });
+    const unparsedId: string = request.params.id;
+    let parsedId: string | ObjectId;
+    if (unparsedId.length === 24) {
+        try {
+            const uid = new ObjectId(unparsedId);
+            parsedId = uid;
+        } catch (e) {
+            parsedId = unparsedId;
+        }
+    } else parsedId = unparsedId;
+
+    let user: BoundUser;
+    if (typeof parsedId === 'string')
+        user = await actions.user.readUser({ username: parsedId });
+    else
+        user = await actions.user.readUser({ _id: parsedId });
+
+    if (user)
+        return payload<GetUser.Ok.UserFound>(`Successfully found user "${unparsedId}".`, 200, true, { user: user.toInterface() });
+    else {
+        const message = typeof parsedId === 'string' ? `Could not find user "${unparsedId}".` : `A user with the id of "${unparsedId}".`;
+        return payload<GetUser.Failed.UserNotFound>(message, 200, false, { error: 'User Not Found' });
+    }
 };
 
 export const getPosts: RouteHandler<GetPosts.Tx> = async function getPosts(request, actions): Promise<RoutePayload<GetPosts.Tx>> {
@@ -82,7 +102,7 @@ export const ratePost: RouteHandler<RatePost.Tx> = async function ratePost(reque
 };
 
 export const routes: RouteInfo[] = [
-    { method: 'GET', path: '/api/user/:username', handler: getUser },
+    { method: 'GET', path: '/api/user/:id', handler: getUser },
     { method: 'GET',  path: '/api/posts', handler: getPosts },
     {
         method: 'POST', path: '/api/:username/post', handler: createPost,

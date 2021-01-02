@@ -1,8 +1,8 @@
 import { Post } from 'interface/data-types';
-import { DbPost } from 'app/database/data-types';
 import { ObjectId } from 'mongodb';
 import { convertDbPost } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock/mock-environment';
+import { convertDbUser, DbPost } from 'app/database/data-types';
 import { createPost, getPost, getPosts, getUser, ratePost } from 'server/router/api-router';
 import { CreatePost, GetPosts, GetPost, GetUser, RatePost } from 'interface/responses/api-responses';
 
@@ -12,7 +12,7 @@ describe('api route handlers', () => {
             const mock = new MockEnvironment({ userFill: 3 });
             const username = 'hello';
             mock.createUser(username);
-            mock.request.params.username = username;
+            mock.request.params.id = username;
 
             const resp = await mock.runRouteHandler(getUser);
             expect(mock.users.findSpy).toBeCalledWith({ username });
@@ -31,13 +31,33 @@ describe('api route handlers', () => {
         it('should return an error when no user is found', async done => {
             const mock = new MockEnvironment({ userFill: 5 });
             const queriedUsername = 'hello';
-            mock.request.params.username = queriedUsername;
+            mock.request.params.id = queriedUsername;
 
             const response = await mock.runRouteHandler(getUser);
             expect(mock.users.findSpy).toBeCalledWith({ username: queriedUsername });
             expect(response.payload).toStrictEqual<GetUser.Failed.UserNotFound>({
                 error: 'User Not Found',
                 ok: false
+            });
+
+            done();
+        });
+        it('should accept both usernames and UIDs', async done => {
+            const mock = new MockEnvironment();
+            const user = mock.createUser('test-user');
+            mock.request.params.id = user.username;
+
+            let response = await mock.runRouteHandler(getUser);
+            expect(response.payload).toStrictEqual<GetUser.Ok.UserFound>({
+                ok: true,
+                user: convertDbUser(user)
+            });
+
+            mock.request.params.id = user._id.toHexString();
+            response = await mock.runRouteHandler(getUser);
+            expect(response.payload).toStrictEqual<GetUser.Ok.UserFound>({
+                ok: true,
+                user: convertDbUser(user)
             });
 
             done();
