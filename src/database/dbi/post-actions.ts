@@ -80,8 +80,12 @@ export class PostAPI {
         return new BoundPost(this, this.commentApi, post);
     }
 
-    async readPost(id: string): Promise<BoundPost> {
-        const posts = await this.dbi.read({ _id: new ObjectId(id) });
+    async readPost(id: ObjectId | string): Promise<BoundPost> {
+        let posts: DbPost[];
+        if (id instanceof ObjectId)
+            posts = await this.dbi.read({ _id: id });
+        else
+            posts = await this.dbi.read({ _id: new ObjectId(id) });
         return posts.length ? new BoundPost(this, this.commentApi, posts[0]) : null;
     }
 
