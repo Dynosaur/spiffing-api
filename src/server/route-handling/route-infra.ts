@@ -4,9 +4,7 @@ import { PostAPI } from 'database/dbi/post-actions';
 import { HttpMethod } from 'server/routing';
 import { CommentAPI } from 'database/dbi/comment-actions';
 import { BaseResponse } from 'interface/response';
-import { DbRatedPosts } from 'app/database/data-types';
 import { CommonActions } from 'database/common-actions';
-import { DatabaseInterface } from 'app/database/dbi/database-interface';
 
 export interface RoutePayload<T extends BaseResponse> {
     httpCode: number;
@@ -30,7 +28,6 @@ export interface DatabaseActions {
     common: CommonActions;
     post: PostAPI;
     user: UserAPI;
-    rate: DatabaseInterface<DbRatedPosts>;
 }
 
 export interface RouteHandler<ResponseType extends BaseResponse> {

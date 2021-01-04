@@ -79,8 +79,7 @@ export class Server {
             comment: this.commentApi,
             common: this.commonApi,
             post: this.postApi,
-            user: this.userApi,
-            rate: this.rateDbi
+            user: this.userApi
         };
         this.configureExpress();
     }
