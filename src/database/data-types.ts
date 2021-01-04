@@ -34,7 +34,7 @@ export interface DbComment {
 
 export interface RatedPost {
     _id: ObjectId;
-    rate: number;
+    rating: -1 | 1;
 }
 
 export interface DbRatedPosts {
