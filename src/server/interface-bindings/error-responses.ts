@@ -1,5 +1,5 @@
 import { ErrorResponse } from './response';
-import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from 'interface/responses/error-responses';
+import { IAuthorizationParseError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 export class ObjectIdParseError extends ErrorResponse<IObjectIdParseError> {
     constructor(public provided: string) {
@@ -30,5 +30,24 @@ export class MissingDataError extends ErrorResponse<IMissingDataError> {
             required: this.required,
             'scope-name': this.scopeName
         };
+    }
+}
+
+export class AuthorizationParseError extends ErrorResponse<IAuthorizationParseError> {
+    constructor(public part: 'Authorization Type' | 'Username' | 'Password') {
+        super('Authorization Parsing Error', `Couldn't parse part of the authorization header: ${part}.`, 400);
+        this.payload.part = this.part;
+    }
+}
+
+export class UnauthenticatedError extends ErrorResponse<IUnauthenticatedError> {
+    constructor() {
+        super('Unauthenticated', 'Request was unauthenticated.', 401);
+    }
+}
+
+export class UnauthorizedError extends ErrorResponse<IUnauthorizedError> {
+    constructor() {
+        super('Unauthorized', 'Request was unauthorized.', 403);
     }
 }
