@@ -1,8 +1,8 @@
 import { User } from 'app/server/interface/data-types';
 import { PostAPI } from './post-actions';
 import { ObjectId } from 'mongodb';
-import { DbUser, Password } from '../data-types';
 import { DatabaseInterface } from './database-interface';
+import { DbRatedPosts, DbUser, Password } from '../data-types';
 
 export class BoundUser implements DbUser {
 
@@ -39,7 +39,7 @@ export class BoundUser implements DbUser {
 
 export class UserAPI {
 
-    constructor(private dbi: DatabaseInterface<DbUser>, private postAPI: PostAPI) { }
+    constructor(private dbi: DatabaseInterface<DbUser>, private postAPI: PostAPI, private rateDbi: DatabaseInterface<DbRatedPosts>) { }
 
     async createUser(username: string, password: Password): Promise<BoundUser> {
         const user: DbUser = {
@@ -49,6 +49,11 @@ export class UserAPI {
             username
         };
         await this.dbi.create(user);
+        await this.rateDbi.create({
+            _id: new ObjectId(),
+            owner: user._id,
+            posts: []
+        });
         return new BoundUser(this, user);
     }
 
@@ -63,6 +68,7 @@ export class UserAPI {
 
     async deleteUser(id: ObjectId): Promise<void> {
         await this.dbi.delete({ _id: id });
+        await this.rateDbi.delete({ owner: id });
         await this.postAPI.deletePosts({ author: id });
     }
 
