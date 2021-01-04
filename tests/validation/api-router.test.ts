@@ -3,10 +3,10 @@ import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
 import { ObjectId } from 'mongodb';
-import { Automated } from 'interface/responses/error-responses';
 import { randomBytes } from 'crypto';
 import { Deregister, Register } from 'interface/responses/auth-endpoints';
 import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
+import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 
 function expectUser(username: string): User {
     if (!username.length)
@@ -66,7 +66,7 @@ describe('api router validation', () => {
     describe('get user', () => {
         it('should return the user\'s data', async done => {
             await supertest(app).get(`/api/user/${testUser.username}`).then(response => {
-                expect(response.body).toStrictEqual<GetUser.Ok.UserFound>({
+                expect(response.body).toStrictEqual<GetUser.Success>({
                     ok: true,
                     user: {
                         _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -80,8 +80,9 @@ describe('api router validation', () => {
         });
         it('should return an error if the user cannot be found', async done => {
             await supertest(app).get('/api/user/King Harvest').then(response => {
-                expect(response.body).toStrictEqual<GetUser.Failed.UserNotFound>({
-                    error: 'User Not Found',
+                expect(response.body).toStrictEqual<INoUserFoundError>({
+                    error: 'No User Found',
+                    id: 'King Harvest',
                     ok: false
                 });
             });
@@ -100,14 +101,10 @@ describe('api router validation', () => {
                 title: 'title'
             })
             .then(res => {
-                expect(res.body).toStrictEqual<CreatePost.Failed.Parse>({
-                    error: 'Parsing Error',
+                expect(res.body).toStrictEqual<IObjectIdParseError>({
+                    error: 'Object Id Parse',
                     ok: false,
-                    path: {
-                        body: {
-                            author: ''
-                        }
-                    }
+                    provided: ''
                 });
             });
 
@@ -118,13 +115,13 @@ describe('api router validation', () => {
             .post(`/api/${testUser.username}/post`)
             .auth(testUser.username, testUser.password)
             .then(res => {
-                expect(res.body).toStrictEqual<Automated.Failed.MissingData>({
-                    error: 'Missing Requirements',
+                expect(res.body).toStrictEqual<IMissingDataError>({
+                    error: 'Missing Data',
                     ok: false,
                     missing: {
-                        possible: [['author', 'content', 'title']],
-                        provided: [],
-                        scope: 'body'
+                        required: ['author', 'content', 'title'],
+                        received: [],
+                        'scope-name': 'body'
                     }
                 });
             });
@@ -133,13 +130,13 @@ describe('api router validation', () => {
             .auth(testUser.username, testUser.password)
             .send({ author: '' })
             .then(res => {
-                expect(res.body).toStrictEqual<Automated.Failed.MissingData>({
-                    error: 'Missing Requirements',
+                expect(res.body).toStrictEqual<IMissingDataError>({
+                    error: 'Missing Data',
                     ok: false,
                     missing: {
-                        possible: [['author', 'content', 'title']],
-                        provided: ['author'],
-                        scope: 'body'
+                        required: ['author', 'content', 'title'],
+                        received: ['author'],
+                        'scope-name': 'body'
                     }
                 });
             });
@@ -148,13 +145,13 @@ describe('api router validation', () => {
             .auth(testUser.username, testUser.password)
             .send({ author: '', content: '' })
             .then(res => {
-                expect(res.body).toStrictEqual<Automated.Failed.MissingData>({
-                    error: 'Missing Requirements',
+                expect(res.body).toStrictEqual<IMissingDataError>({
+                    error: 'Missing Data',
                     ok: false,
                     missing: {
-                        possible: [['author', 'content', 'title']],
-                        provided: ['author', 'content'],
-                        scope: 'body'
+                        received: ['author', 'content', 'title'],
+                        required: ['author', 'content'],
+                        'scope-name': 'body'
                     }
                 });
             });
@@ -166,12 +163,12 @@ describe('api router validation', () => {
             .post(`/api/${testUser.username}/post`)
             .send({ author: '', content: '', title: '' })
             .then(res => {
-                expect(res.body).toStrictEqual<Automated.Failed.MissingData>({
-                    error: 'Missing Requirements',
+                expect(res.body).toStrictEqual<IMissingDataError>({
+                    error: 'Missing Data',
                     missing: {
-                        possible: [['authorization']],
-                        provided: expect.any(Array),
-                        scope: 'headers'
+                        required: ['authorization'],
+                        received: expect.any(Array),
+                        'scope-name': 'headers'
                     },
                     ok: false
                 });
@@ -185,8 +182,8 @@ describe('api router validation', () => {
             .auth(testUser.username, 'worldcon')
             .send({ author: '', content: '', title: '' })
             .then(res => {
-                expect(res.body).toStrictEqual<Automated.Failed.Unauthorized>({
-                    error: 'Authorization Failed',
+                expect(res.body).toStrictEqual<IUnauthorizedError>({
+                    error: 'Unauthorized',
                     ok: false
                 });
             });
@@ -205,7 +202,7 @@ describe('api router validation', () => {
                 title: postTitle
             })
             .then(res => {
-                expect(res.body).toStrictEqual<CreatePost.Ok.Created>({
+                expect(res.body).toStrictEqual<CreatePost.Success>({
                     ok: true,
                     post: {
                         _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -228,7 +225,7 @@ describe('api router validation', () => {
     describe('get post', () => {
         it('should get the post', async done => {
             await supertest(app).get(`/api/post/${postIds[0]}`).then(response => {
-                expect(response.body).toStrictEqual<GetPost.Ok.FoundPost>({
+                expect(response.body).toStrictEqual<GetPost.Success>({
                     ok: true,
                     post: {
                         _id: postIds[0],
@@ -245,18 +242,22 @@ describe('api router validation', () => {
             done();
         });
         it('should return an error if the post cannot be found', async done => {
-            await supertest(app).get(`/api/post/${randomBytes(12).toString('hex')}`).then(response => {
-                expect(response.body).toStrictEqual<GetPost.Failed.NoPost>({
-                    error: 'Post Not Found',
+            const id = randomBytes(12).toString('hex');
+            await supertest(app).get(`/api/post/${id}`).then(response => {
+                expect(response.body).toStrictEqual<INoPostFoundError>({
+                    error: 'No Post Found',
+                    id,
                     ok: false
                 });
             });
             done();
         });
         it('should return an error if the id can not be parsed', async done => {
-            await supertest(app).get('/api/post/lolNotAValidID483947287').then(response => {
-                expect(response.body).toStrictEqual<GetPost.Failed.IDParse>({
-                    error: 'Could Not Parse ID',
+            const id = 'lolNotAValidID483947287';
+            await supertest(app).get(`/api/post/${id}`).then(response => {
+                expect(response.body).toStrictEqual<IObjectIdParseError>({
+                    error: 'Object Id Parse',
+                    provided: id,
                     ok: false
                 });
             });
@@ -267,7 +268,7 @@ describe('api router validation', () => {
     describe('get posts', () => {
         it('should only allow certain query parameters', async done => {
             await supertest(app).get(`/api/posts?author=${randomBytes(12).toString('hex')}&random=5&tag=funny`).then(response => {
-                expect(response.body).toStrictEqual<GetPosts.PostsFound>({
+                expect(response.body).toStrictEqual<GetPosts.Success>({
                     ok: true,
                     posts: [],
                     'query-allowed': ['author'],
@@ -281,12 +282,12 @@ describe('api router validation', () => {
     describe('rate post', () => {
         it('should required a rating field in the request body', async done => {
             await supertest(app).post(`/api/rate/post/${postIds[0]}`).then(response => {
-                expect(response.body).toStrictEqual<Automated.Failed.MissingData>({
-                    error: 'Missing Requirements',
+                expect(response.body).toStrictEqual<IMissingDataError>({
+                    error: 'Missing Data',
                     missing: {
-                        possible: [['rating']],
-                        provided: [],
-                        scope: 'body'
+                        required: ['rating'],
+                        received: [],
+                        'scope-name': 'body'
                     },
                     ok: false
                 });
@@ -295,12 +296,12 @@ describe('api router validation', () => {
         });
         it('should require authorization', async done => {
             await supertest(app).post(`/api/rate/post/${postIds[0]}`).send({ rating: 1 }).then(response => {
-                expect(response.body).toStrictEqual<Automated.Failed.MissingData>({
-                    error: 'Missing Requirements',
+                expect(response.body).toStrictEqual<IMissingDataError>({
+                    error: 'Missing Data',
                     missing: {
-                        possible: [['authorization']],
-                        provided: expect.any(Array),
-                        scope: 'headers'
+                        required: ['authorization'],
+                        received: expect.any(Array),
+                        'scope-name': 'headers'
                     },
                     ok: false
                 });
@@ -313,18 +314,20 @@ describe('api router validation', () => {
             .send({ rating: 1 })
             .auth(testUser.username, testUser.password)
             .then(response => {
-                expect(response.body).toStrictEqual<RatePost.Ok>({ ok: true });
+                expect(response.body).toStrictEqual<RatePost.Success>({ ok: true });
             });
             done();
         });
         it('should return an error with bad id', async done => {
+            const id = randomBytes(12).toString('hex');
             await supertest(app)
-            .post(`/api/rate/post/${randomBytes(12).toString('hex')}`)
+            .post(`/api/rate/post/${id}`)
             .send({ rating: 1 })
             .auth(testUser.username, testUser.password)
             .then(response => {
-                expect(response.body).toStrictEqual<RatePost.Failed.NoPost>({
-                    error: 'No Post',
+                expect(response.body).toStrictEqual<INoPostFoundError>({
+                    error: 'No Post Found',
+                    id,
                     ok: false
                 });
             });

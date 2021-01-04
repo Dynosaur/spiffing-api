@@ -2,8 +2,8 @@ import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
 import { GetUser } from 'interface/responses/api-responses';
-import { Automated } from 'interface/responses/error-responses';
 import { randomBytes } from 'crypto';
+import { INoUserFoundError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 
 describe('auth router validation', () => {
@@ -49,7 +49,7 @@ describe('auth router validation', () => {
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUser.Ok.UserFound>({
+                    expect(res.body).toStrictEqual<GetUser.Success>({
                         ok: true,
                         user: {
                             _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -108,8 +108,8 @@ describe('auth router validation', () => {
                 .auth(username, randomBytes(16).toString('hex'))
                 .send({ username: 'hard2explain' })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Automated.Failed.Unauthorized>({
-                        error: 'Authorization Failed',
+                    expect(res.body).toStrictEqual<IUnauthorizedError>({
+                        error: 'Unauthorized',
                         ok: false
                     });
                 });
@@ -202,15 +202,15 @@ describe('auth router validation', () => {
                 .delete(`/api/user/${username}`)
                 .auth(username, randomBytes(16).toString('hex'))
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Automated.Failed.Unauthorized>({
-                        error: 'Authorization Failed',
+                    expect(res.body).toStrictEqual<IUnauthorizedError>({
+                        error: 'Unauthorized',
                         ok: false
                     });
                 });
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUser.Ok.UserFound>({
+                    expect(res.body).toStrictEqual<GetUser.Success>({
                         ok: true,
                         user: {
                             _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -232,8 +232,9 @@ describe('auth router validation', () => {
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUser.Failed.UserNotFound>({
-                        error: 'User Not Found',
+                    expect(res.body).toStrictEqual<INoUserFoundError>({
+                        error: 'No User Found',
+                        id: username,
                         ok: false
                     });
                 });

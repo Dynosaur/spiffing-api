@@ -7,8 +7,8 @@ import { BaseResponse } from 'app/server/interface/response';
 import { CommonActions } from 'database/common-actions';
 import { DatabaseInterface } from 'app/database/dbi/database-interface';
 import { executeRouteHandler } from 'server/route-handling/route-handler';
-import { DbComment, DbPost, DbUser } from 'database/data-types';
 import { MockCollection, MockRequest } from 'tests/mock';
+import { DbComment, DbPost, DbRatedPosts, DbUser } from 'database/data-types';
 import { DatabaseActions, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
 
 process.env.KEY = randomBytes(32).toString('hex');
@@ -46,9 +46,12 @@ export class MockEnvironment<RequestType> {
     postDBI = new DatabaseInterface<DbPost>(this.posts as any);
     postAPI = new PostAPI(this.postDBI, this.commentAPI);
 
+    ratings = new MockCollection<DbRatedPosts>();
+    rateDBI = new DatabaseInterface<DbRatedPosts>(this.ratings as any);
+
     users = new MockCollection<DbUser>();
     userDBI = new DatabaseInterface<DbUser>(this.users as any);
-    userAPI = new UserAPI(this.userDBI, this.postAPI);
+    userAPI = new UserAPI(this.userDBI, this.postAPI, this.rateDBI);
 
     commonActions = new CommonActions(this.userAPI);
 

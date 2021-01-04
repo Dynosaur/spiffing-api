@@ -1,9 +1,9 @@
 import { hash } from 'tools/crypto';
 import { routes } from 'server/router/auth-router';
-import { Automated } from 'interface/responses/error-responses';
 import { convertDbUser } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock';
 import { encodeBasicAuth } from 'tools/auth';
+import { IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
 
 const register = routes[0];
@@ -134,8 +134,8 @@ describe('auth route handlers integration', () => {
             const response = mock.request.res.internalResponse;
             expect(mock.users.data.length).toBe(1);
             expect(mock.posts.data.length).toBe(5);
-            expect(response).toStrictEqual<Automated.Failed.Unauthorized>({
-                error: 'Authorization Failed',
+            expect(response).toStrictEqual<IUnauthorizedError>({
+                error: 'Unauthorized',
                 ok: false
             });
 
@@ -148,8 +148,8 @@ describe('auth route handlers integration', () => {
 
             await mock.integration(deregister.handler, deregister.requirements);
             const response = mock.request.res.internalResponse;
-            expect(response).toStrictEqual<Automated.Failed.Unauthorized>({
-                error: 'Authorization Failed',
+            expect(response).toStrictEqual<IUnauthorizedError>({
+                error: 'Unauthorized',
                 ok: false
             });
 

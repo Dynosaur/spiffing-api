@@ -1,5 +1,5 @@
-import { parsingError } from '../../src/server/route-handling/response-functions';
-import { decodeBasicAuth, decodeHttp, DecodeResult, encodeBasicAuth, encodeHttp } from '../../src/tools/auth';
+import { AuthorizationParseError } from 'app/server/interface-bindings/error-responses';
+import { decodeBasicAuth, decodeHttp, encodeBasicAuth, encodeHttp } from '../../src/tools/auth';
 
 describe('auth tools', () => {
 
@@ -28,34 +28,22 @@ describe('auth tools', () => {
     });
 
     it('decodeBasicAuth', () => {
-        expect(decodeBasicAuth('Basic aGVsbG86d29ybGQ=')).toStrictEqual<DecodeResult>({
-            ok: true,
+        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic aGVsbG86d29ybGQ='))).toStrictEqual({
             username: 'hello',
             password: 'world'
         });
-        expect(decodeBasicAuth('Basic ZGlmZmljdWx0JTIwdG8lM0FQYXJzZTpJJTIwSEFURSUzQVBBU1NXT1JEUyUyMCUyMA==')).toStrictEqual<DecodeResult>({
-            ok: true,
+        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic ZGlmZmljdWx0JTIwdG8lM0FQYXJzZTpJJTIwSEFURSUzQVBBU1NXT1JEUyUyMCUyMA=='))).toStrictEqual({
             username: 'difficult to:Parse',
             password: 'I HATE:PASSWORDS  '
         });
-        expect(decodeBasicAuth('Basic JTNBJTNBTWFrZSUyMGluZyUyMCUzQSUzQUlUJTNBRElGRklDVUxUJTIwJTIwJTNBJTNBJTNBOiUzQSUzQUxPTCUyMCUyMA==')).toStrictEqual<DecodeResult>({
-            ok: true,
+        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic JTNBJTNBTWFrZSUyMGluZyUyMCUzQSUzQUlUJTNBRElGRklDVUxUJTIwJTIwJTNBJTNBJTNBOiUzQSUzQUxPTCUyMCUyMA=='))).toStrictEqual({
             username: '::Make ing ::IT:DIFFICULT  :::',
             password: '::LOL  '
         });
 
-        expect(decodeBasicAuth('')).toStrictEqual<DecodeResult>({
-            ok: false,
-            error: parsingError('type')
-        });
-        expect(decodeBasicAuth('Basic ')).toStrictEqual<DecodeResult>({
-            ok: false,
-            error: parsingError('username')
-        });
-        expect(decodeBasicAuth('Basic dXNlcm5hbWU6')).toStrictEqual<DecodeResult>({
-            ok: false,
-            error: parsingError('password')
-        });
+        expect(() => new Promise(resolve => decodeBasicAuth(resolve, ''))).toStrictEqual(new AuthorizationParseError('Authorization Type'));
+        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic '))).toStrictEqual(new AuthorizationParseError('Username'));
+        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic dXNlcm5hbWU6'))).toStrictEqual(new AuthorizationParseError('Password'));
     });
 
     it('encodeBasicAuth', () => {
