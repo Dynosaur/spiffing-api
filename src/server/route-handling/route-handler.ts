@@ -2,15 +2,16 @@ import { chalk } from 'tools/chalk';
 import { Request } from 'express';
 import { ObjectId } from 'mongodb';
 import { checkScope } from 'server/route-handling/check-scope';
+import { CommonActions } from 'app/database/common-actions';
+import { DatabaseActions } from 'server/route-handling/route-infra';
 import { decodeBasicAuth } from 'tools/auth';
 import { BoundUser, UserAPI } from 'app/database/dbi/user-api';
 import { BoundPost, PostAPI } from 'app/database/dbi/post-actions';
 import { objectIdParseErrorMessage } from 'app/error-messages';
-import { DatabaseActions } from 'server/route-handling/route-infra';
-import { RoutePayload, RouteHandler, RouteHandlerRequirements } from 'server/route-handling/route-infra';
 import { ErrorResponse as IErrorResponse } from 'interface/response';
-import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from 'interface/responses/error-responses';
-import { MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError } from '../interface-bindings/error-responses';
+import { RoutePayload, RouteHandler, RouteHandlerRequirements } from 'server/route-handling/route-infra';
+import { AuthorizedRequestError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from 'interface/responses/error-responses';
+import { MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from '../interface-bindings/error-responses';
 
 export async function executeRouteHandler(
     request: Request,
@@ -47,40 +48,6 @@ export async function executeRouteHandler(
                 }
                 presentHeaders[scope] = true;
             }
-        }
-        if (requirements.auth) {
-            if (!presentHeaders.authorization) {
-                const headerCheck = checkScope('authorization', {}, request.headers, 'headers');
-                if (headerCheck) {
-                    sendPayload(request, headerCheck, verbose);
-                    return;
-                }
-            }
-            const decoded = decodeBasicAuth(request.headers.authorization);
-            if (decoded.ok === false) {
-                sendPayload(request, decoded.error, verbose);
-                return;
-            }
-            if (requirements.auth.checkParamUsername) {
-                if (request.params.username !== decoded.username) {
-                    // sendPayload(request, paramAuthMismatch(), verbose);
-                    return;
-                }
-            }
-            const authRes = await actions.common.authenticate(decoded.username, decoded.password);
-            switch (requirements.auth.method) {
-                case 'authenticate':
-                    if (authRes.ok === false) {
-                        // sendPayload(request, unauthorized(), verbose);
-                        return;
-                    }
-                case 'pass':
-                    routeHandlerArgs.authentication = authRes;
-                    break;
-            }
-            routeHandlerArgs.username = decoded.username;
-            routeHandlerArgs.password = decoded.password;
-            if (authRes.ok === true) routeHandlerArgs.id = authRes.user._id;
         }
     } else if (verbose) {
         chalk.lime(`${fingerprint} Route handler has no requirements.`);
@@ -158,5 +125,17 @@ export async function getUserOrFail(resolve: ERes<INoUserFoundError>, userAPI: U
         user = await userAPI.readUser({ username: id });
     if (user === null)
         resolve(new NoUserFoundError(id instanceof ObjectId ? id.toHexString() : id).toRoutePayload());
+    return user;
+}
+
+export async function authorizeOrFail(resolve: ERes<AuthorizedRequestError>, commonAPI: CommonActions, authHeader: string): Promise<BoundUser> {
+    if (!authHeader)
+        resolve(new UnauthenticatedError().toRoutePayload());
+
+    const decoded = decodeBasicAuth(resolve, authHeader);
+    const user = await commonAPI.authorize(decoded.username, decoded.password);
+    if (!user)
+        resolve(new UnauthorizedError().toRoutePayload());
+
     return user;
 }
