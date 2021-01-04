@@ -1,63 +1,69 @@
 import { Post } from 'server/interface/data-types';
 import { DbPost } from '../data-types';
 import { ObjectId } from 'mongodb';
+import { SwitchMap } from 'tools/switch-map';
+import { CommentAPI } from './comment-actions';
 import { DatabaseInterface } from './database-interface';
-import { BoundComment, CommentAPI } from './comment-actions';
 
-export class BoundPost implements DbPost {
-
-    _id: ObjectId;
-    author: ObjectId;
-    comments: ObjectId[];
-    content: string;
-    dislikes: number;
-    likes: 0;
-    title: string;
-
+export class BoundPost {
     id: string;
     date: number;
+    alive = true;
+    author: string;
+    private changed = new SwitchMap<string>();
 
-    constructor(private postApi: PostAPI, private commentApi: CommentAPI, obj: DbPost) {
-        Object.assign(this, obj);
-        this.id = this._id.toHexString();
-        this.date = this._id.generationTime;
+    constructor(private postApi: PostAPI, private dbPost: DbPost) {
+        this.id = this.dbPost._id.toHexString();
+        this.date = this.dbPost._id.generationTime;
+        this.author = this.dbPost.author.toHexString();
     }
 
     toInterface(): Post {
         return {
             _id: this.id,
-            author: this.author.toHexString(),
-            comments: this.comments.map(id => id.toHexString()),
-            content: this.content,
+            author: this.author,
+            comments: this.dbPost.comments.map(id => id.toHexString()),
+            content: this.dbPost.content,
             date: this.date,
-            dislikes: this.dislikes,
-            likes: this.likes,
-            title: this.title
+            dislikes: this.dbPost.dislikes,
+            likes: this.dbPost.likes,
+            title: this.dbPost.title
         };
     }
 
+    getId(): ObjectId {
+        return this.dbPost._id;
+    }
+
+    getLikes(): number {
+        return this.dbPost.likes;
+    }
+    setLikes(likes: number): void {
+        this.dbPost.likes = likes;
+        this.changed.on('likes');
+    }
+
+    getDislikes(): number {
+        return this.dbPost.dislikes;
+    }
+    setDislikes(dislikes: number): void {
+        this.dbPost.dislikes = dislikes;
+        this.changed.on('dislikes');
+    }
+
     async deletePost(): Promise<void> {
-        this.postApi.deletePosts({ _id: this._id });
+        await this.postApi.deletePosts({ _id: this.dbPost._id });
+        this.alive = false;
     }
 
-    async addComment(author: string, content: string): Promise<BoundComment> {
-        const comment = await this.commentApi.createComment(author, content);
-        this.comments.push(comment._id);
-        return comment;
-    }
-
-    async like(): Promise<void> {
-        this.likes++;
-        await this.postApi.updatePost(this.id, {
-            likes: this.likes
-        });
-    }
-
-    async dislike(): Promise<void> {
-        this.dislikes--;
-        await this.postApi.updatePost(this.id, {
-            dislikes: this.dislikes
-        });
+    async flush(): Promise<void> {
+        if (this.alive === false)
+            throw new Error(`Post ${this.id} has attempted changes but is no longer alive.`);
+        const changed = {};
+        for (const key of this.changed.keys())
+            changed[key] = this.dbPost[key];
+        await this.postApi.updatePost(this.id, changed);
+        this.changed.clear();
     }
 
 }
@@ -77,7 +83,7 @@ export class PostAPI {
             title
         };
         await this.dbi.create(post);
-        return new BoundPost(this, this.commentApi, post);
+        return new BoundPost(this, post);
     }
 
     async readPost(id: ObjectId | string): Promise<BoundPost> {
@@ -86,14 +92,14 @@ export class PostAPI {
             posts = await this.dbi.read({ _id: id });
         else
             posts = await this.dbi.read({ _id: new ObjectId(id) });
-        return posts.length ? new BoundPost(this, this.commentApi, posts[0]) : null;
+        return posts.length ? new BoundPost(this, posts[0]) : null;
     }
 
     async readPosts(query: Partial<DbPost>): Promise<BoundPost[]> {
         if (query._id && typeof query._id === 'string') query._id = new ObjectId(query._id);
         if (query.author && typeof query.author === 'string') query.author = new ObjectId(query.author);
         const posts = await this.dbi.read(query);
-        return posts.map(post => new BoundPost(this, this.commentApi, post));
+        return posts.map(post => new BoundPost(this, post));
     }
 
     async updatePost(id: string, updates: Partial<DbPost>): Promise<void> {
