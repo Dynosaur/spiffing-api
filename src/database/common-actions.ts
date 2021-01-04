@@ -8,17 +8,17 @@ export class CommonActions {
 
     constructor(private userAPI: UserAPI) { }
 
-    async authenticate(username: string, password: string): Promise<{ ok: true; user: BoundUser; } | { ok: false; }> {
+    async authorize(username: string, password: string): Promise<BoundUser> {
         const user = await this.userAPI.readUser({ username });
-        if (user) {
+        if (user)
             try {
                 const authorized = this.cipher.decrypt(user.password.hash) === hash(password, user.password.salt).hash;
-                if (authorized) return { ok: true, user };
+                if (authorized)
+                    return user;
             } catch (error) {
-                return { ok: false };
+                return null;
             }
-        }
-        return { ok: false };
+        return null;
     }
 
     securePassword(password: string): Password {
