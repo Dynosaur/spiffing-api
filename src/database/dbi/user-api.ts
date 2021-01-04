@@ -1,19 +1,18 @@
 import { User } from 'app/server/interface/data-types';
 import { PostAPI } from './post-actions';
+import { RateAPI } from './rate-api';
 import { ObjectId } from 'mongodb';
 import { DatabaseInterface } from './database-interface';
 import { DbRatedPosts, DbUser, Password } from '../data-types';
 
 export class BoundUser implements DbUser {
-
+    id: string;
     _id: ObjectId;
     password: Password;
     screenname: string;
     username: string;
 
-    id: string;
-
-    constructor(private userAPI: UserAPI, obj: DbUser) {
+    constructor(private userAPI: UserAPI, public rate: RateAPI, obj: DbUser) {
         Object.assign(this, obj);
         this.id = this._id.toHexString();
     }
@@ -39,7 +38,7 @@ export class BoundUser implements DbUser {
 
 export class UserAPI {
 
-    constructor(private dbi: DatabaseInterface<DbUser>, private postAPI: PostAPI, private rateDbi: DatabaseInterface<DbRatedPosts>) { }
+    constructor(private dbi: DatabaseInterface<DbUser>, private postAPI: PostAPI, private rateDBI: DatabaseInterface<DbRatedPosts>) { }
 
     async createUser(username: string, password: Password): Promise<BoundUser> {
         const user: DbUser = {
@@ -49,17 +48,23 @@ export class UserAPI {
             username
         };
         await this.dbi.create(user);
-        await this.rateDbi.create({
+        await this.rateDBI.create({
             _id: new ObjectId(),
             owner: user._id,
             posts: []
         });
-        return new BoundUser(this, user);
+        const rateAPI = new RateAPI(this.rateDBI, user._id);
+        await rateAPI.initialize();
+        return new BoundUser(this, rateAPI, user);
     }
 
     async readUser(query: Partial<DbUser>): Promise<BoundUser> {
         const users = await this.dbi.read(query);
-        return users.length ? new BoundUser(this, users[0]) : null;
+        if (users.length) {
+            const rateAPI = new RateAPI(this.rateDBI, users[0]._id);
+            await rateAPI.initialize();
+            return new BoundUser(this, rateAPI, users[0]);
+        } else return null;
     }
 
     async updateUser(id: string, updates: Partial<DbUser>): Promise<void> {
@@ -68,7 +73,7 @@ export class UserAPI {
 
     async deleteUser(id: ObjectId): Promise<void> {
         await this.dbi.delete({ _id: id });
-        await this.rateDbi.delete({ owner: id });
+        await this.rateDBI.delete({ owner: id });
         await this.postAPI.deletePosts({ author: id });
     }
 
