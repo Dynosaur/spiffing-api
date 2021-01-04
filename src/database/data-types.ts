@@ -32,6 +32,17 @@ export interface DbComment {
     replies: ObjectId[];
 }
 
+export interface RatedPost {
+    _id: ObjectId;
+    rate: number;
+}
+
+export interface DbRatedPosts {
+    _id: ObjectId;
+    owner: ObjectId;
+    posts: RatedPost[];
+}
+
 export function convertDbUser(dbUser: DbUser): User {
     return {
         _id: dbUser._id.toHexString(),
