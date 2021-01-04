@@ -6,7 +6,7 @@ export interface OkResponse extends BaseResponse {
     ok: true;
 }
 
-export interface ErrorResponse<T> extends BaseResponse {
-    error: T;
+export interface ErrorResponse<ErrorMessage extends string> extends BaseResponse {
+    error: ErrorMessage;
     ok: false;
 }
