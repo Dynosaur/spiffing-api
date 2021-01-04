@@ -1,33 +1,21 @@
 import { ErrorResponse } from '../response';
 
-export namespace Automated {
-    export namespace Failed {
-        export namespace Database {
-            export interface NoConnection extends ErrorResponse<'No Connection to Database'> { }
+export interface IObjectIdParseError extends ErrorResponse<'Object Id Parse'> {
+    provided: string;
+}
 
-            export type Tx = NoConnection;
-        }
+export interface INoUserFoundError extends ErrorResponse<'No User Found'> {
+    id: string;
+}
 
-        export interface Parse extends ErrorResponse<'Authorization Header Parse'> {
-            field: 'username' | 'password' | 'type' | 'username param';
-        }
+export interface INoPostFoundError extends ErrorResponse<'No Post Found'> {
+    id: string;
+}
 
-        export interface MissingData extends ErrorResponse<'Missing Requirements'> {
-            missing: {
-                possible: string[][];
-                provided: string[];
-                scope: string;
-            };
-        }
-
-        export interface Unauthorized extends ErrorResponse<'Authorization Failed'> { }
-
-        export interface Unknown extends ErrorResponse<'Unknown'> {
-            errorObject: object;
-        }
-
-        export type Tx = Database.Tx | MissingData | Parse | Unauthorized | Unknown;
-    }
-
-    export type Tx = Failed.Tx;
+export interface IMissingDataError extends ErrorResponse<'Missing Data'> {
+    missing: {
+        received: string[];
+        'scope-name': string;
+        required: string[];
+    };
 }
