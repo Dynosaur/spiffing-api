@@ -1,6 +1,6 @@
 import { OkResponse } from '../response';
 import { Post, User } from '../data-types';
-import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from './error-responses';
+import { AuthorizedRequestError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from './error-responses';
 
 export namespace GetUser {
     export type ErrorTx = INoUserFoundError;
@@ -35,7 +35,7 @@ export namespace GetPost {
 }
 
 export namespace CreatePost {
-    export type ErrorTx = IMissingDataError | IObjectIdParseError;
+    export type ErrorTx = AuthorizedRequestError | IMissingDataError | IObjectIdParseError;
 
     export interface Success extends OkResponse {
         post: Post;
@@ -45,7 +45,7 @@ export namespace CreatePost {
 }
 
 export namespace RatePost {
-    export type ErrorTx = IMissingDataError | INoPostFoundError | IObjectIdParseError;
+    export type ErrorTx = AuthorizedRequestError | IMissingDataError | INoPostFoundError | IObjectIdParseError;
 
     export interface Success extends OkResponse { }
 
