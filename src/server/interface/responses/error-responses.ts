@@ -19,3 +19,13 @@ export interface IMissingDataError extends ErrorResponse<'Missing Data'> {
         required: string[];
     };
 }
+
+export interface IUnauthenticatedError extends ErrorResponse<'Unauthenticated'> { }
+
+export interface IUnauthorizedError extends ErrorResponse<'Unauthorized'> { }
+
+export interface IAuthorizationParseError extends ErrorResponse<'Authorization Parsing Error'> {
+    part: 'Authorization Type' | 'Username' | 'Password';
+}
+
+export type AuthorizedRequestError = IAuthorizationParseError | IUnauthenticatedError | IUnauthorizedError;
