@@ -17,7 +17,7 @@ import { routes as apiRoutes } from 'server/router/api-router';
 import { executeRouteHandler } from 'server/route-handling/route-handler';
 import { Server as NodeServer } from 'http';
 import { routes as authRoutes } from 'server/router/auth-router';
-import { DbComment, DbPost, DbUser } from 'app/database/data-types';
+import { DbComment, DbPost, DbRatedPosts, DbUser } from 'app/database/data-types';
 
 export class Server {
 
@@ -28,6 +28,7 @@ export class Server {
 
     private userDbi: DatabaseInterface<DbUser>;
     private postDbi: DatabaseInterface<DbPost>;
+    private rateDbi: DatabaseInterface<DbRatedPosts>;
     private commentDbi: DatabaseInterface<DbComment>;
 
     private actions: DatabaseActions;
@@ -68,16 +69,18 @@ export class Server {
 
         this.userDbi = new DatabaseInterface<DbUser>(this.mongo.db.collection('users'));
         this.postDbi = new DatabaseInterface<DbPost>(this.mongo.db.collection('posts'));
+        this.rateDbi = new DatabaseInterface<DbRatedPosts>(this.mongo.db.collection('rated'));
 
         this.commentApi = new CommentAPI(this.commentDbi);
         this.postApi = new PostAPI(this.postDbi, this.commentApi);
-        this.userApi = new UserAPI(this.userDbi, this.postApi);
+        this.userApi = new UserAPI(this.userDbi, this.postApi, this.rateDbi);
         this.commonApi = new CommonActions(this.userApi);
         this.actions = {
             comment: this.commentApi,
             common: this.commonApi,
             post: this.postApi,
-            user: this.userApi
+            user: this.userApi,
+            rate: this.rateDbi
         };
         this.configureExpress();
     }
