@@ -1,6 +1,6 @@
-import { Automated } from 'interface/responses/error-responses';
 import { RoutePayload } from 'server/route-handling/route-infra';
-import { parsingError } from 'server/route-handling/response-functions';
+import { AuthorizationParseError } from 'app/server/interface-bindings/error-responses';
+import { IAuthorizationParseError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 const encodeMap = new Map();
 encodeMap.set(' ', '%20');
@@ -20,37 +20,28 @@ export function encodeHttp(s: string): string {
     return s;
 }
 
-export type DecodeResult = {
-    ok: true;
-    username: string;
-    password: string;
-} | {
-    ok: false;
-    error: RoutePayload<Automated.Failed.Tx>;
-}
-
-export function decodeBasicAuth(authorizationHeader: string): DecodeResult {
-    const basicRegex = authorizationHeader.match(/^Basic /);
-    if (!basicRegex) {
-        return { ok: false, error: parsingError('type') };
-    }
+export function decodeBasicAuth(
+    resolve: (error: RoutePayload<IAuthorizationParseError | IUnauthorizedError>) => void,
+    authorizationHeader: string
+): { username: string; password: string; } {
+    const ensureAuthorizationIsBasic = authorizationHeader.match(/^Basic /);
+    if (!ensureAuthorizationIsBasic)
+        resolve(new AuthorizationParseError('Authorization Type').toRoutePayload());
 
     const base64 = authorizationHeader.substring(6);
     const httpEncoded = Buffer.from(base64, 'base64').toString('ascii');
 
     const usernameRegex = httpEncoded.match(/^(.+):/);
-    if (!usernameRegex) {
-        return { ok: false, error: parsingError('username') };
-    }
+    if (!usernameRegex)
+        resolve(new AuthorizationParseError('Username').toRoutePayload());
     const username = decodeHttp(usernameRegex[1]);
 
     const passwordRegex = httpEncoded.match(/:(.+)$/);
-    if (!passwordRegex) {
-        return { ok: false, error: parsingError('password') };
-    }
+    if (!passwordRegex)
+        resolve(new AuthorizationParseError('Password').toRoutePayload());
     const password = decodeHttp(passwordRegex[1]);
 
-    return { ok: true, username, password };
+    return { username, password };
 }
 
 export function encodeBasicAuth(username: string, password: string): string {
