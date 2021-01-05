@@ -12,17 +12,6 @@ export interface RoutePayload<T extends BaseResponse> {
     payload: T;
 }
 
-export function payload<T extends BaseResponse>(message: string, code: number, ok: T['ok'], payload: Omit<T, 'ok'>): RoutePayload<T> {
-    return {
-        consoleMessage: message,
-        httpCode: code,
-        payload: {
-            ok,
-            ...payload as any
-        }
-    };
-}
-
 export interface DatabaseActions {
     comment: CommentAPI;
     common: CommonActions;
