@@ -94,7 +94,7 @@ export class Server {
             if (this.verbose) chalk.yellow(`${fingerprint} ${prettyTimestamp()} ${request.method} ${request.url}`);
             const info = this.routeRegister.isRegistered(request);
             if (info) {
-                executeRouteHandler(request, this.actions, info.handler, fingerprint, info.requirements, this.verbose);
+                executeRouteHandler(request, this.actions, info.handler, fingerprint, this.verbose);
             } else {
                 response.status(404).json({ message: 'Path not supported.' });
                 chalk.yellow(`${fingerprint} Path is not supported.\n`);

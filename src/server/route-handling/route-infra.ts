@@ -31,7 +31,7 @@ export interface DatabaseActions {
 }
 
 export interface RouteHandler<ResponseType extends BaseResponse> {
-    (request: Request<any, ResponseType>, actions: DatabaseActions, args: any): Promise<RoutePayload<ResponseType>>
+    (request: Request<any, ResponseType>, actions: DatabaseActions): Promise<RoutePayload<ResponseType>>
 }
 
 export type RequiredParam = { param: string; strategy?: 'AND' | 'OR'; } | { param: string; strategy: 'REPLACE'; replacement: any; };
