@@ -29,3 +29,8 @@ export interface IAuthorizationParseError extends ErrorResponse<'Authorization P
 }
 
 export type AuthorizedRequestError = IAuthorizationParseError | IUnauthenticatedError | IUnauthorizedError;
+
+export interface IAuthHeaderIdParamMismatchError extends ErrorResponse<'Authorization Header and Id Param Mismatch'> {
+    headerId: string;
+    paramId: string;
+}
