@@ -2,12 +2,13 @@ import { Post } from '../interface/data-types';
 import { ObjectId } from 'mongodb';
 import { BoundUser } from 'app/database/dbi/user-api';
 import { objectIdParseErrorMessage } from 'app/error-messages';
-import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
-import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
+import { RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
+import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from '../interface-bindings/api-responses';
+import { ICreatePost, IGetPost, IGetPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
 import { getPostOrFail, createObjectIdOrFail, scopeMustHaveProps, getUserOrFail, authorizeOrFail } from '../route-handling/route-handler';
 
-export const getUser: RouteHandler<GetUser.Tx> = function getUser(request, actions): Promise<RoutePayload<GetUser.Tx>> {
-    return new Promise<RoutePayload<GetUser.Tx>>(async resolve => {
+export const getUser: RouteHandler<IGetUser.Tx> = function getUser(request, actions): Promise<RoutePayload<IGetUser.Tx>> {
+    return new Promise<RoutePayload<IGetUser.Tx>>(async resolve => {
         let id: ObjectId | string;
         let user: BoundUser;
         try {
@@ -18,12 +19,12 @@ export const getUser: RouteHandler<GetUser.Tx> = function getUser(request, actio
             else throw error;
         }
         user = await getUserOrFail(resolve, actions.user, id);
-        resolve(payload<GetUser.Success>(`Successfully found user "${request.params.id}".`, 200, true, { user: user.toInterface() }));
+        resolve(new GetUser.Success(user.toInterface()).toRoutePayload());
     });
 };
 
-export const getPosts: RouteHandler<GetPosts.Tx> = function getPosts(request, actions): Promise<RoutePayload<GetPosts.Tx>> {
-    return new Promise<RoutePayload<GetPosts.Tx>>(async resolve => {
+export const getPosts: RouteHandler<IGetPosts.Tx> = function getPosts(request, actions): Promise<RoutePayload<IGetPosts.Tx>> {
+    return new Promise<RoutePayload<IGetPosts.Tx>>(async resolve => {
         const allowedKeys: Array<keyof Post> = ['author', 'date', 'title'];
         const allowed: string[] = [];
         const blocked: string[] = [];
@@ -38,33 +39,29 @@ export const getPosts: RouteHandler<GetPosts.Tx> = function getPosts(request, ac
             }
         }
         const posts = await actions.post.readPosts(request.query);
-        return payload<GetPosts.Success>(`Successfully found ${posts.length} posts.`, 200, true, {
-            posts: posts.map(post => post.toInterface()),
-            ...allowed.length && { 'query-allowed': allowed },
-            ...blocked.length && { 'query-blocked': blocked }
-        });
+        resolve(new GetPosts.Success(posts.map(post => post.toInterface()), allowed, blocked).toRoutePayload());
     });
 };
 
-export const getPost: RouteHandler<GetPost.Tx> = function getPost(request, actions): Promise<RoutePayload<GetPost.Tx>> {
-    return new Promise<RoutePayload<GetPost.Tx>>(async resolve => {
+export const getPost: RouteHandler<IGetPost.Tx> = function getPost(request, actions): Promise<RoutePayload<IGetPost.Tx>> {
+    return new Promise<RoutePayload<IGetPost.Tx>>(async resolve => {
         const id = createObjectIdOrFail(resolve, request.params.id);
         const post = await getPostOrFail(resolve, actions.post, id);
-        resolve(payload<GetPost.Success>(`Found post ${request.params.id}.`, 200, true, { post: post[0].toInterface() }));
+        resolve(new GetPost.Success(post.toInterface()).toRoutePayload());
     });
 };
 
-export const createPost: RouteHandler<CreatePost.Tx> = function createPost(request, actions): Promise<RoutePayload<CreatePost.Tx>> {
-    return new Promise<RoutePayload<CreatePost.Tx>>(async resolve => {
+export const createPost: RouteHandler<ICreatePost.Tx> = function createPost(request, actions): Promise<RoutePayload<ICreatePost.Tx>> {
+    return new Promise<RoutePayload<ICreatePost.Tx>>(async resolve => {
         const user = await authorizeOrFail(resolve, actions.common, request.headers.authorization);
         scopeMustHaveProps(resolve, request.body, 'body', ['title', 'content']);
         const post = await actions.post.createPost(user._id, request.body.title, request.body.content);
-        resolve(payload<CreatePost.Success>('Successfully created post.', 201, true, { post: post.toInterface() }));
+        resolve(new CreatePost.Success(post.toInterface()).toRoutePayload());
     });
 };
 
-export const ratePost: RouteHandler<RatePost.Tx> = function ratePost(request, actions): Promise<RoutePayload<RatePost.Tx>> {
-    return new Promise<RoutePayload<RatePost.Tx>>(async resolve => {
+export const ratePost: RouteHandler<IRatePost.Tx> = function ratePost(request, actions): Promise<RoutePayload<IRatePost.Tx>> {
+    return new Promise<RoutePayload<IRatePost.Tx>>(async resolve => {
         scopeMustHaveProps(resolve, request.body, 'body', ['rating']);
         const user = await authorizeOrFail(resolve, actions.common, request.headers.authorization);
         const postId = createObjectIdOrFail(resolve, request.params.id);
@@ -81,7 +78,7 @@ export const ratePost: RouteHandler<RatePost.Tx> = function ratePost(request, ac
                 await user.rate.likePost(post);
                 break;
         }
-        resolve(payload<RatePost.Success>(`Rated post ${request.params.id} with ${rating}`, 200, true, { }));
+        resolve(new RatePost.Success(post, rating).toRoutePayload());
     });
 };
 
