@@ -1,8 +1,13 @@
-import { payload, RouteInfo } from 'server/route-handling/route-infra';
+import { RouteInfo } from 'server/route-handling/route-infra';
 
 export const indexRoute: RouteInfo = {
     handler: async () => {
-        return payload<any>('Pinged index page.', 200, true, { message: 'Hello!' });
+        return {
+            consoleMessage: 'Pinged index page.',
+            httpCode: 200,
+            ok: true,
+            payload: { message: 'Hello!' }
+        };
     },
     method: 'GET',
     path: '/'
