@@ -21,7 +21,7 @@ export function encodeHttp(s: string): string {
 }
 
 export function decodeBasicAuth(
-    resolve: (error: RoutePayload<IAuthorizationParseError | IUnauthorizedError>) => void,
+    resolve: (error: RoutePayload<IAuthorizationParseError>) => void,
     authorizationHeader: string
 ): { username: string; password: string; } {
     const ensureAuthorizationIsBasic = authorizationHeader.match(/^Basic /);
