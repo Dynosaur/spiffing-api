@@ -31,7 +31,7 @@ export class BoundUser implements DbUser {
     }
 
     async delete(): Promise<void> {
-        this.userAPI.deleteUser(this._id);
+        await this.userAPI.deleteUser(this._id);
     }
 
 }
