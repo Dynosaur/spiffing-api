@@ -1,10 +1,10 @@
 import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
-import { GetUser } from 'interface/responses/api-responses';
+import { IGetUser } from 'interface/responses/api-responses';
 import { randomBytes } from 'crypto';
 import { INoUserFoundError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
-import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
+import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
 
 describe('auth router validation', () => {
     let app: Express;
@@ -36,7 +36,7 @@ describe('auth router validation', () => {
                 .post(`/api/user/${username}`)
                 .auth(username, password)
                 .then(res => {
-                    expect(res.body).toStrictEqual<Register.Ok.Created>({
+                    expect(res.body).toStrictEqual<IRegister.Success>({
                         ok: true,
                         user: {
                             _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -49,7 +49,7 @@ describe('auth router validation', () => {
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUser.Success>({
+                    expect(res.body).toStrictEqual<IGetUser.Success>({
                         ok: true,
                         user: {
                             _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -67,7 +67,7 @@ describe('auth router validation', () => {
                 .post(`/api/user/${username}`)
                 .auth(username, password)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Register.Failed.UserExists>({
+                    expect(res.body).toStrictEqual<IRegister.Failed.UserExists>({
                         error: 'User Already Exists',
                         ok: false
                     });
@@ -83,7 +83,7 @@ describe('auth router validation', () => {
                 .post('/api/authenticate')
                 .auth(username, password)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Authenticate.Ok>({ ok: true });
+                    expect(res.body).toStrictEqual<IAuthorize.Success>({ ok: true });
                 });
             done();
         });
@@ -92,8 +92,8 @@ describe('auth router validation', () => {
                 .post('/api/authenticate')
                 .auth(username, randomBytes(16).toString('hex'))
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Authenticate.Failed>({
-                        error: 'Authorization Failed',
+                    expect(res.body).toStrictEqual<IAuthorize.ErrTx>({
+                        error: 'Unauthorized',
                         ok: false
                     });
                 });
@@ -130,8 +130,9 @@ describe('auth router validation', () => {
                 .auth(username, password)
                 .send({ username: newUsername })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Patch.Ok.Updated>({
+                    expect(res.body).toStrictEqual<IPatch.Success>({
                         ok: true,
+                        'rejected-props': [],
                         updated: ['username']
                     });
                 });
@@ -153,8 +154,9 @@ describe('auth router validation', () => {
                 .auth(username, password)
                 .send({ password: newPassword })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Patch.Ok.Updated>({
+                    expect(res.body).toStrictEqual<IPatch.Success>({
                         ok: true,
+                        'rejected-props': [],
                         updated: ['password']
                     });
                 });
@@ -177,8 +179,9 @@ describe('auth router validation', () => {
                 .auth(username, password)
                 .send({ username: newUsername, password: newPassword })
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Patch.Ok.Updated>({
+                    expect(res.body).toStrictEqual<IPatch.Success>({
                         ok: true,
+                        'rejected-props': [],
                         updated: ['username', 'password']
                     });
                 });
@@ -210,7 +213,7 @@ describe('auth router validation', () => {
             await supertest(app)
                 .get(`/api/user/${username}`)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<GetUser.Success>({
+                    expect(res.body).toStrictEqual<IGetUser.Success>({
                         ok: true,
                         user: {
                             _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -227,7 +230,7 @@ describe('auth router validation', () => {
                 .delete(`/api/user/${username}`)
                 .auth(username, password)
                 .expect(200).then(res => {
-                    expect(res.body).toStrictEqual<Deregister.Ok>({ ok: true });
+                    expect(res.body).toStrictEqual<IDeregister.Success>({ ok: true });
                 });
             await supertest(app)
                 .get(`/api/user/${username}`)

@@ -4,7 +4,7 @@ import { convertDbUser } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock';
 import { encodeBasicAuth } from 'tools/auth';
 import { IUnauthorizedError } from 'app/server/interface/responses/error-responses';
-import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
+import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
 
 const register = routes[0];
 const authenticate = routes[1];
@@ -17,16 +17,16 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<Register.Tx>();
+            const mock = new MockEnvironment<IRegister.Tx>();
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.username = username;
 
-            await mock.integration(register.handler, register.requirements);
+            await mock.integration(register.handler);
             const response = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).toBeCalledWith(expect.objectContaining({ username }));
             expect(mock.users.data).toContainEqual(expect.objectContaining({ username }));
-            expect(response).toStrictEqual<Register.Ok.Created>({
+            expect(response).toStrictEqual<IRegister.Success>({
                 ok: true,
                 user: convertDbUser(mock.users.data[0])
             });
@@ -37,16 +37,16 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<Register.Tx>();
+            const mock = new MockEnvironment<IRegister.Tx>();
             mock.createUser(username);
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.id = username;
 
-            await mock.integration(register.handler, register.requirements);
+            await mock.integration(register.handler);
             const response = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
             expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(response).toStrictEqual<Register.Failed.UserExists>({
+            expect(response).toStrictEqual<IRegister.Failed.UserExists>({
                 error: 'User Already Exists',
                 ok: false
             });
@@ -59,14 +59,14 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<Authenticate.Tx>();
+            const mock = new MockEnvironment<IAuthorize.Tx>();
             mock.createUser(username, password);
             mock.request.headers.authorization = encodeBasicAuth(username, password);
 
-            await mock.integration(authenticate.handler, authenticate.requirements);
+            await mock.integration(authenticate.handler);
             const resp = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
-            expect(resp).toStrictEqual<Authenticate.Ok>({
+            expect(resp).toStrictEqual<IAuthorize.Success>({
                 ok: true
             });
 
@@ -75,29 +75,29 @@ describe('auth route handlers integration', () => {
         it('should return FAILED if the credentials are incorrect', async done => {
             const username = 'hello';
 
-            const mock = new MockEnvironment<Authenticate.Tx>();
+            const mock = new MockEnvironment<IAuthorize.Tx>();
             mock.createUser(username, 'password');
             mock.request.headers.authorization = encodeBasicAuth(username, 'world');
 
-            await mock.integration(authenticate.handler, authenticate.requirements);
+            await mock.integration(authenticate.handler);
             const resp = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username });
-            expect(resp).toStrictEqual<Authenticate.Failed>({
-                error: 'Authorization Failed',
+            expect(resp).toStrictEqual<IAuthorize.ErrTx>({
+                error: 'Unauthorized',
                 ok: false
             });
 
             done();
         });
         it('should return NO_USER if the user does not exist', async done => {
-            const mock = new MockEnvironment<Authenticate.Tx>();
+            const mock = new MockEnvironment<IAuthorize.Tx>();
             mock.request.headers.authorization = encodeBasicAuth('hello', 'world');
 
-            await mock.integration(authenticate.handler, authenticate.requirements);
+            await mock.integration(authenticate.handler);
             const resp = mock.request.res.internalResponse;
             expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
-            expect(resp).toStrictEqual<Authenticate.Failed>({
-                error: 'Authorization Failed',
+            expect(resp).toStrictEqual<IAuthorize.ErrTx>({
+                error: 'Unauthorized',
                 ok: false
             });
 
@@ -109,28 +109,28 @@ describe('auth route handlers integration', () => {
             const username = 'hello';
             const password = 'world';
 
-            const mock = new MockEnvironment<Deregister.Tx>();
+            const mock = new MockEnvironment<IDeregister.Tx>();
             const user = mock.createUser(username, password);
             mock.generatePosts(5, user._id);
             mock.request.params.id = username;
             mock.request.headers.authorization = encodeBasicAuth(username, password);
 
-            await mock.integration(deregister.handler, deregister.requirements);
+            await mock.integration(deregister.handler);
             const response = mock.request.res.internalResponse;
             expect(mock.users.data.length).toBe(0);
             expect(mock.posts.data.length).toBe(0);
-            expect(response).toStrictEqual<Deregister.Ok>({ ok: true });
+            expect(response).toStrictEqual<IDeregister.Success>({ ok: true });
 
             done();
         });
         it('should not take action if credentials are incorrect', async done => {
-            const mock = new MockEnvironment<Deregister.Tx>();
+            const mock = new MockEnvironment<IDeregister.Tx>();
             const user = mock.createUser('hello', 'world');
             mock.generatePosts(5, user._id);
             mock.request.params.username = 'hello';
             mock.request.headers.authorization = encodeBasicAuth('hello', 'password');
 
-            await mock.integration(deregister.handler, deregister.requirements);
+            await mock.integration(deregister.handler);
             const response = mock.request.res.internalResponse;
             expect(mock.users.data.length).toBe(1);
             expect(mock.posts.data.length).toBe(5);
@@ -142,11 +142,11 @@ describe('auth route handlers integration', () => {
             done();
         });
         it('should return NO_USER if the user does not exist', async done => {
-            const mock = new MockEnvironment<Deregister.Tx>();
+            const mock = new MockEnvironment<IDeregister.Tx>();
             mock.request.params.username = 'hello';
             mock.request.headers.authorization = encodeBasicAuth('hello', 'world');
 
-            await mock.integration(deregister.handler, deregister.requirements);
+            await mock.integration(deregister.handler);
             const response = mock.request.res.internalResponse;
             expect(response).toStrictEqual<IUnauthorizedError>({
                 error: 'Unauthorized',
@@ -161,18 +161,19 @@ describe('auth route handlers integration', () => {
             const oldUsername = 'old-username';
             const password = 'world';
             const newUsername = 'new-username';
-            const mock = new MockEnvironment<Patch.Tx>();
+            const mock = new MockEnvironment<IPatch.Tx>();
             const user = mock.createUser(oldUsername, password);
             mock.request.body.username = newUsername;
             mock.request.headers.authorization = encodeBasicAuth(oldUsername, password);
             mock.request.params.username = oldUsername;
 
-            await mock.integration(patch.handler, patch.requirements);
+            await mock.integration(patch.handler);
             const resp = mock.request.res.internalResponse;
             expect(user.username).toBe(newUsername);
-            expect(resp).toStrictEqual<Patch.Ok.Updated>({
+            expect(resp).toStrictEqual<IPatch.Success>({
                 ok: true,
-                updated: ['username']
+                updated: ['username'],
+                'rejected-props': []
             });
 
             done();
@@ -180,18 +181,19 @@ describe('auth route handlers integration', () => {
         it('should update password', async done => {
             const username = 'hello';
             const password = 'world';
-            const mock = new MockEnvironment<Patch.Tx>();
+            const mock = new MockEnvironment<IPatch.Tx>();
             const user = mock.createUser(username, password);
             mock.request.body.password = 'secure-password';
             mock.request.headers.authorization = encodeBasicAuth(username, password);
             mock.request.params.username = username;
 
-            await mock.integration(patch.handler, patch.requirements);
+            await mock.integration(patch.handler);
             const resp = mock.request.res.internalResponse;
             expect(mock.commonActions.cipher.decrypt(user.password.hash)).toBe(hash('secure-password', user.password.salt).hash);
-            expect(resp).toStrictEqual<Patch.Ok.Updated>({
+            expect(resp).toStrictEqual<IPatch.Success>({
                 ok: true,
-                updated: ['password']
+                updated: ['password'],
+                'rejected-props': []
             });
 
             done();

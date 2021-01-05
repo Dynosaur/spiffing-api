@@ -4,8 +4,8 @@ import { Server } from 'server/server';
 import { Express } from 'express';
 import { ObjectId } from 'mongodb';
 import { randomBytes } from 'crypto';
-import { Deregister, Register } from 'interface/responses/auth-endpoints';
-import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface/responses/api-responses';
+import { IDeregister, IRegister } from 'interface/responses/auth-endpoints';
+import { ICreatePost, IGetPost, IGetPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
 import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 
 function expectUser(username: string): User {
@@ -41,7 +41,7 @@ describe('api router validation', () => {
         .post(`/api/user/${testUser.username}`)
         .auth(testUser.username, testUser.password)
         .then(response => {
-            expect(response.body).toStrictEqual<Register.Ok.Created>({
+            expect(response.body).toStrictEqual<IRegister.Success>({
                 ok: true,
                 user: expectUser(testUser.username)
             });
@@ -56,7 +56,7 @@ describe('api router validation', () => {
         .delete(`/api/user/${testUser.username}`)
         .auth(testUser.username, testUser.password)
         .then(response => {
-            expect(response.body).toStrictEqual<Deregister.Ok>({ ok: true });
+            expect(response.body).toStrictEqual<IDeregister.Success>({ ok: true });
         }).catch(() => process.exit(1));
 
         await server.mongo.client.close();
@@ -66,7 +66,7 @@ describe('api router validation', () => {
     describe('get user', () => {
         it('should return the user\'s data', async done => {
             await supertest(app).get(`/api/user/${testUser.username}`).then(response => {
-                expect(response.body).toStrictEqual<GetUser.Success>({
+                expect(response.body).toStrictEqual<IGetUser.Success>({
                     ok: true,
                     user: {
                         _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -202,7 +202,7 @@ describe('api router validation', () => {
                 title: postTitle
             })
             .then(res => {
-                expect(res.body).toStrictEqual<CreatePost.Success>({
+                expect(res.body).toStrictEqual<ICreatePost.Success>({
                     ok: true,
                     post: {
                         _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -225,7 +225,7 @@ describe('api router validation', () => {
     describe('get post', () => {
         it('should get the post', async done => {
             await supertest(app).get(`/api/post/${postIds[0]}`).then(response => {
-                expect(response.body).toStrictEqual<GetPost.Success>({
+                expect(response.body).toStrictEqual<IGetPost.Success>({
                     ok: true,
                     post: {
                         _id: postIds[0],
@@ -268,7 +268,7 @@ describe('api router validation', () => {
     describe('get posts', () => {
         it('should only allow certain query parameters', async done => {
             await supertest(app).get(`/api/posts?author=${randomBytes(12).toString('hex')}&random=5&tag=funny`).then(response => {
-                expect(response.body).toStrictEqual<GetPosts.Success>({
+                expect(response.body).toStrictEqual<IGetPosts.Success>({
                     ok: true,
                     posts: [],
                     'query-allowed': ['author'],
@@ -314,7 +314,7 @@ describe('api router validation', () => {
             .send({ rating: 1 })
             .auth(testUser.username, testUser.password)
             .then(response => {
-                expect(response.body).toStrictEqual<RatePost.Success>({ ok: true });
+                expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
             });
             done();
         });

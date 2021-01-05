@@ -4,7 +4,7 @@ import { convertDbPost } from 'database/data-types';
 import { MockEnvironment } from 'tests/mock/mock-environment';
 import { convertDbUser, DbPost } from 'app/database/data-types';
 import { createPost, getPost, getPosts, getUser, ratePost } from 'server/router/api-router';
-import { CreatePost, GetPosts, GetPost, GetUser, RatePost } from 'interface/responses/api-responses';
+import { ICreatePost, IGetPosts, IGetPost, IGetUser, IRatePost } from 'interface/responses/api-responses';
 import { INoPostFoundError, INoUserFoundError } from 'app/server/interface/responses/error-responses';
 
 describe('api route handlers', () => {
@@ -17,7 +17,7 @@ describe('api route handlers', () => {
 
             const resp = await mock.runRouteHandler(getUser);
             expect(mock.users.findSpy).toBeCalledWith({ username });
-            expect(resp.payload).toStrictEqual<GetUser.Success>({
+            expect(resp.payload).toStrictEqual<IGetUser.Success>({
                 ok: true,
                 user: {
                     _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -50,14 +50,14 @@ describe('api route handlers', () => {
             mock.request.params.id = user.username;
 
             let response = await mock.runRouteHandler(getUser);
-            expect(response.payload).toStrictEqual<GetUser.Success>({
+            expect(response.payload).toStrictEqual<IGetUser.Success>({
                 ok: true,
                 user: convertDbUser(user)
             });
 
             mock.request.params.id = user._id.toHexString();
             response = await mock.runRouteHandler(getUser);
-            expect(response.payload).toStrictEqual<GetUser.Success>({
+            expect(response.payload).toStrictEqual<IGetUser.Success>({
                 ok: true,
                 user: convertDbUser(user)
             });
@@ -70,7 +70,7 @@ describe('api route handlers', () => {
             const mock = new MockEnvironment({ postFill: 3 });
 
             const response = await mock.runRouteHandler(getPosts);
-            expect(response.payload).toStrictEqual<GetPosts.Success>({
+            expect(response.payload).toStrictEqual<IGetPosts.Success>({
                 ok: true,
                 posts: expect.arrayContaining([expect.objectContaining<Post>({
                     _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -94,7 +94,7 @@ describe('api route handlers', () => {
 
             const response = await mock.runRouteHandler(getPosts);
             expect(mock.posts.findSpy).toBeCalledWith({ date: 0 });
-            expect(response.payload).toStrictEqual<GetPosts.Success>({
+            expect(response.payload).toStrictEqual<IGetPosts.Success>({
                 ok: true,
                 posts: [],
                 'query-allowed': ['date'],
@@ -111,7 +111,7 @@ describe('api route handlers', () => {
 
             const response = await mock.runRouteHandler(getPosts);
             expect(mock.posts.findSpy).toBeCalledWith({ author: user._id });
-            expect(response.payload).toMatchObject<GetPosts.Success>({
+            expect(response.payload).toMatchObject<IGetPosts.Success>({
                 ok: true,
                 posts: correctPosts.map(post => convertDbPost(post)),
                 'query-allowed': ['author']
@@ -128,7 +128,7 @@ describe('api route handlers', () => {
 
             const response = await mock.runRouteHandler(getPost);
             expect(mock.posts.findSpy).toBeCalledWith({ _id: post._id });
-            expect(response.payload).toStrictEqual<GetPost.Success>({
+            expect(response.payload).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 post: {
                     _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -181,7 +181,7 @@ describe('api route handlers', () => {
                 likes: 0,
                 title
             });
-            expect(response.payload).toStrictEqual<CreatePost.Success>({
+            expect(response.payload).toStrictEqual<ICreatePost.Success>({
                 ok: true,
                 post: {
                     _id: expect.stringMatching(/[a-f\d]{24}/),
@@ -218,7 +218,7 @@ describe('api route handlers', () => {
             const response = await mock.runRouteHandler(ratePost);
             expect(mock.posts.updateManySpy).toBeCalledWith({ _id: post._id }, { $set: { likes: 1 } });
             expect(mock.posts.data[0].likes).toBe(1);
-            expect(response.payload).toStrictEqual<RatePost.Success>({ ok: true });
+            expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             done();
         });
@@ -231,7 +231,7 @@ describe('api route handlers', () => {
             const response = await mock.runRouteHandler(ratePost);
             expect(mock.posts.updateManySpy).toBeCalledWith({ _id: post._id }, { $set: { dislikes: -1 } });
             expect(mock.posts.data[0].dislikes).toBe(-1);
-            expect(response.payload).toStrictEqual<RatePost.Success>({ ok: true });
+            expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             done();
         });
@@ -243,22 +243,22 @@ describe('api route handlers', () => {
 
             let response = await mock.runRouteHandler(ratePost);
             expect(mock.posts.data[0].likes).toBe(1);
-            expect(response.payload).toStrictEqual<RatePost.Success>({ ok: true });
+            expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             mock.request.body.rating = 873498573049857349087590348759043509087098572934752934759342875039487034957848532405730924573940287593248719628374698127462813401230534205;
             response = await mock.runRouteHandler(ratePost);
             expect(mock.posts.data[0].likes).toBe(2);
-            expect(response.payload).toStrictEqual<RatePost.Success>({ ok: true });
+            expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             mock.request.body.rating = -20394;
             response = await mock.runRouteHandler(ratePost);
             expect(mock.posts.data[0].dislikes).toBe(-1);
-            expect(response.payload).toStrictEqual<RatePost.Success>({ ok: true });
+            expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             mock.request.body.rating = -32475093847590238475092347509234875423593487502394875092348572938475093248750239485732904857302948570293485703924857032948570349285703948570983494;
             response = await mock.runRouteHandler(ratePost);
             expect(mock.posts.data[0].dislikes).toBe(-2);
-            expect(response.payload).toStrictEqual<RatePost.Success>({ ok: true });
+            expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             done();
         });

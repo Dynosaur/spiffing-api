@@ -2,8 +2,9 @@ import { hash } from 'tools/crypto';
 import { DbUser } from 'database/data-types';
 import { ObjectId } from 'mongodb';
 import { MockEnvironment } from 'tests/mock/mock-environment';
-import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
-import { authenticate, deregister, patchUser, register } from 'server/router/auth-router';
+import { INoUserFoundError } from 'app/server/interface/responses/error-responses';
+import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
+import { authorize, deregister, patchUser, register } from 'server/router/auth-router';
 
 describe('auth unit tests', () => {
     describe('register', () => {
@@ -41,7 +42,7 @@ describe('auth unit tests', () => {
             const password = 'world';
 
             const resp = await mock.runRouteHandler(register, { username, password });
-            expect(resp.payload).toStrictEqual<Register.Ok.Created>({
+            expect(resp.payload).toStrictEqual<IRegister.Success>({
                 ok: true,
                 user: expect.objectContaining({ username })
             });
@@ -55,7 +56,7 @@ describe('auth unit tests', () => {
 
             const resp = await mock.runRouteHandler(register);
             expect(mock.users.insertOneSpy).not.toBeCalled();
-            expect(resp.payload).toStrictEqual<Register.Failed.UserExists>({
+            expect(resp.payload).toStrictEqual<IRegister.Failed.UserExists>({
                 error: 'User Already Exists',
                 ok: false
             });
@@ -67,8 +68,8 @@ describe('auth unit tests', () => {
         it('should return OK', async done => {
             const mock = new MockEnvironment();
 
-            const resp = await mock.runRouteHandler(authenticate);
-            expect(resp.payload).toMatchObject<Authenticate.Ok>({ ok: true });
+            const resp = await mock.runRouteHandler(authorize);
+            expect(resp.payload).toMatchObject<IAuthorize.Success>({ ok: true });
             done();
         });
     });
@@ -79,8 +80,9 @@ describe('auth unit tests', () => {
 
             const response = await mock.runRouteHandler(deregister);
             expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
-            expect(response.payload).toStrictEqual<Deregister.Failed.NoUser>({
-                error: 'No User',
+            expect(response.payload).toStrictEqual<INoUserFoundError>({
+                error: 'No User Found',
+                id: 'hello',
                 ok: false
             });
 
@@ -120,7 +122,7 @@ describe('auth unit tests', () => {
             mock.generatePosts(3, user._id);
 
             const response = await mock.runRouteHandler(deregister);
-            expect(response.payload).toStrictEqual<Deregister.Ok>({ ok: true });
+            expect(response.payload).toStrictEqual<IDeregister.Success>({ ok: true });
 
             done();
         });
@@ -131,8 +133,9 @@ describe('auth unit tests', () => {
 
             const response = await mock.runRouteHandler(patchUser, { username: 'hello' });
             expect(mock.users.findSpy).toBeCalledWith({ username: 'hello' });
-            expect(response.payload).toStrictEqual<Patch.Failed.NoUser>({
-                error: 'No User',
+            expect(response.payload).toStrictEqual<INoUserFoundError>({
+                error: 'No User Found',
+                id: null,
                 ok: false
             });
 
@@ -144,9 +147,10 @@ describe('auth unit tests', () => {
 
             const response = await mock.runRouteHandler(patchUser, { username: user.username });
             expect(mock.users.updateManySpy).not.toBeCalled();
-            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
+            expect(response.payload).toStrictEqual<IPatch.Success>({
                 ok: true,
-                updated: []
+                updated: [],
+                'rejected-props': []
             });
 
             done();
@@ -164,9 +168,10 @@ describe('auth unit tests', () => {
                 _id: user._id,
                 username: updatedUsername
             }));
-            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
+            expect(response.payload).toStrictEqual<IPatch.Success>({
                 ok: true,
-                updated: ['username']
+                updated: ['username'],
+                'rejected-props': []
             });
 
             done();
@@ -183,8 +188,9 @@ describe('auth unit tests', () => {
             expect(mock.users.findSpy).toBeCalledWith({ username: user.username });
             expect(mock.users.updateManySpy).toBeCalledWith({ _id: user._id }, expect.anything());
             expect(mock.commonActions.cipher.decrypt(dbUser.password.hash)).toBe(hash(newPassword, dbUser.password.salt).hash);
-            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
+            expect(response.payload).toStrictEqual<IPatch.Success>({
                 ok: true,
+                'rejected-props': [],
                 updated: ['password']
             });
 
@@ -202,8 +208,9 @@ describe('auth unit tests', () => {
                 _id: user._id,
                 screenname: updatedScreenname
             }));
-            expect(response.payload).toStrictEqual<Patch.Ok.Updated>({
+            expect(response.payload).toStrictEqual<IPatch.Success>({
                 ok: true,
+                'rejected-props': [],
                 updated: ['screenname']
             });
 
