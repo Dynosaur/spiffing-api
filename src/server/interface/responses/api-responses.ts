@@ -2,7 +2,7 @@ import { OkResponse } from '../response';
 import { Post, User } from '../data-types';
 import { AuthorizedRequestError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from './error-responses';
 
-export namespace GetUser {
+export namespace IGetUser {
     export type ErrorTx = INoUserFoundError;
 
     export interface Success extends OkResponse {
@@ -12,7 +12,7 @@ export namespace GetUser {
     export type Tx = ErrorTx | Success;
 }
 
-export namespace GetPosts {
+export namespace IGetPosts {
     export type ErrorTx = INoPostFoundError | IObjectIdParseError;
 
     export interface Success extends OkResponse {
@@ -24,7 +24,7 @@ export namespace GetPosts {
     export type Tx = ErrorTx | Success;
 }
 
-export namespace GetPost {
+export namespace IGetPost {
     export type ErrorTx = INoPostFoundError | IObjectIdParseError;
 
     export interface Success extends OkResponse {
@@ -34,7 +34,7 @@ export namespace GetPost {
     export type Tx = ErrorTx | Success;
 }
 
-export namespace CreatePost {
+export namespace ICreatePost {
     export type ErrorTx = AuthorizedRequestError | IMissingDataError | IObjectIdParseError;
 
     export interface Success extends OkResponse {
@@ -44,7 +44,7 @@ export namespace CreatePost {
     export type Tx = ErrorTx | Success;
 }
 
-export namespace RatePost {
+export namespace IRatePost {
     export type ErrorTx = AuthorizedRequestError | IMissingDataError | INoPostFoundError | IObjectIdParseError;
 
     export interface Success extends OkResponse { }
