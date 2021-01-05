@@ -1,102 +1,81 @@
-import { Authenticate, Deregister, Patch, Register } from 'interface/responses/auth-endpoints';
-import { payload, RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
+import { decodeBasicAuth } from 'app/tools/auth';
+import { RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
+import { Authorize, Deregister, Patch, Register } from '../interface-bindings/auth-responses';
+import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
+import { authorizeOrFail, requestMustBeAuthenticated } from '../route-handling/route-handler';
+import { AuthHeaderIdParamError, NoUserFoundError, UnauthorizedError } from '../interface-bindings/error-responses';
 
-export const register: RouteHandler<Register.Tx> = async function register(request, actions, args): Promise<RoutePayload<Register.Tx>> {
-    if (await actions.user.readUser({ username: request.params.id })) {
-        return payload<Register.Failed.UserExists>('User already exists with that username.', 200, false, {
-            error: 'User Already Exists'
-        });
-    }
-
-    const user = await actions.user.createUser(args.username, actions.common.securePassword(args.password));
-    return payload<Register.Ok.Created>(`Successfully created new user ${args.username}`, 201, true, {
-        user: user.toInterface()
+export const register: RouteHandler<IRegister.Tx> = function register(request, actions): Promise<RoutePayload<IRegister.Tx>> {
+    return new Promise<RoutePayload<IRegister.Tx>>(async resolve => {
+        requestMustBeAuthenticated(resolve, request.headers.authorization);
+        const userInfo = decodeBasicAuth(resolve, request.headers.authorization);
+        if (await actions.user.readUser({ username: userInfo.username }))
+            resolve(new Register.UserExistsError(userInfo.username).toRoutePayload());
+        const user = await actions.user.createUser(userInfo.username, actions.common.securePassword(userInfo.password));
+        resolve(new Register.Success(user.toInterface()).toRoutePayload());
     });
 };
 
-export const authenticate: RouteHandler<Authenticate.Tx> = async function authenticate(): Promise<RoutePayload<Authenticate.Tx>> {
-    return payload<Authenticate.Ok>('Authentication successful.', 200, true, null);
+export const authorize: RouteHandler<IAuthorize.Tx> = function authenticate(request, actions): Promise<RoutePayload<IAuthorize.Tx>> {
+    return new Promise<RoutePayload<IAuthorize.Tx>>(async resolve => {
+        const user = await authorizeOrFail(resolve, actions.common, request.headers.authorization);
+        if (user.id !== request.params.id)
+            resolve(new AuthHeaderIdParamError(user.id, request.params.id).toRoutePayload());
+        resolve(new Authorize.Success(user).toRoutePayload());
+    });
 };
 
-export const deregister: RouteHandler<Deregister.Tx> = async function deregister(request, actions, args): Promise<RoutePayload<Deregister.Tx>> {
-    const username = request.params.id;
-    const user = await actions.user.readUser({ username });
-    if (user) {
+export const deregister: RouteHandler<IDeregister.Tx> = function deregister(request, actions): Promise<RoutePayload<IDeregister.Tx>> {
+    return new Promise<RoutePayload<IDeregister.Tx>>(async resolve => {
+        requestMustBeAuthenticated(resolve, request.headers.authorization);
+
+        const decoded = decodeBasicAuth(resolve, request.headers.authorization);
+        if (!await actions.user.readUser({ username: decoded.username }))
+            resolve(new NoUserFoundError(decoded.username).toRoutePayload());
+
+        const user = await actions.common.authorize(decoded.username, decoded.password);
+        if (!user)
+            resolve(new UnauthorizedError().toRoutePayload());
+
+        if (user.id !== request.params.id)
+            resolve(new AuthHeaderIdParamError(user.id, request.params.id).toRoutePayload());
+
         await user.delete();
-        return payload<Deregister.Ok>(`User ${username} and their posts have been removed.`, 200, true, null);
-    } else {
-        return payload<Deregister.Failed.NoUser>(`No user with the username ${username}.`, 200, false, { error: 'No User' });
-    }
+
+        resolve(new Deregister.Success(user).toRoutePayload());
+    });
 };
 
-export const patchUser: RouteHandler<Patch.Tx> = async function patchUser(request, actions, args): Promise<RoutePayload<Patch.Tx>> {
-    const user = await actions.user.readUser({ username: args.username });
-    if (user) {
+export const patchUser: RouteHandler<IPatch.Tx> = async function patchUser(request, actions): Promise<RoutePayload<IPatch.Tx>> {
+    return new Promise<RoutePayload<IPatch.Tx>>(async resolve => {
+        const user = await authorizeOrFail(resolve, actions.common, request.headers.authorization);
+        if (user.id !== request.params.id)
+            resolve(new AuthHeaderIdParamError(user.id, request.params.id).toRoutePayload());
+
         const updated: string[] = [];
-        for (const key of ['username', 'password', 'screenname']) {
-            if (request.body[key]) {
-                if (key === 'password') {
-                    await user.update({ password: actions.common.securePassword(request.body.password) });
-                    updated.push(key);
-                    continue;
-                }
-                await user.update({ [key]: request.body[key] });
-                updated.push(key);
-            }
+        const rejected: string[] = [];
+
+        for (const key of Object.keys(request.body)) {
+            if (key === 'password') {
+                await user.update({ password: actions.common.securePassword(request.body.password) });
+                updated.push('password');
+            } else if (key === 'screenname') {
+                await user.update({ screenname: request.body.screenname });
+                updated.push('screenname');
+            } else if (key === 'username') {
+                await user.update({ username: request.body.username });
+                updated.push('username');
+            } else
+                rejected.push(key);
         }
-        return payload<Patch.Ok.Updated>(updated.length ? `Updated ${updated.join(', ')}.` : 'No changes warranted.', 200, true, { updated });
-    } else {
-        return payload<Patch.Failed.NoUser>(`The user ${args.username} does not exist.`, 200, false, { error: 'No User' });
-    }
+
+        resolve(new Patch.Success(user, updated, rejected).toRoutePayload());
+    });
 };
 
 export const routes: RouteInfo[] = [
-    {
-        method: 'POST', path: '/api/user/:id', handler: register,
-        requirements: {
-            auth: {
-                method: 'pass'
-            },
-            scope: {
-                query: {
-                    required: [],
-                    replacements: {
-                        test: false
-                    }
-                }
-            }
-        }
-    },
-    {
-        method: 'POST', path: '/api/authenticate', handler: authenticate,
-        requirements: {
-            auth: {
-                method: 'authenticate'
-            }
-        }
-    },
-    {
-        method: 'DELETE', path: '/api/user/:id', handler: deregister,
-        requirements: {
-            auth: {
-                method: 'authenticate'
-            }
-        }
-    },
-    {
-        method: 'PATCH', path: '/api/user/:id', handler: patchUser,
-        requirements: {
-            scope: {
-                body: {
-                    required: [
-                        ['username'], ['password']
-                    ],
-                    replacements: { }
-                }
-            },
-            auth: {
-                method: 'authenticate'
-            }
-        }
-    }
+    { method: 'POST',   path: '/api/user/:id',      handler: register },
+    { method: 'POST',   path: '/api/authorize/:id', handler: authorize },
+    { method: 'DELETE', path: '/api/user/:id',      handler: deregister },
+    { method: 'PATCH',  path: '/api/user/:id',      handler: patchUser }
 ];
