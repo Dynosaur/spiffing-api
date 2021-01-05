@@ -1,5 +1,5 @@
 import { ErrorResponse } from './response';
-import { IAuthorizationParseError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { IAuthHeaderIdParamMismatchError, IAuthorizationParseError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 export class ObjectIdParseError extends ErrorResponse<IObjectIdParseError> {
     constructor(public provided: string) {
@@ -49,5 +49,17 @@ export class UnauthenticatedError extends ErrorResponse<IUnauthenticatedError> {
 export class UnauthorizedError extends ErrorResponse<IUnauthorizedError> {
     constructor() {
         super('Unauthorized', 'Request was unauthorized.', 403);
+    }
+}
+
+export class AuthHeaderIdParamError extends ErrorResponse<IAuthHeaderIdParamMismatchError> {
+    constructor(public header: string, public param: string) {
+        super(
+            'Authorization Header and Id Param Mismatch',
+            'The authorization header is the credentials to a different user than the one specified in the request param id.',
+            400
+        );
+        this.payload.headerId = this.header;
+        this.payload.paramId = this.param;
     }
 }
