@@ -51,6 +51,10 @@ export class BoundPost {
         this.changed.on('dislikes');
     }
 
+    getTitle(): string {
+        return this.dbPost.title;
+    }
+
     async deletePost(): Promise<void> {
         await this.postApi.deletePosts({ _id: this.dbPost._id });
         this.alive = false;
