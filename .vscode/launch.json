@@ -8,6 +8,13 @@
             "runtimeExecutable": "npm",
             "skipFiles": ["<node_internals>/**"],
             "type": "pwa-node"
+        }, {
+            "name": "run application",
+            "request": "launch",
+            "runtimeArgs": ["start"],
+            "runtimeExecutable": "npm",
+            "skipFiles": ["<node_internals>/**"],
+            "type": "pwa-node"
         }
     ]
 }
