@@ -1,6 +1,6 @@
 import { RoutePayload } from 'server/route-handling/route-infra';
-import { AuthorizationParseError } from 'app/server/interface-bindings/error-responses';
-import { IAuthorizationParseError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { AuthorizationParseError, UnauthenticatedError } from 'app/server/interface-bindings/error-responses';
+import { IAuthorizationParseError, IUnauthenticatedError } from 'interface/responses/error-responses';
 
 const encodeMap = new Map();
 encodeMap.set(' ', '%20');
@@ -20,25 +20,23 @@ export function encodeHttp(s: string): string {
     return s;
 }
 
-export function decodeBasicAuth(
-    resolve: (error: RoutePayload<IAuthorizationParseError>) => void,
-    authorizationHeader: string
-): { username: string; password: string; } {
+export function decodeBasicAuth(authorizationHeader: string): RoutePayload<IAuthorizationParseError | IUnauthenticatedError> | { username: string; password: string; } {
+    if (!authorizationHeader) return new UnauthenticatedError();
+
     const ensureAuthorizationIsBasic = authorizationHeader.match(/^Basic /);
-    if (!ensureAuthorizationIsBasic)
-        resolve(new AuthorizationParseError('Authorization Type').toRoutePayload());
+    if (!ensureAuthorizationIsBasic) return new AuthorizationParseError('Authorization Type');
 
     const base64 = authorizationHeader.substring(6);
     const httpEncoded = Buffer.from(base64, 'base64').toString('ascii');
 
     const usernameRegex = httpEncoded.match(/^(.+):/);
     if (!usernameRegex)
-        resolve(new AuthorizationParseError('Username').toRoutePayload());
+        return new AuthorizationParseError('Username');
     const username = decodeHttp(usernameRegex[1]);
 
     const passwordRegex = httpEncoded.match(/:(.+)$/);
     if (!passwordRegex)
-        resolve(new AuthorizationParseError('Password').toRoutePayload());
+        return new AuthorizationParseError('Password');
     const password = decodeHttp(passwordRegex[1]);
 
     return { username, password };
