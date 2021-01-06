@@ -6,10 +6,8 @@ import { CommentAPI } from 'database/dbi/comment-actions';
 import { IBaseResponse } from 'interface/response';
 import { CommonActions } from 'database/common-actions';
 
-export interface RoutePayload<T extends IBaseResponse> {
-    httpCode: number;
-    consoleMessage: string;
-    payload: T;
+export class RoutePayload<PayloadType extends IBaseResponse> {
+    constructor(public message: string, public payload: PayloadType, public code = 200) { }
 }
 
 export interface DatabaseActions {
