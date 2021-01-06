@@ -1,85 +1,111 @@
 import { Post } from '../interface/data-types';
 import { ObjectId } from 'mongodb';
-import { BoundUser } from 'app/database/dbi/user-api';
+import { BoundUser } from 'database/dbi/user-api';
 import { objectIdParseErrorMessage } from 'app/error-messages';
+import { MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
 import { RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
-import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from '../interface-bindings/api-responses';
+import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface-bindings/api-responses';
 import { ICreatePost, IGetPost, IGetPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
-import { getPostOrFail, createObjectIdOrFail, scopeMustHaveProps, getUserOrFail, authorizeOrFail } from '../route-handling/route-handler';
+import { scopeMustHaveProps } from '../route-handling/route-handler';
+import { decodeBasicAuth } from 'app/tools/auth';
 
-export const getUser: RouteHandler<IGetUser.Tx> = function getUser(request, actions): Promise<RoutePayload<IGetUser.Tx>> {
-    return new Promise<RoutePayload<IGetUser.Tx>>(async resolve => {
-        let id: ObjectId | string;
-        let user: BoundUser;
-        try {
-            id = new ObjectId(request.params.id);
-        } catch (error) {
-            if (error.message === objectIdParseErrorMessage)
-                id = request.params.id;
-            else throw error;
-        }
-        user = await getUserOrFail(resolve, actions.user, id);
-        resolve(new GetUser.Success(user.toInterface()).toRoutePayload());
-    });
+export const getUser: RouteHandler<IGetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<IGetUser.Tx>> {
+    let id: ObjectId | string;
+    try {
+        id = new ObjectId(request.params.id);
+    } catch (error) {
+        if (error.message === objectIdParseErrorMessage)
+            id = request.params.id;
+        else throw error;
+    }
+    let user: BoundUser;
+    if (id instanceof ObjectId) user = await actions.user.readUser({ _id: id });
+    else user = await actions.user.readUser({ username: id });
+    if (!user) return new NoUserFoundError(id instanceof ObjectId ? id.toHexString() : id);
+
+    return new GetUser.Success(user.toInterface());
 };
 
-export const getPosts: RouteHandler<IGetPosts.Tx> = function getPosts(request, actions): Promise<RoutePayload<IGetPosts.Tx>> {
-    return new Promise<RoutePayload<IGetPosts.Tx>>(async resolve => {
-        const allowedKeys: Array<keyof Post> = ['author', 'date', 'title'];
-        const allowed: string[] = [];
-        const blocked: string[] = [];
-        for (const queryKey of Object.keys(request.query)) {
-            if (!allowedKeys.includes(queryKey as any)) {
-                delete request.query[queryKey];
-                blocked.push(queryKey);
-            } else {
-                allowed.push(queryKey);
-                if (queryKey === 'author')
-                    request.query.author = createObjectIdOrFail(resolve, request.query.author as string) as any;
+export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(request, actions): Promise<RoutePayload<IGetPosts.Tx>> {
+    const allowedKeys: Array<keyof Post> = ['author', 'date', 'title'];
+    const allowed: string[] = [];
+    const blocked: string[] = [];
+    for (const queryKey of Object.keys(request.query))
+        if (!allowedKeys.includes(queryKey as any)) {
+            delete request.query[queryKey];
+            blocked.push(queryKey);
+        } else {
+            allowed.push(queryKey);
+            if (queryKey === 'author') {
+                try {
+                    request.query.author = new ObjectId(request.query.author as string) as any;
+                } catch (error) {
+                    if (error.message === objectIdParseErrorMessage)
+                        return new ObjectIdParseError(request.query.author as string);
+                    else throw error;
+                }
             }
         }
-        const posts = await actions.post.readPosts(request.query);
-        resolve(new GetPosts.Success(posts.map(post => post.toInterface()), allowed, blocked).toRoutePayload());
-    });
+    const posts = await actions.post.readPosts(request.query);
+    return new GetPosts.Success(posts.map(post => post.toInterface()), allowed, blocked);
 };
 
-export const getPost: RouteHandler<IGetPost.Tx> = function getPost(request, actions): Promise<RoutePayload<IGetPost.Tx>> {
-    return new Promise<RoutePayload<IGetPost.Tx>>(async resolve => {
-        const id = createObjectIdOrFail(resolve, request.params.id);
-        const post = await getPostOrFail(resolve, actions.post, id);
-        resolve(new GetPost.Success(post.toInterface()).toRoutePayload());
-    });
+export const getPost: RouteHandler<IGetPost.Tx> = async function getPost(request, actions): Promise<RoutePayload<IGetPost.Tx>> {
+    let id: ObjectId;
+    try {
+        id = new ObjectId(request.params.id);
+    } catch (error) {
+        if (error.message === objectIdParseErrorMessage)
+            return new ObjectIdParseError(request.params.id);
+        else throw error;
+    }
+    const post = await actions.post.readPost(id);
+    return new GetPost.Success(post.toInterface());
 };
 
-export const createPost: RouteHandler<ICreatePost.Tx> = function createPost(request, actions): Promise<RoutePayload<ICreatePost.Tx>> {
-    return new Promise<RoutePayload<ICreatePost.Tx>>(async resolve => {
-        const user = await authorizeOrFail(resolve, actions.common, request.headers.authorization);
-        scopeMustHaveProps(resolve, request.body, 'body', ['title', 'content']);
-        const post = await actions.post.createPost(user._id, request.body.title, request.body.content);
-        resolve(new CreatePost.Success(post.toInterface()).toRoutePayload());
-    });
+export const createPost: RouteHandler<ICreatePost.Tx> = async function createPost(request, actions): Promise<RoutePayload<ICreatePost.Tx>> {
+    if (!request.headers.authorization) return new UnauthenticatedError();
+    const bodyError = scopeMustHaveProps(request.body, 'body', ['title', 'content']);
+    if (bodyError) return bodyError;
+
+    const decodeAttempt = decodeBasicAuth(request.headers.authorization);
+    if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
+
+    const user = await actions.user.readUser({ username: decodeAttempt.username });
+    const post = await actions.post.createPost(user._id, request.body.title, request.body.content);
+    return new CreatePost.Success(post.toInterface());
 };
 
-export const ratePost: RouteHandler<IRatePost.Tx> = function ratePost(request, actions): Promise<RoutePayload<IRatePost.Tx>> {
-    return new Promise<RoutePayload<IRatePost.Tx>>(async resolve => {
-        scopeMustHaveProps(resolve, request.body, 'body', ['rating']);
-        const user = await authorizeOrFail(resolve, actions.common, request.headers.authorization);
-        const postId = createObjectIdOrFail(resolve, request.params.id);
-        const rating = Math.sign(request.body.rating);
-        const post = await getPostOrFail(resolve, actions.post, postId);
-        switch (rating) {
-            case -1:
-                await user.rate.dislikePost(post);
-                break;
-            case 0:
-                await user.rate.unratePost(post);
-                break;
-            case 1:
-                await user.rate.likePost(post);
-                break;
-        }
-        resolve(new RatePost.Success(post, rating).toRoutePayload());
-    });
+export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(request, actions): Promise<RoutePayload<IRatePost.Tx>> {
+    if (!request.headers.authorization) return new UnauthenticatedError();
+    if (request.body.rating === undefined || request.body.rating === null)
+        return new MissingDataError('body', request.body.rating, ['rating']);
+    const decodeAttempt = decodeBasicAuth(request.headers.authorization);
+    if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
+    const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
+    if (!user) return new UnauthorizedError();
+    let postId: ObjectId;
+    try {
+        postId = new ObjectId(request.params.id);
+    } catch (error) {
+        if (error.message === objectIdParseErrorMessage) return new ObjectIdParseError(request.params.id);
+        else throw error;
+    }
+    const rating = Math.sign(request.body.rating);
+    const post = await actions.post.readPost(postId);
+    if (!post) return new NoPostFoundError(postId.toHexString());
+    switch (rating) {
+        case -1:
+            await user.rate.dislikePost(post);
+            break;
+        case 0:
+            await user.rate.unratePost(post);
+            break;
+        case 1:
+            await user.rate.likePost(post);
+            break;
+    }
+    return new RatePost.Success(post, rating);
 };
 
 export const routes: RouteInfo[] = [
