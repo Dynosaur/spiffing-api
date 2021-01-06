@@ -9,7 +9,8 @@
             "interface/*": ["src/server/interface/*"],
             "tests/*": ["tests/*"],
             "server/*": ["src/server/*"],
-            "tools/*": ["src/tools/*"]
+            "tools/*": ["src/tools/*"],
+            "interface-bindings/*": ["src/server/interface-bindings/*"]
         },
         "target": "ES6"
     }
