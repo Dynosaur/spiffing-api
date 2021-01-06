@@ -1,4 +1,3 @@
-import { RoutePayload } from 'app/server/route-handling/route-infra';
 import { IBaseResponse as IBaseResponse, IOkResponse as IOkResponse, IErrorResponse as IErrorResponse } from 'interface/response';
 
 export class BaseResponse<PayloadType extends IBaseResponse> {
@@ -6,16 +5,6 @@ export class BaseResponse<PayloadType extends IBaseResponse> {
 
     constructor(public ok: boolean, public message: string, public code = 200) {
         this.payload.ok = this.ok;
-    }
-
-    toRoutePayload(): RoutePayload<PayloadType> {
-        return {
-            consoleMessage: this.message,
-            httpCode: this.code,
-            payload: {
-                ...this.payload
-            }
-        };
     }
 }
 
