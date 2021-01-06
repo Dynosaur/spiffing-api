@@ -10,7 +10,8 @@
             "tests/*": ["tests/*"],
             "server/*": ["src/server/*"],
             "tools/*": ["src/tools/*"],
-            "interface-bindings/*": ["src/server/interface-bindings/*"]
+            "interface-bindings/*": ["src/server/interface-bindings/*"],
+            "route-handling/*": ["src/server/route-handling/*"]
         },
         "target": "ES6"
     }
