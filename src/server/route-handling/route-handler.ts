@@ -8,7 +8,7 @@ import { BoundUser, UserAPI } from 'app/database/dbi/user-api';
 import { BoundPost, PostAPI } from 'app/database/dbi/post-actions';
 import { objectIdParseErrorMessage } from 'app/error-messages';
 import { RoutePayload, RouteHandler } from 'server/route-handling/route-infra';
-import { ErrorResponse as IErrorResponse } from 'interface/response';
+import { IErrorResponse as IErrorResponse } from 'interface/response';
 import { MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from '../interface-bindings/error-responses';
 import { AuthorizedRequestError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError } from 'interface/responses/error-responses';
 

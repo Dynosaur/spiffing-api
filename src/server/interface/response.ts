@@ -1,12 +1,12 @@
-export interface BaseResponse {
+export interface IBaseResponse {
     ok: boolean;
 }
 
-export interface OkResponse extends BaseResponse {
+export interface IOkResponse extends IBaseResponse {
     ok: true;
 }
 
-export interface ErrorResponse<ErrorMessage extends string> extends BaseResponse {
+export interface IErrorResponse<ErrorMessage extends string> extends IBaseResponse {
     error: ErrorMessage;
     ok: false;
 }

@@ -3,10 +3,10 @@ import { UserAPI } from 'database/dbi/user-api';
 import { PostAPI } from 'database/dbi/post-actions';
 import { HttpMethod } from 'server/routing';
 import { CommentAPI } from 'database/dbi/comment-actions';
-import { BaseResponse } from 'interface/response';
+import { IBaseResponse } from 'interface/response';
 import { CommonActions } from 'database/common-actions';
 
-export interface RoutePayload<T extends BaseResponse> {
+export interface RoutePayload<T extends IBaseResponse> {
     httpCode: number;
     consoleMessage: string;
     payload: T;
@@ -19,7 +19,7 @@ export interface DatabaseActions {
     user: UserAPI;
 }
 
-export interface RouteHandler<ResponseType extends BaseResponse> {
+export interface RouteHandler<ResponseType extends IBaseResponse> {
     (request: Request<any, ResponseType>, actions: DatabaseActions): Promise<RoutePayload<ResponseType>>
 }
 

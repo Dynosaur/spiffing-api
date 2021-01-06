@@ -3,7 +3,7 @@ import { UserAPI } from 'app/database/dbi/user-api';
 import { ObjectId } from 'mongodb';
 import { CommentAPI } from 'app/database/dbi/comment-actions';
 import { randomBytes } from 'crypto';
-import { BaseResponse } from 'app/server/interface/response';
+import { IBaseResponse } from 'app/server/interface/response';
 import { CommonActions } from 'database/common-actions';
 import { DatabaseInterface } from 'app/database/dbi/database-interface';
 import { executeRouteHandler } from 'server/route-handling/route-handler';
@@ -109,11 +109,11 @@ export class MockEnvironment<RequestType> {
         return posts;
     }
 
-    async runRouteHandler<T extends BaseResponse = any>(handler: RouteHandler<T>, args?: object): Promise<RoutePayload<T>> {
+    async runRouteHandler<T extends IBaseResponse = any>(handler: RouteHandler<T>, args?: object): Promise<RoutePayload<T>> {
         return await handler(this.request as any, this.actions);
     }
 
-    async integration<T extends BaseResponse = any>(handler: RouteHandler<T>): Promise<void> {
+    async integration<T extends IBaseResponse = any>(handler: RouteHandler<T>): Promise<void> {
         await executeRouteHandler(this.request as any, this.actions, handler, 'test', false);
     }
 

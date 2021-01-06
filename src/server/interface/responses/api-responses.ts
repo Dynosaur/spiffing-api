@@ -1,11 +1,11 @@
-import { OkResponse } from '../response';
+import { IOkResponse } from '../response';
 import { Post, User } from '../data-types';
 import { AuthorizedRequestError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from './error-responses';
 
 export namespace IGetUser {
     export type ErrorTx = INoUserFoundError;
 
-    export interface Success extends OkResponse {
+    export interface Success extends IOkResponse {
         user: User;
     }
 
@@ -15,7 +15,7 @@ export namespace IGetUser {
 export namespace IGetPosts {
     export type ErrorTx = INoPostFoundError | IObjectIdParseError;
 
-    export interface Success extends OkResponse {
+    export interface Success extends IOkResponse {
         posts: Post[];
         'query-blocked'?: string[];
         'query-allowed'?: string[];
@@ -27,7 +27,7 @@ export namespace IGetPosts {
 export namespace IGetPost {
     export type ErrorTx = INoPostFoundError | IObjectIdParseError;
 
-    export interface Success extends OkResponse {
+    export interface Success extends IOkResponse {
         post: Post;
     }
 
@@ -37,7 +37,7 @@ export namespace IGetPost {
 export namespace ICreatePost {
     export type ErrorTx = AuthorizedRequestError | IMissingDataError | IObjectIdParseError;
 
-    export interface Success extends OkResponse {
+    export interface Success extends IOkResponse {
         post: Post;
     }
 
@@ -47,7 +47,7 @@ export namespace ICreatePost {
 export namespace IRatePost {
     export type ErrorTx = AuthorizedRequestError | IMissingDataError | INoPostFoundError | IObjectIdParseError;
 
-    export interface Success extends OkResponse { }
+    export interface Success extends IOkResponse { }
 
     export type Tx = ErrorTx | Success;
 }

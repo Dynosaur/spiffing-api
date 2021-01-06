@@ -1,18 +1,18 @@
-import { ErrorResponse } from '../response';
+import { IErrorResponse } from '../response';
 
-export interface IObjectIdParseError extends ErrorResponse<'Object Id Parse'> {
+export interface IObjectIdParseError extends IErrorResponse<'Object Id Parse'> {
     provided: string;
 }
 
-export interface INoUserFoundError extends ErrorResponse<'No User Found'> {
+export interface INoUserFoundError extends IErrorResponse<'No User Found'> {
     id: string;
 }
 
-export interface INoPostFoundError extends ErrorResponse<'No Post Found'> {
+export interface INoPostFoundError extends IErrorResponse<'No Post Found'> {
     id: string;
 }
 
-export interface IMissingDataError extends ErrorResponse<'Missing Data'> {
+export interface IMissingDataError extends IErrorResponse<'Missing Data'> {
     missing: {
         received: string[];
         'scope-name': string;
@@ -20,17 +20,17 @@ export interface IMissingDataError extends ErrorResponse<'Missing Data'> {
     };
 }
 
-export interface IUnauthenticatedError extends ErrorResponse<'Unauthenticated'> { }
+export interface IUnauthenticatedError extends IErrorResponse<'Unauthenticated'> { }
 
-export interface IUnauthorizedError extends ErrorResponse<'Unauthorized'> { }
+export interface IUnauthorizedError extends IErrorResponse<'Unauthorized'> { }
 
-export interface IAuthorizationParseError extends ErrorResponse<'Authorization Parsing Error'> {
+export interface IAuthorizationParseError extends IErrorResponse<'Authorization Parsing Error'> {
     part: 'Authorization Type' | 'Username' | 'Password';
 }
 
 export type AuthorizedRequestError = IAuthorizationParseError | IUnauthenticatedError | IUnauthorizedError;
 
-export interface IAuthHeaderIdParamMismatchError extends ErrorResponse<'Authorization Header and Id Param Mismatch'> {
+export interface IAuthHeaderIdParamMismatchError extends IErrorResponse<'Authorization Header and Id Param Mismatch'> {
     headerId: string;
     paramId: string;
 }
