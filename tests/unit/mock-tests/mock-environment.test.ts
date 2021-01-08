@@ -36,7 +36,7 @@ describe('mock-environment', () => {
         });
         it('should be able to use actions', async done => {
             const mock = new MockEnvironment();
-            const users = mock.generateUsers(100);
+            const users = mock.generateUsers(10);
 
             for (const user of users) expect(await mock.actions.user.readUser({ _id: user._id })).toMatchObject({ ...user });
             const user = users[0];
