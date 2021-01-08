@@ -1,11 +1,12 @@
 import { Post } from 'interface/data-types';
 import { ObjectId } from 'mongodb';
-import { convertDbPost } from 'database/data-types';
+import { encodeBasicAuth } from 'app/tools/auth';
 import { MockEnvironment } from 'tests/mock/mock-environment';
 import { convertDbUser, DbPost } from 'app/database/data-types';
+import { convertDbPost, DbRatedPosts, DbUser } from 'database/data-types';
 import { createPost, getPost, getPosts, getUser, ratePost } from 'server/router/api-router';
 import { ICreatePost, IGetPosts, IGetPost, IGetUser, IRatePost } from 'interface/responses/api-responses';
-import { INoPostFoundError, INoUserFoundError } from 'app/server/interface/responses/error-responses';
+import { IMissingDataError, INoPostFoundError, INoUserFoundError } from 'app/server/interface/responses/error-responses';
 
 describe('api route handlers', () => {
     describe('getUser', () => {
@@ -164,6 +165,7 @@ describe('api route handlers', () => {
         it('should create a post', async done => {
             const mock = new MockEnvironment();
             const user = mock.createUser();
+            mock.request.headers.authorization = encodeBasicAuth(user.username, MockEnvironment.defaultPassword);
             const content = 'Some random content for the post and it will be stored in the database.';
             const title = 'My post in the database wow';
             mock.request.body.author = user._id.toHexString();
@@ -171,16 +173,6 @@ describe('api route handlers', () => {
             mock.request.body.title = title;
 
             const response = await mock.runRouteHandler(createPost);
-            expect(mock.posts.insertOneSpy).toBeCalled();
-            expect(mock.posts.data[0]).toStrictEqual<DbPost>({
-                _id: expect.any(ObjectId),
-                author: user._id,
-                comments: [],
-                content,
-                dislikes: 0,
-                likes: 0,
-                title
-            });
             expect(response.payload).toStrictEqual<ICreatePost.Success>({
                 ok: true,
                 post: {
@@ -194,51 +186,96 @@ describe('api route handlers', () => {
                     title
                 }
             });
+            expect(mock.posts.insertOneSpy).toBeCalled();
+            expect(mock.posts.data[0]).toStrictEqual<DbPost>({
+                _id: expect.any(ObjectId),
+                author: user._id,
+                comments: [],
+                content,
+                dislikes: 0,
+                likes: 0,
+                title
+            });
 
             done();
         });
     });
     describe('ratePost', () => {
-        it('should check if the post exists', async done => {
-            const mock = new MockEnvironment();
-            const id = new ObjectId();
-            mock.request.params.id = id.toHexString();
-
-            await mock.runRouteHandler(ratePost);
-            expect(mock.posts.findSpy).toBeCalledWith({ _id: id });
+        let mock: MockEnvironment<any>;
+        let user: DbUser;
+        let posts: DbPost[];
+        beforeEach(() => {
+            mock = new MockEnvironment();
+            user = mock.createUser();
+            posts = mock.generatePosts(5);
+            mock.request.headers.authorization = encodeBasicAuth(user.username, MockEnvironment.defaultPassword);
+            mock.request.params.id = posts[0]._id.toHexString();
+        });
+        it('should return an error if body does not contain a rating property', async done => {
+            const response = await mock.runRouteHandler(ratePost);
+            expect(response.payload).toStrictEqual<IMissingDataError>({
+                error: 'Missing Data',
+                missing: {
+                    received: [],
+                    required: ['rating'],
+                    'scope-name': 'body'
+                },
+                ok: false
+            });
 
             done();
         });
         it('should be able to like posts', async done => {
-            const mock = new MockEnvironment();
-            const post = mock.createPost();
-            mock.request.params.id = post._id.toHexString();
             mock.request.body.rating = 1;
 
             const response = await mock.runRouteHandler(ratePost);
-            expect(mock.posts.updateManySpy).toBeCalledWith({ _id: post._id }, { $set: { likes: 1 } });
-            expect(mock.posts.data[0].likes).toBe(1);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
+            expect(mock.ratings.insertOneSpy).toBeCalledWith<[DbRatedPosts]>({
+                _id: expect.any(ObjectId),
+                owner: user._id,
+                posts: [{
+                    _id: posts[0]._id,
+                    rating: 1
+                }]
+            });
+            expect(mock.posts.updateManySpy).toBeCalledWith({ _id: posts[0]._id }, { $set: { likes: 1 } });
+            expect(mock.posts.data[0].likes).toBe(1);
 
             done();
         });
         it('should be able to dislike posts', async done => {
             const mock = new MockEnvironment();
+            const user = mock.createUser();
+            mock.request.headers.authorization = encodeBasicAuth(user.username, MockEnvironment.defaultPassword);
             const post = mock.createPost();
             mock.request.params.id = post._id.toHexString();
             mock.request.body.rating = -1;
 
             const response = await mock.runRouteHandler(ratePost);
-            expect(mock.posts.updateManySpy).toBeCalledWith({ _id: post._id }, { $set: { dislikes: -1 } });
-            expect(mock.posts.data[0].dislikes).toBe(-1);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
+            expect(mock.ratings.insertOneSpy).toBeCalledWith<[DbRatedPosts]>({
+                _id: expect.any(ObjectId),
+                owner: user._id,
+                posts: [{
+                    _id: post._id,
+                    rating: -1
+                }]
+            });
+            expect(mock.ratings.data[0]).toStrictEqual<DbRatedPosts>({
+                _id: expect.any(ObjectId),
+                owner: user._id,
+                posts: [{
+                    _id: post._id,
+                    rating: -1
+                }]
+            });
+            expect(mock.posts.updateManySpy).toBeCalledWith({ _id: post._id }, { $set: { dislikes: 1 } });
+            expect(mock.posts.data[0].dislikes).toBe(1);
 
             done();
         });
         it('should be able to handle extraneous values', async done => {
-            const mock = new MockEnvironment();
-            const post = mock.createPost();
-            mock.request.params.id = post._id.toHexString();
+            mock.request.params.id = posts[0]._id.toHexString();
             mock.request.body.rating = 1534;
 
             let response = await mock.runRouteHandler(ratePost);
@@ -252,12 +289,12 @@ describe('api route handlers', () => {
 
             mock.request.body.rating = -20394;
             response = await mock.runRouteHandler(ratePost);
-            expect(mock.posts.data[0].dislikes).toBe(-1);
+            expect(mock.posts.data[0].dislikes).toBe(1);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             mock.request.body.rating = -32475093847590238475092347509234875423593487502394875092348572938475093248750239485732904857302948570293485703924857032948570349285703948570983494;
             response = await mock.runRouteHandler(ratePost);
-            expect(mock.posts.data[0].dislikes).toBe(-2);
+            expect(mock.posts.data[0].dislikes).toBe(2);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             done();
