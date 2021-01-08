@@ -15,6 +15,20 @@
             "runtimeExecutable": "npm",
             "skipFiles": ["<node_internals>/**"],
             "type": "pwa-node"
+        }, {
+            "name": "router unit tests",
+            "request": "launch",
+            "runtimeArgs": ["run", "test:unit:router"],
+            "runtimeExecutable": "npm",
+            "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**/*.js"],
+            "type": "pwa-node"
+        }, {
+            "name": "mock unit tests",
+            "request": "launch",
+            "runtimeArgs": ["run", "test:unit:mock"],
+            "runtimeExecutable": "npm",
+            "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**/*.js"],
+            "type": "pwa-node"
         }
     ]
 }
