@@ -1,6 +1,6 @@
 import { DbPost } from 'database/data-types';
 import { ObjectId } from 'mongodb';
-import { MockCollection, asymmetricalMatch } from 'tests/mock';
+import { MockCollection } from 'tests/mock';
 
 function mockPost(id = new ObjectId(), author = new ObjectId()): DbPost {
     return {
