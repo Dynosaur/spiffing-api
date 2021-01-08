@@ -97,7 +97,7 @@ export class Server {
                 executeRouteHandler(request, this.actions, info.handler, fingerprint, this.verbose);
             } else {
                 response.status(404).json({ message: 'Path not supported.' });
-                chalk.yellow(`${fingerprint} Path is not supported.\n`);
+                if (this.verbose) chalk.yellow(`${fingerprint} Path is not supported.\n`);
             }
         });
 
