@@ -47,11 +47,12 @@ export const deregister: RouteHandler<IDeregister.Tx> = async function deregiste
 };
 
 export const patchUser: RouteHandler<IPatch.Tx> = async function patchUser(request, actions): Promise<RoutePayload<IPatch.Tx>> {
-    if (!request.headers.authorization) throw new UnauthenticatedError();
+    if (!request.headers.authorization) return new UnauthenticatedError();
 
     const decodeAttempt = decodeBasicAuth(request.headers.authorization);
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
+    if (!user) return new UnauthorizedError();
     if (user.id !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
 
     const updated: string[] = [];

@@ -60,18 +60,20 @@ export const getPost: RouteHandler<IGetPost.Tx> = async function getPost(request
         else throw error;
     }
     const post = await actions.post.readPost(id);
+    if (!post) return new NoPostFoundError(id.toHexString());
     return new GetPost.Success(post.toInterface());
 };
 
 export const createPost: RouteHandler<ICreatePost.Tx> = async function createPost(request, actions): Promise<RoutePayload<ICreatePost.Tx>> {
     if (!request.headers.authorization) return new UnauthenticatedError();
-    const bodyError = scopeMustHaveProps(request.body, 'body', ['title', 'content']);
+    const bodyError = scopeMustHaveProps(request.body, 'body', ['content', 'title']);
     if (bodyError) return bodyError;
 
     const decodeAttempt = decodeBasicAuth(request.headers.authorization);
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
 
-    const user = await actions.user.readUser({ username: decodeAttempt.username });
+    const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
+    if (!user) return new UnauthorizedError();
     const post = await actions.post.createPost(user._id, request.body.title, request.body.content);
     return new CreatePost.Success(post.toInterface());
 };
@@ -79,7 +81,7 @@ export const createPost: RouteHandler<ICreatePost.Tx> = async function createPos
 export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(request, actions): Promise<RoutePayload<IRatePost.Tx>> {
     if (!request.headers.authorization) return new UnauthenticatedError();
     if (request.body.rating === undefined || request.body.rating === null)
-        return new MissingDataError('body', request.body.rating, ['rating']);
+        return new MissingDataError('body', Object.keys(request.body), ['rating']);
     const decodeAttempt = decodeBasicAuth(request.headers.authorization);
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
