@@ -10,9 +10,9 @@ export async function executeRouteHandler(
     fingerprint: string,
     verbose = true): Promise<void> {
     function sendPayload(request: Request, payload: RoutePayload<any>, verbose = true): void {
-        request.res.status(payload.httpCode).send(payload.payload);
+        request.res.status(payload.code).send(payload.payload);
         if (verbose) {
-            const message = `[${payload.httpCode}] ${payload.consoleMessage}`;
+            const message = `[${payload.code}] ${payload.message}`;
             if (payload.payload.ok) {
                 chalk.lime(`${fingerprint} SUCCESS: ${message}`);
             } else {
@@ -55,5 +55,5 @@ export function scopeMustHaveProps(scope: object, scopeName: string, props: stri
         if (!scope.hasOwnProperty(prop))
             missing.push(prop);
     if (missing.length)
-        return new MissingDataError(scopeName, Object.keys(scope), props);
+        return new MissingDataError(scopeName, Object.keys(scope), missing);
 }
