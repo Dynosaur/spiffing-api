@@ -12,6 +12,7 @@ describe('auth router validation', () => {
     let username = 'hello';
     let screenname = username;
     let password = 'world';
+    let uid: string;
 
     beforeAll(() => {
         process.env.environment = 'DEV';
@@ -45,10 +46,11 @@ describe('auth router validation', () => {
                             username: username
                         }
                     });
+                    uid = res.body.user._id;
                 });
             await supertest(app)
                 .get(`/api/user/${username}`)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IGetUser.Success>({
                         ok: true,
                         user: {
@@ -66,7 +68,7 @@ describe('auth router validation', () => {
             await supertest(app)
                 .post(`/api/user/${username}`)
                 .auth(username, password)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IRegister.Failed.UserExists>({
                         error: 'User Already Exists',
                         ok: false
@@ -77,21 +79,21 @@ describe('auth router validation', () => {
         });
     });
 
-    describe('authenticate', () => {
-        it('should authenticate', async done => {
+    describe('authorize', () => {
+        it('should authorize', async done => {
             await supertest(app)
-                .post('/api/authenticate')
+                .post(`/api/authorize/${uid}`)
                 .auth(username, password)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IAuthorize.Success>({ ok: true });
                 });
             done();
         });
         it('should not authenticate', async done => {
             await supertest(app)
-                .post('/api/authenticate')
+                .post(`/api/authorize/${uid}`)
                 .auth(username, randomBytes(16).toString('hex'))
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IAuthorize.ErrTx>({
                         error: 'Unauthorized',
                         ok: false
@@ -107,16 +109,16 @@ describe('auth router validation', () => {
                 .patch(`/api/user/${username}`)
                 .auth(username, randomBytes(16).toString('hex'))
                 .send({ username: 'hard2explain' })
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IUnauthorizedError>({
                         error: 'Unauthorized',
                         ok: false
                     });
                 });
             await supertest(app)
-                .post('/api/authenticate')
+                .post(`/api/authorize/${uid}`)
                 .auth(username, password)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual({
                         ok: true
                     });
@@ -126,10 +128,10 @@ describe('auth router validation', () => {
         it('should update username', async done => {
             const newUsername = 'Johari';
             await supertest(app)
-                .patch(`/api/user/${username}`)
+                .patch(`/api/user/${uid}`)
                 .auth(username, password)
                 .send({ username: newUsername })
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IPatch.Success>({
                         ok: true,
                         'rejected-props': [],
@@ -138,9 +140,9 @@ describe('auth router validation', () => {
                 });
             username = newUsername;
             await supertest(app)
-                .post('/api/authenticate')
+                .post(`/api/authorize/${uid}`)
                 .auth(username, password)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual({
                         ok: true
                     });
@@ -150,10 +152,10 @@ describe('auth router validation', () => {
         it('should update password', async done => {
             const newPassword = 'theb3stKn0w';
             await supertest(app)
-                .patch(`/api/user/${username}`)
+                .patch(`/api/user/${uid}`)
                 .auth(username, password)
                 .send({ password: newPassword })
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IPatch.Success>({
                         ok: true,
                         'rejected-props': [],
@@ -162,9 +164,9 @@ describe('auth router validation', () => {
                 });
             password = newPassword;
             await supertest(app)
-                .post('/api/authenticate')
+                .post(`/api/authorize/${uid}`)
                 .auth(username, password)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual({
                         ok: true
                     });
@@ -175,10 +177,10 @@ describe('auth router validation', () => {
             const newUsername = 'CandyStoreOfOurs';
             const newPassword = 'Som3Feather5!';
             await supertest(app)
-                .patch(`/api/user/${username}`)
+                .patch(`/api/user/${uid}`)
                 .auth(username, password)
                 .send({ username: newUsername, password: newPassword })
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IPatch.Success>({
                         ok: true,
                         'rejected-props': [],
@@ -188,9 +190,9 @@ describe('auth router validation', () => {
             username = newUsername;
             password = newPassword;
             await supertest(app)
-                .post('/api/authenticate')
+                .post(`/api/authorize/${uid}`)
                 .auth(username, password)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual({
                         ok: true
                     });
@@ -202,17 +204,17 @@ describe('auth router validation', () => {
     describe('deregister', () => {
         it('should not delete if authentication fails', async done => {
             await supertest(app)
-                .delete(`/api/user/${username}`)
+                .delete(`/api/user/${uid}`)
                 .auth(username, randomBytes(16).toString('hex'))
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IUnauthorizedError>({
                         error: 'Unauthorized',
                         ok: false
                     });
                 });
             await supertest(app)
-                .get(`/api/user/${username}`)
-                .expect(200).then(res => {
+                .get(`/api/user/${uid}`)
+                .then(res => {
                     expect(res.body).toStrictEqual<IGetUser.Success>({
                         ok: true,
                         user: {
@@ -227,17 +229,17 @@ describe('auth router validation', () => {
         });
         it('should delete the user and its posts', async done => {
             await supertest(app)
-                .delete(`/api/user/${username}`)
+                .delete(`/api/user/${uid}`)
                 .auth(username, password)
-                .expect(200).then(res => {
+                .then(res => {
                     expect(res.body).toStrictEqual<IDeregister.Success>({ ok: true });
                 });
             await supertest(app)
-                .get(`/api/user/${username}`)
-                .expect(200).then(res => {
+                .get(`/api/user/${uid}`)
+                .then(res => {
                     expect(res.body).toStrictEqual<INoUserFoundError>({
                         error: 'No User Found',
-                        id: username,
+                        id: uid,
                         ok: false
                     });
                 });

@@ -6,7 +6,7 @@ import { ObjectId } from 'mongodb';
 import { randomBytes } from 'crypto';
 import { IDeregister, IRegister } from 'interface/responses/auth-endpoints';
 import { ICreatePost, IGetPost, IGetPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
-import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
+import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 
 function expectUser(username: string): User {
     if (!username.length)
@@ -23,9 +23,9 @@ describe('api router validation', () => {
     let app: Express;
     let server: Server;
     let testUser = {
-        username: 'hello',
+        username: 'hello2',
         password: 'world',
-        id: null
+        id: ''
     };
     const postIds: string[] = [];
 
@@ -45,7 +45,7 @@ describe('api router validation', () => {
                 ok: true,
                 user: expectUser(testUser.username)
             });
-            testUser.id = new ObjectId(response.body.user?._id);
+            testUser.id = response.body.user._id;
         }).catch(() => process.exit(1));
 
         done();
@@ -53,7 +53,7 @@ describe('api router validation', () => {
 
     afterAll(async done => {
         await supertest(app)
-        .delete(`/api/user/${testUser.username}`)
+        .delete(`/api/user/${testUser.id}`)
         .auth(testUser.username, testUser.password)
         .then(response => {
             expect(response.body).toStrictEqual<IDeregister.Success>({ ok: true });
@@ -79,10 +79,10 @@ describe('api router validation', () => {
             done();
         });
         it('should return an error if the user cannot be found', async done => {
-            await supertest(app).get('/api/user/King Harvest').then(response => {
+            await supertest(app).get('/api/user/KingHarvest').then(response => {
                 expect(response.body).toStrictEqual<INoUserFoundError>({
                     error: 'No User Found',
-                    id: 'King Harvest',
+                    id: 'KingHarvest',
                     ok: false
                 });
             });
@@ -91,86 +91,49 @@ describe('api router validation', () => {
     });
 
     describe('create post', () => {
-        it('should return a parsing error if body author is extraneous', async done => {
-            await supertest(app)
-            .post(`/api/${testUser.username}/post`)
-            .auth(testUser.username, testUser.password)
-            .send({
-                author: '',
-                content: 'content',
-                title: 'title'
-            })
-            .then(res => {
-                expect(res.body).toStrictEqual<IObjectIdParseError>({
-                    error: 'Object Id Parse',
-                    ok: false,
-                    provided: ''
-                });
-            });
-
-            done();
-        });
         it('should return an error if required body fields are not present', async done => {
             await supertest(app)
-            .post(`/api/${testUser.username}/post`)
+            .post('/api/post')
             .auth(testUser.username, testUser.password)
             .then(res => {
                 expect(res.body).toStrictEqual<IMissingDataError>({
                     error: 'Missing Data',
                     ok: false,
                     missing: {
-                        required: ['author', 'content', 'title'],
+                        required: ['content', 'title'],
                         received: [],
                         'scope-name': 'body'
                     }
                 });
             });
             await supertest(app)
-            .post(`/api/${testUser.username}/post`)
+            .post('/api/post')
             .auth(testUser.username, testUser.password)
-            .send({ author: '' })
+            .send({ content: '' })
             .then(res => {
                 expect(res.body).toStrictEqual<IMissingDataError>({
                     error: 'Missing Data',
                     ok: false,
                     missing: {
-                        required: ['author', 'content', 'title'],
-                        received: ['author'],
+                        required: ['title'],
+                        received: ['content'],
                         'scope-name': 'body'
                     }
                 });
             });
             await supertest(app)
-            .post(`/api/${testUser.username}/post`)
+            .post('/api/post')
             .auth(testUser.username, testUser.password)
-            .send({ author: '', content: '' })
+            .send({ title: '' })
             .then(res => {
                 expect(res.body).toStrictEqual<IMissingDataError>({
                     error: 'Missing Data',
                     ok: false,
                     missing: {
-                        received: ['author', 'content', 'title'],
-                        required: ['author', 'content'],
+                        received: ['title'],
+                        required: ['content'],
                         'scope-name': 'body'
                     }
-                });
-            });
-
-            done();
-        });
-        it('should require an authorization header', async done => {
-            await supertest(app)
-            .post(`/api/${testUser.username}/post`)
-            .send({ author: '', content: '', title: '' })
-            .then(res => {
-                expect(res.body).toStrictEqual<IMissingDataError>({
-                    error: 'Missing Data',
-                    missing: {
-                        required: ['authorization'],
-                        received: expect.any(Array),
-                        'scope-name': 'headers'
-                    },
-                    ok: false
                 });
             });
 
@@ -178,8 +141,17 @@ describe('api router validation', () => {
         });
         it('should require authorization', async done => {
             await supertest(app)
-            .post(`/api/${testUser.username}/post`)
-            .auth(testUser.username, 'worldcon')
+            .post('/api/post')
+            .send({ author: '', content: '', title: '' })
+            .then(res => {
+                expect(res.body).toStrictEqual<IUnauthenticatedError>({
+                    error: 'Unauthenticated',
+                    ok: false
+                });
+            });
+            await supertest(app)
+            .post('/api/post')
+            .auth(testUser.username, 'jambalaya')
             .send({ author: '', content: '', title: '' })
             .then(res => {
                 expect(res.body).toStrictEqual<IUnauthorizedError>({
@@ -187,17 +159,16 @@ describe('api router validation', () => {
                     ok: false
                 });
             });
-
             done();
         });
         it('should create a new post', async done => {
             const postContent = 'Hello, World!';
             const postTitle = 'Test Post';
             await supertest(app)
-            .post(`/api/${testUser.username}/post`)
+            .post('/api/post')
             .auth(testUser.username, testUser.password)
             .send({
-                author: testUser.id.toHexString(),
+                author: testUser.id,
                 content: postContent,
                 title: postTitle
             })
@@ -206,7 +177,7 @@ describe('api router validation', () => {
                     ok: true,
                     post: {
                         _id: expect.stringMatching(/[a-f\d]{24}/),
-                        author: testUser.id.toHexString(),
+                        author: testUser.id,
                         comments: [],
                         content: postContent,
                         date: expect.any(Number),
@@ -229,7 +200,7 @@ describe('api router validation', () => {
                     ok: true,
                     post: {
                         _id: postIds[0],
-                        author: testUser.id.toHexString(),
+                        author: testUser.id,
                         comments: [],
                         content: expect.any(String),
                         date: expect.any(Number),
@@ -280,28 +251,39 @@ describe('api router validation', () => {
     });
 
     describe('rate post', () => {
+        it('should require authorization', async done => {
+            await supertest(app)
+            .post(`/api/rate/post/${postIds[0]}`)
+            .send({ rating: 1 })
+            .then(response => {
+                expect(response.body).toStrictEqual<IUnauthenticatedError>({
+                    error: 'Unauthenticated',
+                    ok: false
+                });
+            });
+            await supertest(app)
+            .post(`/api/rate/post/${postIds[0]}`)
+            .auth(testUser.username, 'Snail Jose')
+            .send({ rating: 1 })
+            .then(response => {
+                expect(response.body).toStrictEqual<IUnauthorizedError>({
+                    error: 'Unauthorized',
+                    ok: false
+                });
+            });
+            done();
+        });
         it('should required a rating field in the request body', async done => {
-            await supertest(app).post(`/api/rate/post/${postIds[0]}`).then(response => {
+            await supertest(app)
+            .post(`/api/rate/post/${postIds[0]}`)
+            .auth(testUser.username, testUser.password)
+            .then(response => {
                 expect(response.body).toStrictEqual<IMissingDataError>({
                     error: 'Missing Data',
                     missing: {
                         required: ['rating'],
                         received: [],
                         'scope-name': 'body'
-                    },
-                    ok: false
-                });
-            });
-            done();
-        });
-        it('should require authorization', async done => {
-            await supertest(app).post(`/api/rate/post/${postIds[0]}`).send({ rating: 1 }).then(response => {
-                expect(response.body).toStrictEqual<IMissingDataError>({
-                    error: 'Missing Data',
-                    missing: {
-                        required: ['authorization'],
-                        received: expect.any(Array),
-                        'scope-name': 'headers'
                     },
                     ok: false
                 });
