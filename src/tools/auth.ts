@@ -1,12 +1,14 @@
 import { RoutePayload } from 'server/route-handling/route-infra';
-import { AuthorizationParseError, UnauthenticatedError } from 'app/server/interface-bindings/error-responses';
-import { IAuthorizationParseError, IUnauthenticatedError } from 'interface/responses/error-responses';
+import { UndefinedError } from './undefined-error';
+import { AuthorizationParseError } from 'app/server/interface-bindings/error-responses';
+import { IAuthorizationParseError } from 'interface/responses/error-responses';
 
 const encodeMap = new Map();
 encodeMap.set(' ', '%20');
 encodeMap.set(':', '%3A');
 
 export function decodeHttp(s: string): string {
+    if (s === undefined || s === null) throw new UndefinedError('s', s);
     encodeMap.forEach((encoded, plain) => {
         s = s.replace(new RegExp(encoded, 'g'), plain);
     });
@@ -14,14 +16,16 @@ export function decodeHttp(s: string): string {
 }
 
 export function encodeHttp(s: string): string {
+    if (s === undefined || s === null) throw new UndefinedError('s', s);
     encodeMap.forEach((encoded, plain) => {
         s = s.replace(new RegExp(plain, 'g'), encoded);
     });
     return s;
 }
 
-export function decodeBasicAuth(authorizationHeader: string): RoutePayload<IAuthorizationParseError | IUnauthenticatedError> | { username: string; password: string; } {
-    if (!authorizationHeader) return new UnauthenticatedError();
+export function decodeBasicAuth(authorizationHeader: string): RoutePayload<IAuthorizationParseError> | { username: string; password: string; } {
+    if (authorizationHeader === undefined || authorizationHeader === null)
+        throw new UndefinedError('authorizationHeader', authorizationHeader);
 
     const ensureAuthorizationIsBasic = authorizationHeader.match(/^Basic /);
     if (!ensureAuthorizationIsBasic) return new AuthorizationParseError('Authorization Type');
@@ -43,6 +47,8 @@ export function decodeBasicAuth(authorizationHeader: string): RoutePayload<IAuth
 }
 
 export function encodeBasicAuth(username: string, password: string): string {
+    if (username === undefined || username === null) throw new UndefinedError('username', username);
+    if (password === undefined || password === null) throw new UndefinedError('password', password);
     username = encodeHttp(username);
     password = encodeHttp(password);
 
