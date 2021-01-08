@@ -6,8 +6,6 @@ export class MockRequest<T = any> {
                 public query: any = {},
                 public headers: any = {},
                 public body: any = {}) { }
-
-
 }
 
 class MockResponse<T> {

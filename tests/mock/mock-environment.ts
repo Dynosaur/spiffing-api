@@ -18,13 +18,6 @@ interface DatabaseConfig {
     postFill?: number;
 }
 
-interface RequestConfig {
-    body?: object;
-    headers?: object;
-    params?: object;
-    query?: object;
-}
-
 export class MockEnvironment<RequestType> {
 
     static defaultPassword = 'test-password';
@@ -55,14 +48,14 @@ export class MockEnvironment<RequestType> {
 
     commonActions = new CommonActions(this.userAPI);
 
-    constructor(dbConfig: DatabaseConfig = { }, reqConfig: RequestConfig = { }) {
+    constructor(dbConfig: DatabaseConfig = { }) {
         this.actions = {
             comment: this.commentAPI,
             common: this.commonActions,
             post: this.postAPI,
             user: this.userAPI
         };
-        this.request = new MockRequest(reqConfig.params, reqConfig.query, reqConfig.headers, reqConfig.body);
+        this.request = new MockRequest();
 
         this.generateUsers(dbConfig.userFill);
         this.generatePosts(dbConfig.postFill);
@@ -109,7 +102,7 @@ export class MockEnvironment<RequestType> {
         return posts;
     }
 
-    async runRouteHandler<T extends IBaseResponse = any>(handler: RouteHandler<T>, args?: object): Promise<RoutePayload<T>> {
+    async runRouteHandler<T extends IBaseResponse = any>(handler: RouteHandler<T>): Promise<RoutePayload<T>> {
         return await handler(this.request as any, this.actions);
     }
 
