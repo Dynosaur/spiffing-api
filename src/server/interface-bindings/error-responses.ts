@@ -1,5 +1,6 @@
 import { ErrorResponse } from './response';
-import { IAuthHeaderIdParamMismatchError, IAuthorizationParseError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { IAuthHeaderIdParamMismatchError, IAuthorizationParseError, IMissingDataError, INoPostFoundError, INoUserFoundError,
+IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 export class ObjectIdParseError extends ErrorResponse<IObjectIdParseError> {
     constructor(public provided: string) {
@@ -18,7 +19,7 @@ export class NoUserFoundError extends ErrorResponse<INoUserFoundError> {
 export class NoPostFoundError extends ErrorResponse<INoPostFoundError> {
     constructor(public id: string) {
         super('No Post Found', `Could not find post ${id}.`, 404);
-        this.payload.id;
+        this.payload.id = this.id;
     }
 }
 
