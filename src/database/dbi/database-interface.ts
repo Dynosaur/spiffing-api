@@ -23,11 +23,12 @@ export class DatabaseInterface<T extends Identifiable> {
         return items;
     }
 
-    async update(query: Partial<T>, updates: Partial<T>): Promise<boolean> {
-        const elements = await this.read(query);
-        if (!elements.length) return false;
-        await this.collection.updateMany(query, { $set: updates });
-        return true;
+    async update(query: Partial<T>, updates: Partial<T>): Promise<{ matched: number; modified: number; }> {
+        const updateRequest = await this.collection.updateMany(query, { $set: updates });
+        return {
+            matched: updateRequest.matchedCount,
+            modified: updateRequest.modifiedCount
+        };
     }
 
 }
