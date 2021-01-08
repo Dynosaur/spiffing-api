@@ -10,6 +10,14 @@ export class RateAPI {
 
     async initialize(): Promise<void> {
         this.userRatedPosts = await this.dbi.read({ owner: this.uid })[0];
+        if (this.userRatedPosts === undefined || this.userRatedPosts === null) {
+            this.userRatedPosts = {
+                _id: new ObjectId(),
+                owner: this.uid,
+                posts: []
+            };
+            await this.dbi.create(this.userRatedPosts);
+        }
     }
 
     async likePost(post: BoundPost): Promise<void> {
@@ -27,6 +35,8 @@ export class RateAPI {
                 rating: 1
             });
             await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
+            post.setLikes(post.getLikes() + 1);
+            await post.flush();
         }
     }
 
@@ -45,6 +55,8 @@ export class RateAPI {
                 rating: -1
             });
             await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
+            post.setDislikes(post.getDislikes() + 1);
+            await post.flush();
         }
     }
 
