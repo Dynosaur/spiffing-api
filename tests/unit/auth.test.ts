@@ -28,22 +28,22 @@ describe('auth tools', () => {
     });
 
     it('decodeBasicAuth', () => {
-        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic aGVsbG86d29ybGQ='))).toStrictEqual({
+        expect(decodeBasicAuth('Basic aGVsbG86d29ybGQ=')).toStrictEqual({
             username: 'hello',
             password: 'world'
         });
-        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic ZGlmZmljdWx0JTIwdG8lM0FQYXJzZTpJJTIwSEFURSUzQVBBU1NXT1JEUyUyMCUyMA=='))).toStrictEqual({
+        expect(decodeBasicAuth('Basic ZGlmZmljdWx0JTIwdG8lM0FQYXJzZTpJJTIwSEFURSUzQVBBU1NXT1JEUyUyMCUyMA==')).toStrictEqual({
             username: 'difficult to:Parse',
             password: 'I HATE:PASSWORDS  '
         });
-        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic JTNBJTNBTWFrZSUyMGluZyUyMCUzQSUzQUlUJTNBRElGRklDVUxUJTIwJTIwJTNBJTNBJTNBOiUzQSUzQUxPTCUyMCUyMA=='))).toStrictEqual({
+        expect(decodeBasicAuth('Basic JTNBJTNBTWFrZSUyMGluZyUyMCUzQSUzQUlUJTNBRElGRklDVUxUJTIwJTIwJTNBJTNBJTNBOiUzQSUzQUxPTCUyMCUyMA==')).toStrictEqual({
             username: '::Make ing ::IT:DIFFICULT  :::',
             password: '::LOL  '
         });
 
-        expect(() => new Promise(resolve => decodeBasicAuth(resolve, ''))).toStrictEqual(new AuthorizationParseError('Authorization Type'));
-        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic '))).toStrictEqual(new AuthorizationParseError('Username'));
-        expect(() => new Promise(resolve => decodeBasicAuth(resolve, 'Basic dXNlcm5hbWU6'))).toStrictEqual(new AuthorizationParseError('Password'));
+        expect(decodeBasicAuth('')).toStrictEqual(new AuthorizationParseError('Authorization Type'));
+        expect(decodeBasicAuth('Basic ')).toStrictEqual(new AuthorizationParseError('Username'));
+        expect(decodeBasicAuth('Basic dXNlcm5hbWU6')).toStrictEqual(new AuthorizationParseError('Password'));
     });
 
     it('encodeBasicAuth', () => {
