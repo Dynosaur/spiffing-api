@@ -5,8 +5,8 @@ import { Express } from 'express';
 import { ObjectId } from 'mongodb';
 import { randomBytes } from 'crypto';
 import { IDeregister, IRegister } from 'interface/responses/auth-endpoints';
-import { ICreatePost, IGetPost, IGetPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
-import { IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
+import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
+import { IAuthHeaderIdParamMismatchError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 
 function expectUser(username: string): User {
     if (!username.length)
@@ -298,6 +298,13 @@ describe('api router validation', () => {
             .then(response => {
                 expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
             });
+            await supertest(app)
+            .post(`/api/rate/post/${postIds[0]}`)
+            .send({ rating: 0 })
+            .auth(testUser.username, testUser.password)
+            .then(response => {
+                expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+            });
             done();
         });
         it('should return an error with bad id', async done => {
@@ -311,6 +318,82 @@ describe('api router validation', () => {
                     error: 'No Post Found',
                     id,
                     ok: false
+                });
+            });
+            done();
+        });
+    });
+
+    describe('get rated posts', () => {
+        it('should require authorization', async done => {
+            await supertest(app)
+            .get(`/api/rated/${testUser.id}`)
+            .then(response => {
+                expect(response.body).toStrictEqual<IUnauthenticatedError>({
+                    error: 'Unauthenticated',
+                    ok: false
+                });
+            });
+            await supertest(app)
+            .get(`/api/rated/${testUser.id}`)
+            .auth(testUser.username, 'Do Your Wurst')
+            .then(response => {
+                expect(response.body).toStrictEqual<IUnauthorizedError>({
+                    error: 'Unauthorized',
+                    ok: false
+                });
+            });
+            done();
+        });
+        it('should require authorized user id to be the same as ownerId', async done => {
+            await supertest(app)
+            .get('/api/rated/PorterRobinson')
+            .auth(testUser.username, testUser.password)
+            .then(response => {
+                expect(response.body).toStrictEqual<IAuthHeaderIdParamMismatchError>({
+                    error: 'Authorization Header and Id Param Mismatch',
+                    headerId: expect.stringMatching(/[a-f\d]{24}/),
+                    ok: false,
+                    paramId: 'PorterRobinson'
+                });
+            });
+            done();
+        });
+        it('should get ratedPosts', async done => {
+            await supertest(app)
+            .get(`/api/rated/${testUser.id}`)
+            .auth(testUser.username, testUser.password)
+            .then(response => {
+                expect(response.body).toStrictEqual<IGetRatedPosts.Success>({
+                    ok: true,
+                    ratedPosts: {
+                        _id: expect.stringMatching(/[a-f\d]{24}/),
+                        owner: testUser.id,
+                        posts: []
+                    }
+                });
+            });
+            await supertest(app)
+            .post(`/api/rate/post/${postIds[0]}`)
+            .send({ rating: 1 })
+            .auth(testUser.username, testUser.password)
+            .then(response => {
+                expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+            });
+            await supertest(app)
+            .get(`/api/rated/${testUser.id}`)
+            .auth(testUser.username, testUser.password)
+            .then(response => {
+                expect(response.body).toStrictEqual<IGetRatedPosts.Success>({
+                    ok: true,
+                    ratedPosts: {
+                        _id: expect.stringMatching(/[a-f\d]{24}/),
+                        owner: testUser.id,
+                        posts: [{
+                            _id: postIds[0],
+                            rating: 1
+                        }]
+                    }
                 });
             });
             done();
