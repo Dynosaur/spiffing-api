@@ -82,7 +82,7 @@ describe('auth router validation', () => {
     describe('authorize', () => {
         it('should authorize', async done => {
             await supertest(app)
-                .post(`/api/authorize/${uid}`)
+                .post('/api/authorize')
                 .auth(username, password)
                 .then(res => {
                     expect(res.body).toStrictEqual<IAuthorize.Success>({ ok: true });
@@ -91,7 +91,7 @@ describe('auth router validation', () => {
         });
         it('should not authenticate', async done => {
             await supertest(app)
-                .post(`/api/authorize/${uid}`)
+                .post('/api/authorize')
                 .auth(username, randomBytes(16).toString('hex'))
                 .then(res => {
                     expect(res.body).toStrictEqual<IAuthorize.ErrTx>({
@@ -116,7 +116,7 @@ describe('auth router validation', () => {
                     });
                 });
             await supertest(app)
-                .post(`/api/authorize/${uid}`)
+                .post('/api/authorize')
                 .auth(username, password)
                 .then(res => {
                     expect(res.body).toStrictEqual({
@@ -140,7 +140,7 @@ describe('auth router validation', () => {
                 });
             username = newUsername;
             await supertest(app)
-                .post(`/api/authorize/${uid}`)
+                .post('/api/authorize')
                 .auth(username, password)
                 .then(res => {
                     expect(res.body).toStrictEqual({
@@ -164,7 +164,7 @@ describe('auth router validation', () => {
                 });
             password = newPassword;
             await supertest(app)
-                .post(`/api/authorize/${uid}`)
+                .post('/api/authorize')
                 .auth(username, password)
                 .then(res => {
                     expect(res.body).toStrictEqual({
@@ -190,7 +190,7 @@ describe('auth router validation', () => {
             username = newUsername;
             password = newPassword;
             await supertest(app)
-                .post(`/api/authorize/${uid}`)
+                .post('/api/authorize')
                 .auth(username, password)
                 .then(res => {
                     expect(res.body).toStrictEqual({
