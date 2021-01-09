@@ -1,7 +1,8 @@
-import { BoundPost } from 'app/database/dbi/post-actions';
+import { BoundPost } from 'database/dbi/post-actions';
+import { BoundUser } from 'database/dbi/user-api';
 import { OkResponse } from './response';
-import { Post, User } from '../interface/data-types';
-import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost } from 'interface/responses/api-responses';
+import { Post, RatedPosts, User } from 'interface/data-types';
+import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost, IGetRatedPosts } from 'interface/responses/api-responses';
 
 export namespace GetUser {
     export class Success extends OkResponse<IGetUser.Success> {
@@ -47,6 +48,15 @@ export namespace RatePost {
     export class Success extends OkResponse<IRatePost.Success> {
         constructor(post: BoundPost, rating: number, changed: boolean) {
             super(changed ? `Successfully rated post ${post.getTitle()} (${post.id}) with rating ${rating}.` : `No change from rating ${rating}.`, 201);
+        }
+    }
+}
+
+export namespace GetRatedPosts {
+    export class Success extends OkResponse<IGetRatedPosts.Success> {
+        constructor(user: BoundUser, ratedPosts: RatedPosts) {
+            super(`Successfully found posts rated by user ${user.username} (${user.id}).`);
+            this.payload.ratedPosts = ratedPosts;
         }
     }
 }
