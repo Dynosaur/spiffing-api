@@ -1,13 +1,14 @@
-import { Post } from '../interface/data-types';
+import { Post } from 'interface/data-types';
 import { ObjectId } from 'mongodb';
 import { BoundUser } from 'database/dbi/user-api';
+import { decodeBasicAuth } from 'tools/auth';
+import { scopeMustHaveProps } from 'route-handling/route-handler';
+import { convertDbRatedPosts } from 'database/data-types';
 import { objectIdParseErrorMessage } from 'app/error-messages';
-import { MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
 import { RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
-import { CreatePost, GetPost, GetPosts, GetUser, RatePost } from 'interface-bindings/api-responses';
-import { ICreatePost, IGetPost, IGetPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
-import { scopeMustHaveProps } from '../route-handling/route-handler';
-import { decodeBasicAuth } from 'app/tools/auth';
+import { CreatePost, GetPost, GetPosts, GetRatedPosts, GetUser, RatePost } from 'interface-bindings/api-responses';
+import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
+import { AuthHeaderIdParamError, MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
 
 export const getUser: RouteHandler<IGetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<IGetUser.Tx>> {
     let id: ObjectId | string;
@@ -111,10 +112,22 @@ export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(requ
     return new RatePost.Success(post, rating, result);
 };
 
+export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function getRatedPosts(request, actions): Promise<RoutePayload<IGetRatedPosts.Tx>> {
+    if (!request.headers.authorization) return new UnauthenticatedError();
+    const decodeAttempt = decodeBasicAuth(request.headers.authorization);
+    if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
+    const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
+    if (!user) return new UnauthorizedError();
+    if (user.id !== request.params.ownerId) return new AuthHeaderIdParamError(user.id, request.params.ownerId);
+    const rated = user.rate.getRatedPosts();
+    return new GetRatedPosts.Success(user, convertDbRatedPosts(rated));
+};
+
 export const routes: RouteInfo[] = [
-    { method: 'GET',  path: '/api/user/:id',      handler: getUser },
-    { method: 'GET',  path: '/api/posts',         handler: getPosts },
-    { method: 'POST', path: '/api/post',          handler: createPost },
-    { method: 'GET',  path: '/api/post/:id',      handler: getPost },
-    { method: 'POST', path: '/api/rate/post/:id', handler: ratePost }
+    { method: 'GET',  path: '/api/user/:id',       handler: getUser       },
+    { method: 'GET',  path: '/api/posts',          handler: getPosts      },
+    { method: 'POST', path: '/api/post',           handler: createPost    },
+    { method: 'GET',  path: '/api/post/:id',       handler: getPost       },
+    { method: 'POST', path: '/api/rate/post/:id',  handler: ratePost      },
+    { method: 'GET',  path: '/api/rated/:ownerId', handler: getRatedPosts }
 ];
