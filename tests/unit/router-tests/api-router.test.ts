@@ -282,19 +282,22 @@ describe('api route handlers', () => {
             expect(mock.posts.data[0].likes).toBe(1);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
-            mock.request.body.rating = 873498573049857349087590348759043509087098572934752934759342875039487034957848532405730924573940287593248719628374698127462813401230534205;
+            mock.request.body.rating = -873498573049857349087590348759043509087098572934752934759342875039487034957848532405730924573940287593248719628374698127462813401230534205;
             response = await mock.runRouteHandler(ratePost);
-            expect(mock.posts.data[0].likes).toBe(2);
+            expect(mock.posts.data[0].likes).toBe(0);
+            expect(mock.posts.data[0].dislikes).toBe(1);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
-            mock.request.body.rating = -20394;
+            mock.request.body.rating = 20394;
             response = await mock.runRouteHandler(ratePost);
-            expect(mock.posts.data[0].dislikes).toBe(1);
+            expect(mock.posts.data[0].likes).toBe(1);
+            expect(mock.posts.data[0].dislikes).toBe(0);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             mock.request.body.rating = -32475093847590238475092347509234875423593487502394875092348572938475093248750239485732904857302948570293485703924857032948570349285703948570983494;
             response = await mock.runRouteHandler(ratePost);
-            expect(mock.posts.data[0].dislikes).toBe(2);
+            expect(mock.posts.data[0].dislikes).toBe(1);
+            expect(mock.posts.data[0].likes).toBe(0);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
 
             done();
