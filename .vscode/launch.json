@@ -29,6 +29,13 @@
             "runtimeExecutable": "npm",
             "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**/*.js"],
             "type": "pwa-node"
+        }, {
+            "name": "router api unit tests",
+            "request": "launch",
+            "runtimeArgs": ["run", "test:unit:router:api"],
+            "runtimeExecutable": "npm",
+            "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**/*.js"],
+            "type": "pwa-node"
         }
     ]
 }

@@ -11,6 +11,7 @@
     "test:unit": "jest --selectProjects unit-tests",
     "test:unit:mock": "jest --selectProjects unit-tests/mock",
     "test:unit:router": "jest --selectProjects unit-tests/router",
+    "test:unit:router:api": "jest --selectProjects unit-tests/router/api",
     "test:unit:database": "jest --selectProjects unit-tests/database",
     "test:valid": "jest --selectProjects validation-tests --runInBand",
     "coverage-report": ".\\coverage.\\lcov-report.\\index.html"
