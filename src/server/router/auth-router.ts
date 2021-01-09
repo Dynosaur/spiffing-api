@@ -28,7 +28,6 @@ export const authorize: RouteHandler<IAuthorize.Tx> = async function authenticat
 
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
-    if (user.id !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
 
     return new Authorize.Success(user);
 };
@@ -75,8 +74,8 @@ export const patchUser: RouteHandler<IPatch.Tx> = async function patchUser(reque
 };
 
 export const routes: RouteInfo[] = [
-    { method: 'POST',   path: '/api/user/:id',      handler: register },
-    { method: 'POST',   path: '/api/authorize/:id', handler: authorize },
-    { method: 'DELETE', path: '/api/user/:id',      handler: deregister },
-    { method: 'PATCH',  path: '/api/user/:id',      handler: patchUser }
+    { method: 'POST',   path: '/api/user/:id',  handler: register },
+    { method: 'POST',   path: '/api/authorize', handler: authorize },
+    { method: 'DELETE', path: '/api/user/:id',  handler: deregister },
+    { method: 'PATCH',  path: '/api/user/:id',  handler: patchUser }
 ];
