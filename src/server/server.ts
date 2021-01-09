@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { chalk } from 'tools/chalk';
+import { devInfo } from 'app/dev/dev-actions';
 import { UserAPI } from 'app/database/dbi/user-api';
 import { PostAPI } from 'app/database/dbi/post-actions';
 import { indexRoute } from './router/misc-router';
@@ -11,7 +12,6 @@ import { RouteRegister } from 'server/routing';
 import { CommonActions } from 'app/database/common-actions';
 import { prettyTimestamp } from 'tools/time';
 import { DatabaseActions } from 'server/route-handling/route-infra';
-import { DeveloperActions } from 'app/dev/dev-actions';
 import { DatabaseInterface } from 'app/database/dbi/database-interface';
 import { routes as apiRoutes } from 'server/router/api-router';
 import { executeRouteHandler } from 'server/route-handling/route-handler';
@@ -36,8 +36,6 @@ export class Server {
     private userApi: UserAPI;
     private commonApi: CommonActions;
     private commentApi: CommentAPI;
-
-    private devActions = new DeveloperActions();
 
     private requestFingerprintSize = 3;
 
@@ -94,7 +92,8 @@ export class Server {
             if (this.verbose) chalk.yellow(`${fingerprint} ${prettyTimestamp()} ${request.method} ${request.url}`);
             const info = this.routeRegister.isRegistered(request);
             if (info) {
-                executeRouteHandler(request, this.actions, info.handler, fingerprint, this.verbose);
+                if (info.stream) info.streamHandler(request, this.verbose, fingerprint);
+                else executeRouteHandler(request, this.actions, info.handler, fingerprint, this.verbose);
             } else {
                 response.status(404).json({ message: 'Path not supported.' });
                 if (this.verbose) chalk.yellow(`${fingerprint} Path is not supported.\n`);
@@ -103,14 +102,8 @@ export class Server {
 
         apiRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         authRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
+        devInfo.forEach(info => this.routeRegister.register(info.path, info.method, info));
         this.routeRegister.register('', 'GET', indexRoute);
-
-        this.app.get('/dev/response', (req, res) => this.devActions.streamResponse().pipe(res));
-        this.app.get('/dev/endpoints', (req, res) => this.devActions.streamEndpoints().pipe(res));
-        this.app.get('/dev/data-types', (req, res) => this.devActions.streamDataTypes().pipe(res));
-        this.app.get('/dev/responses/api', (req, res) => this.devActions.streamResponsesApi().pipe(res));
-        this.app.get('/dev/responses/auth', (req, res) => this.devActions.streamResponsesAuth().pipe(res));
-        this.app.get('/dev/responses/error', (req, res) => this.devActions.streamResponsesError().pipe(res));
     }
 
     async start(port: number): Promise<void> {

@@ -44,6 +44,7 @@ export interface RouteHandlerRequirements {
 export interface RouteInfo {
     method: HttpMethod;
     path: string;
-    handler: RouteHandler<any>;
-    requirements?: RouteHandlerRequirements;
+    handler: RouteHandler<IBaseResponse>;
+    stream?: boolean;
+    streamHandler?: (request: Request, verbose: boolean, id: string) => void;
 }
