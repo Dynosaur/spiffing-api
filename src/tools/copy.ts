@@ -14,7 +14,9 @@ export function defensiveCopy<T>(object: T): T {
     if (typeof object === 'object') {
         const newObject = {};
         for (const property of Object.keys(object))
-            if (typeof object[property] === 'object') newObject[property] = defensiveCopy(object[property]);
+            if (typeof object[property] === 'object') 
+                if (object[property] instanceof Array) newObject[property] = copyArray(object[property]);
+                else newObject[property] = defensiveCopy(object[property]);
             else newObject[property] = object[property];
         return newObject as T;
     } else return object;

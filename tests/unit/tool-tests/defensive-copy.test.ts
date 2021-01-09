@@ -26,4 +26,11 @@ describe('defensiveCopy function', () => {
         copy.place.state = 'Blue Rock';
         expect(original.place.state).toStrictEqual('Red Rock');
     });
+    it('should copy objects with arrays as properties', () => {
+        let original: any = { a: 'a', b: ['b', 'c', 'd'] };
+        let copy = defensiveCopy(original);
+        expect(copy).toStrictEqual(original);
+        copy.b[0] = 'a';
+        expect(original.b[0]).toBe('b');
+    });
 });
