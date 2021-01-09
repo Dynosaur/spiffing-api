@@ -96,18 +96,19 @@ export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(requ
     const rating = Math.sign(request.body.rating);
     const post = await actions.post.readPost(postId);
     if (!post) return new NoPostFoundError(postId.toHexString());
+    let result: boolean;
     switch (rating) {
         case -1:
-            await user.rate.dislikePost(post);
+            result = await user.rate.dislikePost(post);
             break;
         case 0:
-            await user.rate.unratePost(post);
+            result = await user.rate.unratePost(post);
             break;
         case 1:
-            await user.rate.likePost(post);
+            result = await user.rate.likePost(post);
             break;
     }
-    return new RatePost.Success(post, rating);
+    return new RatePost.Success(post, rating, result);
 };
 
 export const routes: RouteInfo[] = [

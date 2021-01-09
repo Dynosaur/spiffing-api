@@ -45,8 +45,8 @@ export namespace CreatePost {
 
 export namespace RatePost {
     export class Success extends OkResponse<IRatePost.Success> {
-        constructor(post: BoundPost, rating: number) {
-            super(`Successfully rated post ${post.getTitle()} (${post.id}) with rating ${rating}.`, 201);
+        constructor(post: BoundPost, rating: number, changed: boolean) {
+            super(changed ? `Successfully rated post ${post.getTitle()} (${post.id}) with rating ${rating}.` : `No change from rating ${rating}.`, 201);
         }
     }
 }
