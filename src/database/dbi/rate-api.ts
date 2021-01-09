@@ -8,6 +8,19 @@ export class RateAPI {
 
     constructor(private dbi: DatabaseInterface<DbRatedPosts>, private uid: ObjectId) { }
 
+    getRatedPosts(): DbRatedPosts {
+        return {
+            _id: new ObjectId(this.userRatedPosts._id),
+            owner: new ObjectId(this.userRatedPosts.owner),
+            posts: this.userRatedPosts.posts.map(post => {
+                return {
+                    _id: new ObjectId(post._id),
+                    rating: post.rating,
+                };
+            })
+        };
+    }
+
     async initialize(): Promise<void> {
         const result = await this.dbi.read({ owner: this.uid });
         if (result.length === 0) {
