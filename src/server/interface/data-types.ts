@@ -24,3 +24,14 @@ export interface Comment {
     likes: number;
     replies: string[];
 }
+
+export interface RatedPost {
+    _id: string;
+    rating: -1 | 1;
+}
+
+export interface RatedPosts {
+    _id: string;
+    owner: string;
+    posts: RatedPost[];
+}
