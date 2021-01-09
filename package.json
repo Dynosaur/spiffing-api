@@ -14,7 +14,7 @@
     "test:unit:router:api": "jest --selectProjects unit-tests/router/api",
     "test:unit:database": "jest --selectProjects unit-tests/database",
     "test:valid": "jest --selectProjects validation-tests --runInBand",
-    "coverage-report": ".\\coverage.\\lcov-report.\\index.html"
+    "get-coverage": "npm run test -- --collectCoverage && .\\coverage.\\lcov-report.\\index.html"
   },
   "keywords": [],
   "author": "",
