@@ -1,13 +1,13 @@
-import { Post } from 'interface/data-types';
 import { ObjectId } from 'mongodb';
 import { BoundUser } from 'database/dbi/user-api';
+import { Post, User } from 'interface/data-types';
 import { decodeBasicAuth } from 'tools/auth';
 import { scopeMustHaveProps } from 'route-handling/route-handler';
 import { convertDbRatedPosts } from 'database/data-types';
 import { objectIdParseErrorMessage } from 'app/error-messages';
 import { RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
-import { CreatePost, GetPost, GetPosts, GetRatedPosts, GetUser, RatePost } from 'interface-bindings/api-responses';
-import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
+import { CreatePost, GetPost, GetPosts, GetRatedPosts, GetUser, GetUsers, RatePost } from 'interface-bindings/api-responses';
+import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IRatePost } from 'interface/responses/api-responses';
 import { AuthHeaderIdParamError, MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
 
 export const getUser: RouteHandler<IGetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<IGetUser.Tx>> {
@@ -123,11 +123,27 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
     return new GetRatedPosts.Success(user, convertDbRatedPosts(rated));
 };
 
+export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {
+    const queryCheck = scopeMustHaveProps(request.query, 'query', ['ids']);
+    if (queryCheck) return queryCheck;
+    const ids = Array.from((request.query.ids as string).matchAll(/([a-f\d]{24})/g)).map(tingy => tingy[1]);
+    const users: User[] = [];
+    const missingIds: string[] = [];
+    while (ids.length) {
+        const id = ids.shift();
+        const user = await actions.user.readUser({ _id: new ObjectId(id) });
+        if (user) users.push(user.toInterface());
+        else missingIds.push(id);
+    }
+    return new GetUsers.Success(users, missingIds);
+};
+
 export const routes: RouteInfo[] = [
     { method: 'GET',  path: '/api/user/:id',       handler: getUser       },
     { method: 'GET',  path: '/api/posts',          handler: getPosts      },
     { method: 'POST', path: '/api/post',           handler: createPost    },
     { method: 'GET',  path: '/api/post/:id',       handler: getPost       },
     { method: 'POST', path: '/api/rate/post/:id',  handler: ratePost      },
-    { method: 'GET',  path: '/api/rated/:ownerId', handler: getRatedPosts }
+    { method: 'GET',  path: '/api/rated/:ownerId', handler: getRatedPosts },
+    { method: 'GET',  path: '/api/users',          handler: getUsers      }
 ];

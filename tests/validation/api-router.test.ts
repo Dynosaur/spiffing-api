@@ -2,10 +2,9 @@ import { User } from 'app/server/interface/data-types';
 import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
-import { ObjectId } from 'mongodb';
 import { randomBytes } from 'crypto';
 import { IDeregister, IRegister } from 'interface/responses/auth-endpoints';
-import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IRatePost } from 'interface/responses/api-responses';
+import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IRatePost } from 'interface/responses/api-responses';
 import { IAuthHeaderIdParamMismatchError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 
 function expectUser(username: string): User {
@@ -394,6 +393,42 @@ describe('api router validation', () => {
                             rating: 1
                         }]
                     }
+                });
+            });
+            done();
+        });
+    });
+
+    describe('get users', () => {
+        it('should require a query param', async done => {
+            await supertest(app)
+            .get('/api/users')
+            .then(response => {
+                expect(response.body).toStrictEqual<IMissingDataError>({
+                    error: 'Missing Data',
+                    missing: {
+                        received: [],
+                        required: ['ids'],
+                        'scope-name': 'query'
+                    },
+                    ok: false
+                });
+            });
+            done();
+        });
+        it('should be able to get a single user', async done => {
+            await supertest(app)
+            .get(`/api/users?ids=${testUser.id}`)
+            .then(response => {
+                expect(response.body).toStrictEqual<IGetUsers.Success>({
+                    missing: [],
+                    ok: true,
+                    users: [{
+                        _id: testUser.id,
+                        created: expect.any(Number),
+                        screenname: testUser.username,
+                        username: testUser.username
+                    }]
                 });
             });
             done();

@@ -2,7 +2,7 @@ import { BoundPost } from 'database/dbi/post-actions';
 import { BoundUser } from 'database/dbi/user-api';
 import { OkResponse } from './response';
 import { Post, RatedPosts, User } from 'interface/data-types';
-import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost, IGetRatedPosts } from 'interface/responses/api-responses';
+import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost, IGetRatedPosts, IGetUsers } from 'interface/responses/api-responses';
 
 export namespace GetUser {
     export class Success extends OkResponse<IGetUser.Success> {
@@ -57,6 +57,16 @@ export namespace GetRatedPosts {
         constructor(user: BoundUser, ratedPosts: RatedPosts) {
             super(`Successfully found posts rated by user ${user.username} (${user.id}).`);
             this.payload.ratedPosts = ratedPosts;
+        }
+    }
+}
+
+export namespace GetUsers {
+    export class Success extends OkResponse<IGetUsers.Success> {
+        constructor(users: User[], missing: string[]) {
+            super(`Successfully found ${users.length} users${missing.length ? `, but did not find ${missing.length} users.` : '.'}`);
+            this.payload.missing = missing;
+            this.payload.users = users;
         }
     }
 }
