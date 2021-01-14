@@ -15,9 +15,7 @@ export class CommonActions {
                 const authorized = this.cipher.decrypt(user.password.hash) === hash(password, user.password.salt).hash;
                 if (authorized)
                     return user;
-            } catch (error) {
-                return null;
-            }
+            } catch (error) { }
         return null;
     }
 
