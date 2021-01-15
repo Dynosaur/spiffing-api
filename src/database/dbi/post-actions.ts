@@ -100,8 +100,6 @@ export class PostAPI {
     }
 
     async readPosts(query: Partial<DbPost>): Promise<BoundPost[]> {
-        if (query._id && typeof query._id === 'string') query._id = new ObjectId(query._id);
-        if (query.author && typeof query.author === 'string') query.author = new ObjectId(query.author);
         const posts = await this.dbi.read(query);
         return posts.map(post => new BoundPost(this, post));
     }
