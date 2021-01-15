@@ -36,6 +36,13 @@
             "runtimeExecutable": "npm",
             "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**/*.js"],
             "type": "pwa-node"
+        }, {
+            "name": "integration tests",
+            "request": "launch",
+            "runtimeArgs": ["run", "test:int"],
+            "runtimeExecutable": "npm",
+            "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**/*.js"],
+            "type": "pwa-node"
         }
     ]
 }
