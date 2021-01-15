@@ -13,6 +13,7 @@ function createProject(name, path, other) {
 
 module.exports = {
     projects: [
+        createProject('integration-tests', 'integration'),
         createProject('unit-tests', 'unit'),
         createProject('unit-tests/mock', 'unit/mock-tests'),
         createProject('unit-tests/router', 'unit/router-tests'),
