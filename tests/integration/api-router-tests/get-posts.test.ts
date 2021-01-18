@@ -88,7 +88,7 @@ describe('getPosts route handler', () => {
                 likes: 0,
                 title: expect.any(String)
             }],
-            'query-allowed': ['id']
+            'query-allowed': ['id', 'include']
         });
         done();
     });
