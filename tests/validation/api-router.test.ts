@@ -247,6 +247,18 @@ describe('api router validation', () => {
             });
             done();
         });
+        it('should include the author as a user if requested', async done => {
+            await supertest(app)
+            .get('/api/posts?include=authorUser')
+            .then(response => {
+                expect(response.body).toStrictEqual<IGetPosts.Success>({
+                    ok: true,
+                    posts: expect.arrayContaining([expect.objectContaining({ _id: postIds[0] })]),
+                    'query-allowed': ['include']
+                });
+            });
+            done();
+        });
     });
 
     describe('rate post', () => {
