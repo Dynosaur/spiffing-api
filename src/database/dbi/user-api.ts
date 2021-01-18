@@ -1,9 +1,9 @@
-import { User } from 'app/server/interface/data-types';
-import { PostAPI } from './post-actions';
-import { RateAPI } from './rate-api';
+import { User } from 'interface/data-types';
+import { PostAPI } from 'database/dbi/post-actions';
+import { RateAPI } from 'database/dbi/rate-api';
 import { ObjectId } from 'mongodb';
-import { DatabaseInterface } from './database-interface';
-import { DbRatedPosts, DbUser, Password } from '../data-types';
+import { DatabaseInterface } from 'database/dbi/database-interface';
+import { DbRatedPosts, DbUser, Password } from 'database/data-types';
 
 export class BoundUser implements DbUser {
     id: string;
@@ -12,7 +12,7 @@ export class BoundUser implements DbUser {
     screenname: string;
     username: string;
 
-    constructor(private userAPI: UserAPI, public rate: RateAPI, obj: DbUser) {
+    constructor(private api: UserAPI, obj: DbUser) {
         Object.assign(this, obj);
         this.id = this._id.toHexString();
     }
@@ -26,45 +26,56 @@ export class BoundUser implements DbUser {
         };
     }
 
+    async getRateApi(): Promise<RateAPI> {
+        let rateApi = new RateAPI(this.api.rateDbi, this._id);
+        await rateApi.initialize();
+        return rateApi;
+    }
+
     async update(updates: Partial<DbUser>): Promise<void> {
-        await this.userAPI.updateUser(this.id, updates);
+        await this.api.updateUser(this.id, updates);
     }
 
     async delete(): Promise<void> {
-        await this.userAPI.deleteUser(this._id);
+        await this.api.deleteUser(this._id);
     }
 
 }
 
 export class UserAPI {
 
-    constructor(private dbi: DatabaseInterface<DbUser>, private postAPI: PostAPI, private rateDBI: DatabaseInterface<DbRatedPosts>) { }
+    constructor(private dbi: DatabaseInterface<DbUser>, private postApi: PostAPI, public rateDbi: DatabaseInterface<DbRatedPosts>) { }
 
     async createUser(username: string, password: Password): Promise<BoundUser> {
         const user: DbUser = {
-            _id: new ObjectId(),
+            _id: undefined,
             password,
             screenname: username,
             username
         };
+        delete user._id;
         await this.dbi.create(user);
-        await this.rateDBI.create({
-            _id: new ObjectId(),
+        const ratedPosts: DbRatedPosts = {
+            _id: undefined,
             owner: user._id,
             posts: []
-        });
-        const rateAPI = new RateAPI(this.rateDBI, user._id);
-        await rateAPI.initialize();
-        return new BoundUser(this, rateAPI, user);
+        };
+        delete ratedPosts._id;
+        await this.rateDbi.create(ratedPosts);
+        return new BoundUser(this, user);
     }
 
     async readUser(query: Partial<DbUser>): Promise<BoundUser> {
         const users = await this.dbi.read(query);
-        if (users.length) {
-            const rateAPI = new RateAPI(this.rateDBI, users[0]._id);
-            await rateAPI.initialize();
-            return new BoundUser(this, rateAPI, users[0]);
-        } else return null;
+        if (users.length) return new BoundUser(this, users[0]);
+        else return null;
+    }
+
+    async getUsersById(ids: ObjectId[]): Promise<BoundUser[]> {
+        const users = await this.dbi.read({ _id: { $in: ids } as any });
+        const boundUsers: BoundUser[] = [];
+        for (const user of users) boundUsers.push(new BoundUser(this, user));
+        return boundUsers;
     }
 
     async updateUser(id: string, updates: Partial<DbUser>): Promise<void> {
@@ -73,8 +84,8 @@ export class UserAPI {
 
     async deleteUser(id: ObjectId): Promise<void> {
         await this.dbi.delete({ _id: id });
-        await this.rateDBI.delete({ owner: id });
-        await this.postAPI.deletePosts({ author: id });
+        await this.rateDbi.delete({ owner: id });
+        await this.postApi.deletePosts({ author: id });
     }
 
 }
