@@ -3,13 +3,16 @@ import { BoundUser } from 'database/dbi/user-api';
 import { Post, User } from 'interface/data-types';
 import { decodeBasicAuth } from 'tools/auth';
 import { scopeMustHaveProps } from 'route-handling/route-handler';
-import { convertDbRatedPosts } from 'database/data-types';
 import { objectIdParseErrorMessage } from 'app/error-messages';
-import { RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
+import { convertDbRatedPosts, DbPost } from 'database/data-types';
+import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
 import { CreatePost, GetPost, GetPosts, GetRatedPosts, GetUser, GetUsers, RatePost } from 'interface-bindings/api-responses';
 import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IRatePost } from 'interface/responses/api-responses';
 import { AuthHeaderIdParamError, MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
 
+/**
+ * @deprecated
+ */
 export const getUser: RouteHandler<IGetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<IGetUser.Tx>> {
     let id: ObjectId | string;
     try {
@@ -28,29 +31,77 @@ export const getUser: RouteHandler<IGetUser.Tx> = async function getUser(request
 };
 
 export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(request, actions): Promise<RoutePayload<IGetPosts.Tx>> {
-    const allowedKeys: Array<keyof Post> = ['author', 'date', 'title'];
+    let posts: Post[] = [];
     const allowed: string[] = [];
     const blocked: string[] = [];
-    for (const queryKey of Object.keys(request.query))
-        if (!allowedKeys.includes(queryKey as any)) {
-            delete request.query[queryKey];
-            blocked.push(queryKey);
-        } else {
-            allowed.push(queryKey);
-            if (queryKey === 'author') {
-                try {
-                    request.query.author = new ObjectId(request.query.author as string) as any;
-                } catch (error) {
-                    if (error.message === objectIdParseErrorMessage)
-                        return new ObjectIdParseError(request.query.author as string);
-                    else throw error;
+    if (Object.keys(request.query).length === 0) {
+        const boundPosts = await actions.post.readPosts({});
+        posts = boundPosts.map(post => post.toInterface());
+    } else {
+        const allowedKeys = ['author', 'id', 'ids', 'title'];
+        const dbQuery: Partial<DbPost> = {};
+        for (const query in request.query) {
+            const queryValue = request.query[query] as string;
+            if (allowedKeys.includes(query)) {
+                allowed.push(query);
+                switch (query) {
+                    case 'author':
+                        try {
+                            dbQuery.author = new ObjectId(queryValue);
+                        } catch (error) {
+                            if (error.message === objectIdParseErrorMessage)
+                                return new ObjectIdParseError(queryValue);
+                            else throw error;
+                        }
+                        break;
+                    case 'id':
+                        try {
+                            dbQuery._id = new ObjectId(queryValue);
+                        } catch (error) {
+                            if (error.message === objectIdParseErrorMessage)
+                                return new ObjectIdParseError(queryValue);
+                            else throw error;
+                        }
+                        break;
+                    case 'ids': {
+                        const ids = queryValue.match(/[a-f\d]{24}/g).map(match => new ObjectId(match));
+                        dbQuery._id = { $in: ids } as any;
+                        break;
+                    }
+                    default:
+                        dbQuery[query] = queryValue;
+                        break;
                 }
             }
         }
-    const posts = await actions.post.readPosts(request.query);
-    return new GetPosts.Success(posts.map(post => post.toInterface()), allowed, blocked);
+        const boundPosts = await actions.post.readPosts(dbQuery);
+        posts = boundPosts.map(post => post.toInterface());
+    }
+    if (request.query.include === 'authorUser') {
+        const authorIds: ObjectId[] = [];
+        for (const post of posts) authorIds.push(new ObjectId(post.author as string));
+        const authors = await actions.user.getUsersById(authorIds);
+        if (authors.length === posts.length) {
+            for (let i = 0; i < posts.length; i++) posts[i].author = authors[i].toInterface();
+        } else {
+            for (const post of posts) {
+                let index: number;
+                for (let i = 0; i < authors.length; i++) {
+                    if (authors[i].id === post.author) {
+                        index = i;
+                        break;
+                    }
+                }
+                post.author = authors.splice(index, 1)[0].toInterface();
+            }
+        }
+    }
+    return new GetPosts.Success(posts, allowed, blocked);
 };
 
+/**
+ * @deprecated
+ */
 export const getPost: RouteHandler<IGetPost.Tx> = async function getPost(request, actions): Promise<RoutePayload<IGetPost.Tx>> {
     let id: ObjectId;
     try {
@@ -98,15 +149,16 @@ export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(requ
     const post = await actions.post.readPost(postId);
     if (!post) return new NoPostFoundError(postId.toHexString());
     let result: boolean;
+    let rate = await user.getRateApi();
     switch (rating) {
         case -1:
-            result = await user.rate.dislikePost(post);
+            result = await rate.dislikePost(post);
             break;
         case 0:
-            result = await user.rate.unratePost(post);
+            result = await rate.unratePost(post);
             break;
         case 1:
-            result = await user.rate.likePost(post);
+            result = await rate.likePost(post);
             break;
     }
     return new RatePost.Success(post, rating, result);
@@ -119,7 +171,8 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
     if (user.id !== request.params.ownerId) return new AuthHeaderIdParamError(user.id, request.params.ownerId);
-    const rated = user.rate.getRatedPosts();
+    let rate = await user.getRateApi();
+    const rated = rate.getRatedPosts();
     return new GetRatedPosts.Success(user, convertDbRatedPosts(rated));
 };
 
