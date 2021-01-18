@@ -38,7 +38,7 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
         const boundPosts = await actions.post.readPosts({});
         posts = boundPosts.map(post => post.toInterface());
     } else {
-        const allowedKeys = ['author', 'id', 'ids', 'title'];
+        const allowedKeys = ['author', 'id', 'ids', 'include', 'title'];
         const dbQuery: Partial<DbPost> = {};
         for (const query in request.query) {
             const queryValue = request.query[query] as string;
@@ -68,11 +68,13 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
                         dbQuery._id = { $in: ids } as any;
                         break;
                     }
+                    case 'include':
+                        break;
                     default:
                         dbQuery[query] = queryValue;
                         break;
                 }
-            }
+            } else blocked.push(query);
         }
         const boundPosts = await actions.post.readPosts(dbQuery);
         posts = boundPosts.map(post => post.toInterface());
