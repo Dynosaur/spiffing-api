@@ -28,17 +28,16 @@ export async function executeRouteHandler(
     try {
         routePayload = await handler(request, actions);
     } catch (error) {
-        if (verbose) chalk.red(`ERROR: route handler "${handler.name}" threw an error: ${error.message}`);
         if (error.message === 'Topology is closed, please connect') {
             // sendPayload(request, noDatabaseConnection(), verbose);
             return;
         }
-        // sendPayload(request, unknown(error), verbose);
+        sendPayload(request, { code: 500, message: error.message, payload: { ok: false, error: error.message } }, verbose);
         return;
     }
 
     if (!routePayload) {
-        chalk.red(`ERROR: route handler "${handler.name}" returned null. Responding with error.`);
+        chalk.red(`${fingerprint} ERROR: route handler "${handler.name}" returned null. Responding with error.`);
         request.res.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
     } else {
         sendPayload(request, routePayload, verbose);

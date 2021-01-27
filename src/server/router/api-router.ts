@@ -80,23 +80,14 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
         posts = boundPosts.map(post => post.toInterface());
     }
     if (request.query.include === 'authorUser') {
-        const authorIds: ObjectId[] = [];
-        for (const post of posts) authorIds.push(new ObjectId(post.author as string));
-        const authors = await actions.user.getUsersById(authorIds);
-        if (authors.length === posts.length) {
-            for (let i = 0; i < posts.length; i++) posts[i].author = authors[i].toInterface();
-        } else {
-            for (const post of posts) {
-                let index: number;
-                for (let i = 0; i < authors.length; i++) {
-                    if (authors[i].id === post.author) {
-                        index = i;
-                        break;
-                    }
-                }
-                post.author = authors.splice(index, 1)[0].toInterface();
-            }
-        }
+        const authorMap = new Map<string, User>();
+        for (const post of posts) authorMap.set(post.author as string, null);
+        const authors = await actions.user.getUsersById(Array.from(authorMap.keys()).map(id => new ObjectId(id)));
+        authors.forEach(author => authorMap.set(author._id.toHexString(), author.toInterface()));
+        posts.forEach(post => {
+            post.author = post.author as string;
+            if (authorMap.has(post.author)) post.author = authorMap.get(post.author);
+        });
     }
     return new GetPosts.Success(posts, allowed, blocked);
 };
