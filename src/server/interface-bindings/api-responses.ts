@@ -63,10 +63,11 @@ export namespace GetRatedPosts {
 
 export namespace GetUsers {
     export class Success extends OkResponse<IGetUsers.Success> {
-        constructor(users: User[], missing: string[]) {
-            super(`Successfully found ${users.length} users${missing.length ? `, but did not find ${missing.length} users.` : '.'}`);
-            this.payload.missing = missing;
+        constructor(users: User[], allowed: string[] = [], blocked: string[] = []) {
+            super(`Successfully found ${users.length} users.`);
             this.payload.users = users;
+            if (allowed.length) this.payload['allowed-queries'] = allowed;
+            if (blocked.length) this.payload['blocked-queries'] = blocked;
         }
     }
 }

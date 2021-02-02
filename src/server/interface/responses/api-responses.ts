@@ -63,11 +63,12 @@ export namespace IGetRatedPosts {
 }
 
 export namespace IGetUsers {
-    export type ErrorTx = IMissingDataError;
+    export type ErrorTx = IMissingDataError | IObjectIdParseError;
 
     export interface Success extends IOkResponse {
         users: User[];
-        missing: string[];
+        'allowed-queries'?: string[];
+        'blocked-queries'?: string[];
     }
 
     export type Tx = ErrorTx | Success;

@@ -71,6 +71,11 @@ export class UserAPI {
         else return null;
     }
 
+    async readUsers(query: Partial<DbUser>): Promise<BoundUser[]> {
+        const users = await this.dbi.read(query);
+        return users.map(db => new BoundUser(this, db));
+    }
+
     async getUsersById(ids: ObjectId[]): Promise<BoundUser[]> {
         const users = await this.dbi.read({ _id: { $in: ids } as any });
         const boundUsers: BoundUser[] = [];

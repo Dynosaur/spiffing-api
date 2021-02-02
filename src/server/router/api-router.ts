@@ -4,11 +4,30 @@ import { Post, User } from 'interface/data-types';
 import { decodeBasicAuth } from 'tools/auth';
 import { scopeMustHaveProps } from 'route-handling/route-handler';
 import { objectIdParseErrorMessage } from 'app/error-messages';
-import { convertDbRatedPosts, DbPost } from 'database/data-types';
+import { convertDbRatedPosts, DbPost, DbUser } from 'database/data-types';
 import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
 import { CreatePost, GetPost, GetPosts, GetRatedPosts, GetUser, GetUsers, RatePost } from 'interface-bindings/api-responses';
 import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IRatePost } from 'interface/responses/api-responses';
 import { AuthHeaderIdParamError, MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
+
+function query(accepted: string[], query: object): { allowed: string[]; blocked: string[]; } {
+    if (Object.keys(query).length === 0) return { allowed: [], blocked: [] };
+    const allowed: string[] = [];
+    const blocked: string[] = [];
+    for (const q in query)
+        if (accepted.includes(q)) allowed.push(q);
+        else blocked.push(q);
+    return { allowed, blocked };
+}
+
+function toObjectId(s: string): ObjectId {
+    try {
+        return new ObjectId(s);
+    } catch (error) {
+        if (error.message === objectIdParseErrorMessage) return null;
+        else throw error;
+    }
+}
 
 /**
  * @deprecated
@@ -170,18 +189,33 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
 };
 
 export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {
-    const queryCheck = scopeMustHaveProps(request.query, 'query', ['ids']);
-    if (queryCheck) return queryCheck;
-    const ids = Array.from((request.query.ids as string).matchAll(/([a-f\d]{24})/g)).map(tingy => tingy[1]);
-    const users: User[] = [];
-    const missingIds: string[] = [];
-    while (ids.length) {
-        const id = ids.shift();
-        const user = await actions.user.readUser({ _id: new ObjectId(id) });
-        if (user) users.push(user.toInterface());
-        else missingIds.push(id);
-    }
-    return new GetUsers.Success(users, missingIds);
+    const queryCheck = query(['id', 'ids', 'username', 'usernames'], request.query);
+    const databaseQuery: Partial<DbUser> = {};
+    queryCheck.allowed.forEach(key => {
+        switch (key) {
+            case 'id':
+                request.query.id = request.query.id as string;
+                const id = toObjectId(request.query.id);
+                if (id === null) return new ObjectIdParseError(request.query.id);
+                else databaseQuery._id = id;
+                break;
+            case 'ids':
+                request.query.ids = request.query.ids as string;
+                const ids = Array.from(request.query.ids.matchAll(/([a-f\d]{24})/g)).map(regexMatch => regexMatch[1]);
+                if (ids.length === 0) break;
+                const objectIds = ids.map(id => new ObjectId(id));
+                databaseQuery._id = { $in: objectIds } as any;
+                break;
+            case 'username':
+                databaseQuery.username = request.query.username as string;
+                break;
+            case 'usernames':
+                databaseQuery.username = { $in: (request.query.usernames as string).split(',') } as any;
+                break;
+        }
+    });
+    const users: User[] = (await actions.user.readUsers(databaseQuery)).map(user => user.toInterface());
+    return new GetUsers.Success(users, queryCheck.allowed, queryCheck.blocked);
 };
 
 export const routes: RouteInfo[] = [

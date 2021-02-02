@@ -91,6 +91,12 @@ export class IntegrationEnvironment {
         );
     }
 
+    async generateUsers(length: number): Promise<BoundUser[]> {
+        const users: BoundUser[] = [];
+        for (let i = 0; i < length; i++) users.push(await this.generateUser());
+        return users;
+    }
+
     async generatePosts(amount: number, author: ObjectId): Promise<BoundPost[]> {
         const posts: DbPost[] = [];
         for (let i = 0; i < amount; i++) {
