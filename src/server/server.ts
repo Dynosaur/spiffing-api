@@ -4,7 +4,6 @@ import { chalk } from 'tools/chalk';
 import { devInfo } from 'app/dev/dev-actions';
 import { UserAPI } from 'app/database/dbi/user-api';
 import { PostAPI } from 'app/database/dbi/post-actions';
-import { indexRoute } from './router/misc-router';
 import { CommentAPI } from 'app/database/dbi/comment-actions';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'database/mongo-client';
@@ -16,7 +15,8 @@ import { DatabaseInterface } from 'app/database/dbi/database-interface';
 import { routes as apiRoutes } from 'server/router/api-router';
 import { executeRouteHandler } from 'server/route-handling/route-handler';
 import { Server as NodeServer } from 'http';
-import { routes as authRoutes } from 'server/router/auth-router';
+import { routes as miscRoutes } from 'router/misc-router';
+import { routes as authRoutes } from 'router/auth-router';
 import { DbComment, DbPost, DbRatedPosts, DbUser } from 'app/database/data-types';
 
 export class Server {
@@ -103,7 +103,7 @@ export class Server {
         apiRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         authRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         devInfo.forEach(info => this.routeRegister.register(info.path, info.method, info));
-        this.routeRegister.register('', 'GET', indexRoute);
+        miscRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
     }
 
     async start(port: number): Promise<void> {
