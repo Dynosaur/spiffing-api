@@ -22,6 +22,7 @@ export namespace Authorize {
     export class Success extends OkResponse<IAuthorize.Success> {
         constructor(user: BoundUser) {
             super(`Successfully authorized user ${user.username} (${user._id.toHexString()}).`);
+            this.payload.user = user.toInterface();
         }
     }
 }
@@ -37,7 +38,7 @@ export namespace Deregister {
 export namespace Patch {
     export class Success extends OkResponse<IPatch.Success> {
         constructor(user: BoundUser, public updated: string[], public rejected: string[]) {
-            super(`Successfully deleted user ${user.username} (${user._id.toHexString()}).`);
+            super(`Successfully updated user ${user.username} (${user._id.toHexString()}) ${updated.join(', ')}.`);
             this.payload.updated = this.updated;
             this.payload['rejected-props'] = this.rejected;
         }

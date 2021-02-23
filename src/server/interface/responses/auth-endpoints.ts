@@ -19,7 +19,9 @@ export namespace IRegister {
 export namespace IAuthorize {
     export type ErrTx = AuthorizedRequestError | IAuthHeaderIdParamMismatchError;
 
-    export interface Success extends IOkResponse { }
+    export interface Success extends IOkResponse {
+        user: User;
+    }
 
     export type Tx = ErrTx | Success;
 }
