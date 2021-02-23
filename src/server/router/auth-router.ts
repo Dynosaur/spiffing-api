@@ -39,7 +39,7 @@ export const deregister: RouteHandler<IDeregister.Tx> = async function deregiste
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
-    if (user.id !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
+    if (user.username !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
 
     await user.delete();
     return new Deregister.Success(user);
@@ -52,7 +52,7 @@ export const patchUser: RouteHandler<IPatch.Tx> = async function patchUser(reque
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
-    if (user.id !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
+    if (user.id !== request.params.id && user.username !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
 
     const updated: string[] = [];
     const rejected: string[] = [];
