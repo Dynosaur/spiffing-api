@@ -37,6 +37,20 @@ export class BoundUser implements DbUser {
     }
 
     async delete(): Promise<void> {
+        const rateApi = await this.getRateApi();
+        const postMap = new Map<string, boolean>();
+        const ratedPostIds = rateApi.getRatedPosts().posts.map(post => {
+            postMap.set(post._id.toHexString(), post.rating === 1);
+            return post._id;
+        });
+        const posts = await this.api.postApi.readPosts({ _id: { $in: ratedPostIds } as any });
+        posts.forEach(post => {
+            if (postMap.has(post.id)) {
+                if (postMap.get(post.id)) post.setLikes(post.getLikes() - 1);
+                else post.setDislikes(post.getDislikes() - 1);
+                post.flush();
+            } else throw new Error(`postMap does not include post ${post.id}.`);
+        });
         await this.api.deleteUser(this._id);
     }
 
@@ -44,7 +58,7 @@ export class BoundUser implements DbUser {
 
 export class UserAPI {
 
-    constructor(private dbi: DatabaseInterface<DbUser>, private postApi: PostAPI, public rateDbi: DatabaseInterface<DbRatedPosts>) { }
+    constructor(private dbi: DatabaseInterface<DbUser>, public postApi: PostAPI, public rateDbi: DatabaseInterface<DbRatedPosts>) { }
 
     async createUser(username: string, password: Password): Promise<BoundUser> {
         const user: DbUser = {
