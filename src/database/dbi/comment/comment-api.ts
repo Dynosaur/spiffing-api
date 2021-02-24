@@ -1,21 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { DbComment } from 'database/data-types';
+import { BoundComment } from 'database/dbi/comment/bound-comment';
 import { DatabaseInterface } from 'database/dbi/database-interface';
-
-export class BoundComment implements DbComment {
-
-    _id: ObjectId;
-    author: string;
-    content: string;
-    dislikes: number;
-    likes: number;
-    replies: ObjectId[];
-
-    constructor(private actions: CommentAPI, obj: DbComment) {
-        Object.assign(this, obj);
-    }
-
-}
 
 export class CommentAPI {
 
