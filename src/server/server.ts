@@ -4,7 +4,7 @@ import { chalk } from 'tools/chalk';
 import { devInfo } from 'app/dev/dev-actions';
 import { UserAPI } from 'app/database/dbi/user-api';
 import { PostAPI } from 'app/database/dbi/post-actions';
-import { CommentAPI } from 'app/database/dbi/comment-actions';
+import { CommentAPI } from 'app/database/dbi/comment/comment-api';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'database/mongo-client';
 import { RouteRegister } from 'server/routing';

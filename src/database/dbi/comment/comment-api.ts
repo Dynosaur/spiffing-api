@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
-import { DbComment } from '../data-types';
-import { DatabaseInterface } from './database-interface';
+import { DbComment } from 'database/data-types';
+import { DatabaseInterface } from 'database/dbi/database-interface';
 
 export class BoundComment implements DbComment {
 

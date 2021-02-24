@@ -2,7 +2,7 @@ import { Post } from 'server/interface/data-types';
 import { DbPost } from '../data-types';
 import { ObjectId } from 'mongodb';
 import { SwitchMap } from 'tools/switch-map';
-import { CommentAPI } from './comment-actions';
+import { CommentAPI } from 'database/dbi/comment/comment-api';
 import { DatabaseInterface } from './database-interface';
 
 export class BoundPost {
