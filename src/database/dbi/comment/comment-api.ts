@@ -1,27 +1,47 @@
 import { ObjectId } from 'mongodb';
-import { DbComment } from 'database/data-types';
+import { BoundPost } from 'database/dbi/post-actions';
+import { DbComment } from 'database/data-types/comment';
 import { BoundComment } from 'database/dbi/comment/bound-comment';
 import { DatabaseInterface } from 'database/dbi/database-interface';
 
 export class CommentAPI {
+    constructor(public dbi: DatabaseInterface<DbComment>) { }
 
-    constructor(private dbi: DatabaseInterface<DbComment>) { }
-
-    async createComment(author: string, content: string): Promise<BoundComment> {
+    async createComment(author: ObjectId, content: string, parent: BoundPost | BoundComment): Promise<BoundComment> {
+        let contentType: 'post' | 'comment';
+        let parentId: ObjectId;
+        if (parent instanceof BoundPost) {
+            contentType = 'post';
+            parentId = parent.getObjectId();
+        } else {
+            contentType = 'comment';
+            parentId = parent.getObjectId();
+        }
         const post: DbComment = {
-            _id: new ObjectId(),
-            author,
-            content,
-            dislikes: 0,
-            likes: 0,
-            replies: []
+            replies: [],
+            _id: undefined,
+            author, content,
+            likes: 0, dislikes: 0,
+            parent: {
+                contentType,
+                _id: parentId
+            }
         };
         await this.dbi.create(post);
-        return new BoundComment(this, post);
+        const boundComment = new BoundComment(this, post);
+        if (parent instanceof BoundPost) {
+            parent.addComment(boundComment);
+            await parent.flush();
+        } else {
+            parent.addReply(boundComment);
+            await parent.flush();
+        }
+        return boundComment;
     }
 
     async readComment(id: string): Promise<BoundComment> {
         const comments = await this.dbi.read({ _id: new ObjectId(id) });
+        if (comments.length === 0) return null;
         return new BoundComment(this, comments[0]);
     }
 
