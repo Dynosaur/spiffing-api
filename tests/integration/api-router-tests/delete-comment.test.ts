@@ -1,12 +1,12 @@
+import { ObjectId } from 'mongodb';
 import { BoundUser } from 'database/dbi/user-api';
 import { BoundPost } from 'database/dbi/post-actions';
+import { DbComment } from 'database/comment/comment';
 import { deleteComment } from 'router/api-router';
-import { INoCommentFoundError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { IDeleteComment } from 'interface/responses/api-responses';
+import { encodeBasicAuth } from 'tools/auth';
 import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
-import { encodeBasicAuth } from 'app/tools/auth';
-import { IDeleteComment } from 'app/server/interface/responses/api-responses';
-import { DbComment } from 'app/database/data-types/comment';
-import { ObjectId } from 'mongodb';
+import { INoCommentFoundError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 describe('deleteComment route handler', () => {
     let env: IntegrationEnvironment;

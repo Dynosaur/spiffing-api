@@ -2,8 +2,8 @@ import { PostAPI } from 'database/dbi/post-actions';
 import { Comment } from 'interface/data-types';
 import { ObjectId } from 'mongodb';
 import { SwitchMap } from 'tools/switch-map';
-import { DbComment } from 'database/data-types/comment';
-import { CommentAPI } from 'database/dbi/comment/comment-api';
+import { DbComment } from 'database/comment/comment';
+import { CommentAPI } from 'database/comment/api';
 import { defensiveCopy } from 'tools/copy';
 
 export class BoundComment {

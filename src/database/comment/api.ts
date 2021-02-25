@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
-import { DbComment } from 'database/data-types/comment';
-import { BoundComment } from 'database/dbi/comment/bound-comment';
+import { DbComment } from 'database/comment/comment';
+import { BoundComment } from 'database/comment/bound';
 import { DatabaseInterface } from 'database/dbi/database-interface';
 import { BoundPost, PostAPI } from 'database/dbi/post-actions';
 

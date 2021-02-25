@@ -1,6 +1,6 @@
 import { Request } from 'express';
-import { DbComment } from 'database/data-types/comment';
-import { CommentAPI } from 'database/dbi/comment/comment-api';
+import { DbComment } from 'database/comment/comment';
+import { CommentAPI } from 'database/comment/api';
 import { MongoClient } from 'database/mongo-client';
 import { randomBytes } from 'crypto';
 import { IBaseResponse } from 'interface/response';
