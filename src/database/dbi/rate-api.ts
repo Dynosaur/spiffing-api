@@ -34,7 +34,7 @@ export class RateAPI {
     }
 
     async likePost(post: BoundPost): Promise<boolean> {
-        const ratedPost = this.userRatedPosts.posts.find(p => p._id.toHexString() === post.id);
+        const ratedPost = this.userRatedPosts.posts.find(p => p._id.toHexString() === post.getIdString());
         if (ratedPost) {
             if (ratedPost.rating === -1) {
                 post.setDislikes(post.getDislikes() - 1);
@@ -46,7 +46,7 @@ export class RateAPI {
             } else return false;
         } else {
             this.userRatedPosts.posts.push({
-                _id: post.getId(),
+                _id: post.getObjectId(),
                 rating: 1
             });
             await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
@@ -57,7 +57,7 @@ export class RateAPI {
     }
 
     async dislikePost(post: BoundPost): Promise<boolean> {
-        const ratedPost = this.userRatedPosts.posts.find(p => p._id.toHexString() === post.id);
+        const ratedPost = this.userRatedPosts.posts.find(p => p._id.toHexString() === post.getIdString());
         if (ratedPost) {
             if (ratedPost.rating === 1) {
                 post.setLikes(post.getLikes() - 1);
@@ -69,7 +69,7 @@ export class RateAPI {
             } else return false;
         } else {
             this.userRatedPosts.posts.push({
-                _id: post.getId(),
+                _id: post.getObjectId(),
                 rating: -1
             });
             await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
@@ -80,7 +80,7 @@ export class RateAPI {
     }
 
     async unratePost(post: BoundPost): Promise<boolean> {
-        const ratedPost = this.userRatedPosts.posts.find(p => p._id.toHexString() === post.id);
+        const ratedPost = this.userRatedPosts.posts.find(p => p._id.toHexString() === post.getIdString());
         if (ratedPost) {
             if (ratedPost.rating === -1)
                 post.setDislikes(post.getDislikes() - 1);

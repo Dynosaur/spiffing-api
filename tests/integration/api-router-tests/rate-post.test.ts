@@ -63,13 +63,13 @@ describe('ratePost route handler', () => {
             post = posts[0];
             env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
             env.request.body.rating = 1;
-            env.request.params.id = post.id;
+            env.request.params.id = post.getIdString();
         });
         it('should like', async done => {
             const response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getId() })).toStrictEqual<DbPost>({
-                _id: post.getId(),
+            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
+                _id: post.getObjectId(),
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -81,7 +81,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getId(),
+                    _id: post.getObjectId(),
                     rating: 1
                 }]
             });
@@ -92,8 +92,8 @@ describe('ratePost route handler', () => {
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getId() })).toStrictEqual<DbPost>({
-                _id: post.getId(),
+            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
+                _id: post.getObjectId(),
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -105,7 +105,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getId(),
+                    _id: post.getObjectId(),
                     rating: 1
                 }]
             });
@@ -118,8 +118,8 @@ describe('ratePost route handler', () => {
             env.request.body.rating = 1;
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getId() })).toStrictEqual<DbPost>({
-                _id: post.getId(),
+            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
+                _id: post.getObjectId(),
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -131,7 +131,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getId(),
+                    _id: post.getObjectId(),
                     rating: 1
                 }]
             });
@@ -144,13 +144,13 @@ describe('ratePost route handler', () => {
             post = posts[0];
             env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
             env.request.body.rating = -1;
-            env.request.params.id = post.id;
+            env.request.params.id = post.getIdString();
         });
         it('should dislike', async done => {
             const response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getId() })).toStrictEqual<DbPost>({
-                _id: post.getId(),
+            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
+                _id: post.getObjectId(),
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -162,7 +162,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getId(),
+                    _id: post.getObjectId(),
                     rating: -1
                 }]
             });
@@ -173,8 +173,8 @@ describe('ratePost route handler', () => {
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getId() })).toStrictEqual<DbPost>({
-                _id: post.getId(),
+            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
+                _id: post.getObjectId(),
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -186,7 +186,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getId(),
+                    _id: post.getObjectId(),
                     rating: -1
                 }]
             });
@@ -199,8 +199,8 @@ describe('ratePost route handler', () => {
             env.request.body.rating = -1;
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getId() })).toStrictEqual<DbPost>({
-                _id: post.getId(),
+            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
+                _id: post.getObjectId(),
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -212,7 +212,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getId(),
+                    _id: post.getObjectId(),
                     rating: -1
                 }]
             });

@@ -31,7 +31,7 @@ describe('getPosts route handler', () => {
             done();
         });
         it('should query by id', async done => {
-            env.request.query.id = posts[0].id;
+            env.request.query.id = posts[0].getIdString();
             const response = await env.executeRouteHandler(getPosts);
             expect(response.payload).toStrictEqual<IGetPosts.Success>({
                 ok: true,
@@ -42,7 +42,7 @@ describe('getPosts route handler', () => {
         });
         it('should query by ids', async done => {
             const requestedPosts = posts.slice(0, 2);
-            env.request.query.ids = requestedPosts.map(post => post.id).join(',');
+            env.request.query.ids = requestedPosts.map(post => post.getIdString()).join(',');
             const response = await env.executeRouteHandler(getPosts);
             expect(response.payload).toStrictEqual<IGetPosts.Success>({
                 ok: true,
@@ -58,7 +58,7 @@ describe('getPosts route handler', () => {
             ok: true,
             posts: posts.map(post => post.toInterface())
         });
-        env.request.query.id = posts[0].id;
+        env.request.query.id = posts[0].getIdString();
         response = await env.executeRouteHandler(getPosts);
         expect(response.payload).toStrictEqual<IGetPosts.Success>({
             ok: true,
@@ -68,13 +68,13 @@ describe('getPosts route handler', () => {
         done();
     });
     it('should include author as a User if requested', async done => {
-        env.request.query.id = posts[0].id;
+        env.request.query.id = posts[0].getIdString();
         env.request.query.include = 'authorUser';
         const response = await env.executeRouteHandler(getPosts);
         expect(response.payload).toStrictEqual<IGetPosts.Success>({
             ok: true,
             posts: [{
-                _id: posts[0].id,
+                _id: posts[0].getIdString(),
                 author: {
                     _id: author.id,
                     created: expect.any(Number),
