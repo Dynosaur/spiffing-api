@@ -1,5 +1,6 @@
 import { Request } from 'express';
-import { CommentAPI } from 'database/dbi/comment-actions';
+import { DbComment } from 'database/data-types/comment';
+import { CommentAPI } from 'database/dbi/comment/comment-api';
 import { MongoClient } from 'database/mongo-client';
 import { randomBytes } from 'crypto';
 import { IBaseResponse } from 'interface/response';
@@ -8,7 +9,7 @@ import { DatabaseInterface } from 'database/dbi/database-interface';
 import { BoundPost, PostAPI } from 'database/dbi/post-actions';
 import { BoundUser, UserAPI } from 'database/dbi/user-api';
 import { Collection, ObjectId } from 'mongodb';
-import { DbComment, DbPost, DbRatedPosts, DbUser } from 'database/data-types';
+import { DbPost, DbRatedPosts, DbUser } from 'database/data-types';
 import { DatabaseActions, RouteHandler, RoutePayload } from 'route-handling/route-infra';
 
 export class IntegrationEnvironment {
