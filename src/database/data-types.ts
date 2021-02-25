@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { Comment, Post, RatedPost, RatedPosts, User } from 'interface/data-types';
+import { Post, RatedPost, RatedPosts, User } from 'interface/data-types';
 
 export interface Password {
     hash: string;
@@ -21,15 +21,6 @@ export interface DbPost {
     dislikes: number;
     likes: number;
     title: string;
-}
-
-export interface DbComment {
-    _id: ObjectId;
-    author: string;
-    content: string;
-    dislikes: number;
-    likes: number;
-    replies: ObjectId[];
 }
 
 export interface DbRatedPost {
@@ -62,17 +53,6 @@ export function convertDbPost(dbPost: DbPost): Post {
         dislikes: dbPost.dislikes,
         likes: dbPost.likes,
         title: dbPost.title
-    };
-}
-
-export function convertDbComment(dbComment: DbComment): Comment {
-    return {
-        _id: dbComment._id.toHexString(),
-        author: dbComment.author,
-        content: dbComment.content,
-        dislikes: dbComment.dislikes,
-        likes: dbComment.likes,
-        replies: dbComment.replies.map(_id => _id.toHexString())
     };
 }
 

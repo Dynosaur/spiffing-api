@@ -4,6 +4,7 @@ import { chalk } from 'tools/chalk';
 import { devInfo } from 'app/dev/dev-actions';
 import { UserAPI } from 'app/database/dbi/user-api';
 import { PostAPI } from 'app/database/dbi/post-actions';
+import { DbComment } from 'database/data-types/comment';
 import { CommentAPI } from 'app/database/dbi/comment/comment-api';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'database/mongo-client';
@@ -17,7 +18,7 @@ import { executeRouteHandler } from 'server/route-handling/route-handler';
 import { Server as NodeServer } from 'http';
 import { routes as miscRoutes } from 'router/misc-router';
 import { routes as authRoutes } from 'router/auth-router';
-import { DbComment, DbPost, DbRatedPosts, DbUser } from 'app/database/data-types';
+import { DbPost, DbRatedPosts, DbUser } from 'database/data-types';
 
 export class Server {
 
