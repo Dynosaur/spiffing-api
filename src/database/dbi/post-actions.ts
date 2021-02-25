@@ -64,6 +64,24 @@ export class BoundPost {
         this.changed.on('comments');
     }
 
+    deleteComment(comment: BoundComment): boolean {
+        let index = -1;
+        for (let i = 0; i < this.dbPost.comments.length; i++) {
+            const commentId = this.dbPost.comments[i].toHexString();
+            if (commentId === comment.getStringId()) {
+                index = i;
+                break;
+            }
+        }
+        if (index === -1) return false;
+        this.dbPost.comments.splice(index, 1);
+        this.changed.on('comments');
+    }
+
+    getComments(): ObjectId[] {
+        return this.dbPost.comments.map(commentId => new ObjectId(commentId));
+    }
+
     async deletePost(): Promise<void> {
         await this.postApi.deletePosts({ _id: this.dbPost._id });
         this.alive = false;
@@ -73,6 +91,7 @@ export class BoundPost {
         const id = this.getIdString();
         if (this.alive === false)
             throw new Error(`Post ${id} has attempted changes but is no longer alive.`);
+        if (Array.from(this.changed.keys()).length === 0) return;
         const changed = {};
         for (const key of this.changed.keys())
             changed[key] = this.dbPost[key];
@@ -80,6 +99,14 @@ export class BoundPost {
         this.changed.clear();
     }
 
+    async sync(): Promise<void> {
+        const post = await this.postApi.readPost(this.getIdString());
+        if (post === null) {
+            this.alive = false;
+            return;
+        }
+        this.dbPost = post.dbPost;
+    }
 }
 
 export class PostAPI {
