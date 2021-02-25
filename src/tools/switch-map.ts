@@ -24,4 +24,14 @@ export class SwitchMap<KeyType> {
     clear(): void {
         this.map.clear();
     }
+
+    has(key: KeyType): boolean {
+        return this.map.has(key);
+    }
+
+    delete(key: KeyType): void {
+        if (this.map.has(key)) {
+            this.map.delete(key);
+        }
+    }
 }
