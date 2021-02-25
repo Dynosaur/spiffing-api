@@ -12,6 +12,10 @@ export interface INoPostFoundError extends IErrorResponse<'No Post Found'> {
     id: string;
 }
 
+export interface INoCommentFoundError extends IErrorResponse<'No Comment Found'> {
+    id: string;
+}
+
 export interface IMissingDataError extends IErrorResponse<'Missing Data'> {
     missing: {
         received: string[];
@@ -33,4 +37,10 @@ export type AuthorizedRequestError = IAuthorizationParseError | IUnauthenticated
 export interface IAuthHeaderIdParamMismatchError extends IErrorResponse<'Authorization Header and Id Param Mismatch'> {
     headerId: string;
     paramId: string;
+}
+
+export interface IIllegalValueError extends IErrorResponse<'Illegal Value'> {
+    providedValue: any;
+    allowedValues: any[];
+    context: string;
 }

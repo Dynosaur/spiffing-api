@@ -6,9 +6,9 @@ import { scopeMustHaveProps } from 'route-handling/route-handler';
 import { objectIdParseErrorMessage } from 'app/error-messages';
 import { convertDbRatedPosts, DbPost, DbUser } from 'database/data-types';
 import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
-import { CreatePost, GetPost, GetPosts, GetRatedPosts, GetUser, GetUsers, RatePost } from 'interface-bindings/api-responses';
-import { ICreatePost, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IRatePost } from 'interface/responses/api-responses';
-import { AuthHeaderIdParamError, MissingDataError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
+import { CreatePost, DeleteComment, GetPost, GetPosts, GetRatedPosts, GetUser, GetUsers, PostComment, RatePost } from 'interface-bindings/api-responses';
+import { ICreatePost, IDeleteComment, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IPostComment, IRatePost } from 'interface/responses/api-responses';
+import { AuthHeaderIdParamError, IllegalValueError, MissingDataError, NoCommentFoundError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
 
 function query(accepted: string[], query: object): { allowed: string[]; blocked: string[]; } {
     if (Object.keys(query).length === 0) return { allowed: [], blocked: [] };
@@ -218,12 +218,50 @@ export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(requ
     return new GetUsers.Success(users, queryCheck.allowed, queryCheck.blocked);
 };
 
+export const postComment: RouteHandler<IPostComment.Tx> = async function postComment(request, actions): Promise<RoutePayload<IPostComment.Tx>> {
+    if (!request.headers.authorization) return new UnauthenticatedError();
+    if (!request.body.hasOwnProperty('content'))
+        return new MissingDataError('body', Object.keys(request.body), ['content']);
+    const decodeAttempt = decodeBasicAuth(request.headers.authorization);
+    if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
+    const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
+    if (!user) return new UnauthorizedError();
+    if (request.params.contentType === 'post') {
+        const post = await actions.post.readPost(request.params.id);
+        if (post === null) return new NoPostFoundError(request.params.id);
+        const comment = await actions.comment.createComment(user._id, request.body.content, post);
+        return new PostComment.Success(comment);
+    } else if (request.params.contentType === 'comment') {
+        const comment = await actions.comment.readComment(request.params.id);
+        if (comment === null) return new NoCommentFoundError(request.params.id);
+        const subcomment = await actions.comment.createComment(user._id, request.body.content, comment);
+        return new PostComment.Success(subcomment);
+    } else {
+        return new IllegalValueError(request.params.contentType, ['post', 'comment'], 'params');
+    }
+};
+
+export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function deleteComment(request, actions): Promise<RoutePayload<IDeleteComment.Tx>> {
+    if (!request.headers.authorization) return new UnauthenticatedError();
+    const decodeAttempt = decodeBasicAuth(request.headers.authorization);
+    if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
+    const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
+    if (!user) return new UnauthorizedError();
+    const comment = await actions.comment.readComment(request.params.commentId);
+    if (comment === null) return new NoCommentFoundError(request.params.commentId);
+    if (user.id !== comment.getStringAuthor()) return new UnauthorizedError();
+    await comment.delete();
+    return new DeleteComment.Success(comment, !comment.alive);
+};
+
 export const routes: RouteInfo[] = [
-    { method: 'GET',  path: '/api/user/:id',       handler: getUser       },
-    { method: 'GET',  path: '/api/posts',          handler: getPosts      },
-    { method: 'POST', path: '/api/post',           handler: createPost    },
-    { method: 'GET',  path: '/api/post/:id',       handler: getPost       },
-    { method: 'POST', path: '/api/rate/post/:id',  handler: ratePost      },
-    { method: 'GET',  path: '/api/rated/:ownerId', handler: getRatedPosts },
-    { method: 'GET',  path: '/api/users',          handler: getUsers      }
+    { method: 'GET',    path: '/api/user/:id',           handler: getUser       },
+    { method: 'GET',    path: '/api/posts',              handler: getPosts      },
+    { method: 'POST',   path: '/api/post',               handler: createPost    },
+    { method: 'GET',    path: '/api/post/:id',           handler: getPost       },
+    { method: 'POST',   path: '/api/rate/post/:id',      handler: ratePost      },
+    { method: 'GET',    path: '/api/rated/:ownerId',     handler: getRatedPosts },
+    { method: 'GET',    path: '/api/users',              handler: getUsers      },
+    { method: 'POST',   path: '/api/:contentType/:id',   handler: postComment   },
+    { method: 'DELETE', path: '/api/comment/:commentId', handler: deleteComment }
 ];

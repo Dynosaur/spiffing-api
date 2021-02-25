@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import { UndefinedError } from './undefined-error';
 
 export function copyArray<T>(arr: T[]): T[] {
@@ -11,10 +12,12 @@ export function copyArray<T>(arr: T[]): T[] {
 }
 
 export function defensiveCopy<T>(object: T): T {
+    if (object === null) return null;
+    if (object instanceof ObjectId) return new ObjectId(object) as any;
     if (typeof object === 'object') {
         const newObject = {};
         for (const property of Object.keys(object))
-            if (typeof object[property] === 'object') 
+            if (typeof object[property] === 'object')
                 if (object[property] instanceof Array) newObject[property] = copyArray(object[property]);
                 else newObject[property] = defensiveCopy(object[property]);
             else newObject[property] = object[property];

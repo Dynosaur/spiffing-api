@@ -61,6 +61,8 @@ export class IntegrationEnvironment {
         this.posts.interface = new DatabaseInterface(this.posts.db);
         this.posts.api = new PostAPI(this.posts.interface, this.comments.api);
 
+        this.comments.api.postApi = this.posts.api;
+
         this.ratings = {} as any;
         this.ratings.db = this.mongo.db.collection(`${this.suiteName}Ratings`);
         this.ratings.interface = new DatabaseInterface(this.ratings.db);

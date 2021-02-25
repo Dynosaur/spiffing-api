@@ -1,10 +1,11 @@
 import { ObjectId } from 'mongodb';
-import { BoundPost } from 'database/dbi/post-actions';
 import { DbComment } from 'database/data-types/comment';
 import { BoundComment } from 'database/dbi/comment/bound-comment';
 import { DatabaseInterface } from 'database/dbi/database-interface';
+import { BoundPost, PostAPI } from 'database/dbi/post-actions';
 
 export class CommentAPI {
+    postApi: PostAPI;
     constructor(public dbi: DatabaseInterface<DbComment>) { }
 
     async createComment(author: ObjectId, content: string, parent: BoundPost | BoundComment): Promise<BoundComment> {
@@ -28,7 +29,7 @@ export class CommentAPI {
             }
         };
         await this.dbi.create(post);
-        const boundComment = new BoundComment(this, post);
+        const boundComment = new BoundComment(this, this.postApi, post);
         if (parent instanceof BoundPost) {
             parent.addComment(boundComment);
             await parent.flush();
@@ -42,7 +43,7 @@ export class CommentAPI {
     async readComment(id: string): Promise<BoundComment> {
         const comments = await this.dbi.read({ _id: new ObjectId(id) });
         if (comments.length === 0) return null;
-        return new BoundComment(this, comments[0]);
+        return new BoundComment(this, this.postApi, comments[0]);
     }
 
     async updateComment(id: string, updates: Partial<DbComment>): Promise<void> {

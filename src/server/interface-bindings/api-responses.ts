@@ -2,7 +2,8 @@ import { BoundPost } from 'database/dbi/post-actions';
 import { BoundUser } from 'database/dbi/user-api';
 import { OkResponse } from './response';
 import { Post, RatedPosts, User } from 'interface/data-types';
-import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost, IGetRatedPosts, IGetUsers } from 'interface/responses/api-responses';
+import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost, IGetRatedPosts, IGetUsers, IPostComment, IDeleteComment } from 'interface/responses/api-responses';
+import { BoundComment } from 'app/database/dbi/comment/bound-comment';
 
 export namespace GetUser {
     export class Success extends OkResponse<IGetUser.Success> {
@@ -47,7 +48,11 @@ export namespace CreatePost {
 export namespace RatePost {
     export class Success extends OkResponse<IRatePost.Success> {
         constructor(post: BoundPost, rating: number, changed: boolean) {
-            super(changed ? `Successfully rated post ${post.getTitle()} (${post.id}) with rating ${rating}.` : `No change from rating ${rating}.`, 201);
+            super(changed
+                ? `Successfully rated post ${post.getTitle()} (${post.getIdString()}) with rating ${rating}.`
+                : `No change from rating ${rating}.`
+                , 201
+            );
         }
     }
 }
@@ -68,6 +73,24 @@ export namespace GetUsers {
             this.payload.users = users;
             if (allowed.length) this.payload['allowed-queries'] = allowed;
             if (blocked.length) this.payload['blocked-queries'] = blocked;
+        }
+    }
+}
+
+export namespace PostComment {
+    export class Success extends OkResponse<IPostComment.Success> {
+        constructor(comment: BoundComment) {
+            super(`Successfully created comment ${comment.getStringId()}.`);
+            this.payload.comment = comment.toInterface();
+        }
+    }
+}
+
+export namespace DeleteComment {
+    export class Success extends OkResponse<IDeleteComment.Success> {
+        constructor(comment: BoundComment, fullyDeleted: boolean) {
+            super(`Successfully deleted comment ${comment.getStringId()}.`);
+            this.payload.fullyDeleted = fullyDeleted;
         }
     }
 }

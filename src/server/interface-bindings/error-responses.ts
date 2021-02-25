@@ -1,6 +1,6 @@
 import { ErrorResponse } from './response';
-import { IAuthHeaderIdParamMismatchError, IAuthorizationParseError, IMissingDataError, INoPostFoundError, INoUserFoundError,
-IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { IAuthHeaderIdParamMismatchError, IAuthorizationParseError, IMissingDataError, INoCommentFoundError, INoPostFoundError, INoUserFoundError,
+IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError, IIllegalValueError } from 'interface/responses/error-responses';
 
 export class ObjectIdParseError extends ErrorResponse<IObjectIdParseError> {
     constructor(public provided: string) {
@@ -62,5 +62,21 @@ export class AuthHeaderIdParamError extends ErrorResponse<IAuthHeaderIdParamMism
         );
         this.payload.headerId = this.header;
         this.payload.paramId = this.param;
+    }
+}
+
+export class NoCommentFoundError extends ErrorResponse<INoCommentFoundError> {
+    constructor(public id: string) {
+        super('No Comment Found', `Could not find post ${id}.`, 404);
+        this.payload.id = this.id;
+    }
+}
+
+export class IllegalValueError extends ErrorResponse<IIllegalValueError> {
+    constructor(public value: any, public allowed: any[], public context: string) {
+        super('Illegal Value', `Illegal value '${JSON.stringify(value)}' in request ${context}.`);
+        this.payload.allowedValues = allowed;
+        this.payload.providedValue = value;
+        this.payload.context = context;
     }
 }

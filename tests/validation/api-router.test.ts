@@ -433,7 +433,6 @@ describe('api router validation', () => {
             .get(`/api/users?ids=${testUser.id}`)
             .then(response => {
                 expect(response.body).toStrictEqual<IGetUsers.Success>({
-                    missing: [],
                     ok: true,
                     users: [{
                         _id: testUser.id,

@@ -1,6 +1,6 @@
 import { IOkResponse } from '../response';
-import { Post, RatedPosts, User } from '../data-types';
-import { AuthorizedRequestError, IAuthHeaderIdParamMismatchError, IMissingDataError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from './error-responses';
+import { Post, RatedPosts, User, Comment } from '../data-types';
+import { AuthorizedRequestError, IAuthHeaderIdParamMismatchError, IIllegalValueError, IMissingDataError, INoCommentFoundError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from './error-responses';
 
 export namespace IGetUser {
     export type ErrorTx = INoUserFoundError;
@@ -69,6 +69,27 @@ export namespace IGetUsers {
         users: User[];
         'allowed-queries'?: string[];
         'blocked-queries'?: string[];
+    }
+
+    export type Tx = ErrorTx | Success;
+}
+
+export namespace IPostComment {
+    export type ErrorTx = AuthorizedRequestError | INoPostFoundError | IMissingDataError |
+    INoCommentFoundError | IIllegalValueError;
+
+    export interface Success extends IOkResponse {
+        comment: Comment;
+    }
+
+    export type Tx = ErrorTx | Success;
+}
+
+export namespace IDeleteComment {
+    export type ErrorTx = AuthorizedRequestError | INoCommentFoundError;
+
+    export interface Success extends IOkResponse {
+        fullyDeleted: boolean;
     }
 
     export type Tx = ErrorTx | Success;
