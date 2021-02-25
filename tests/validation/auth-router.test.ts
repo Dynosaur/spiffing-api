@@ -85,7 +85,15 @@ describe('auth router validation', () => {
                 .post('/api/authorize')
                 .auth(username, password)
                 .then(res => {
-                    expect(res.body).toStrictEqual<IAuthorize.Success>({ ok: true });
+                    expect(res.body).toStrictEqual<IAuthorize.Success>({
+                        ok: true,
+                        user: {
+                            username,
+                            _id: expect.stringMatching(/[a-f\d]{24}/),
+                            created: expect.any(Number),
+                            screenname: username
+                        }
+                    });
                 });
             done();
         });
