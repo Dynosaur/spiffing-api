@@ -1,6 +1,16 @@
 import { ErrorResponse } from './response';
-import { IAuthHeaderIdParamMismatchError, IAuthorizationParseError, IMissingDataError, INoCommentFoundError, INoPostFoundError, INoUserFoundError,
-IObjectIdParseError, IUnauthenticatedError, IUnauthorizedError, IIllegalValueError } from 'interface/responses/error-responses';
+import {
+    IMissingDataError,
+    INoPostFoundError,
+    INoUserFoundError,
+    IIllegalValueError,
+    IUnauthorizedError,
+    IObjectIdParseError,
+    INoCommentFoundError,
+    IUnauthenticatedError,
+    IAuthorizationParseError,
+    IAuthHeaderIdParamMismatchError
+} from 'interface/responses/error-responses';
 
 export class ObjectIdParseError extends ErrorResponse<IObjectIdParseError> {
     constructor(public provided: string) {

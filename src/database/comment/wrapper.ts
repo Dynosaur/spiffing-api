@@ -1,6 +1,6 @@
 import { Comment } from 'interface/data-types';
 import { ObjectId } from 'mongodb';
-import { DbComment } from 'database/comment/comment';
+import { DbComment } from 'database/comment';
 
 export class CommentWrapper implements DbComment {
     _id!: ObjectId;

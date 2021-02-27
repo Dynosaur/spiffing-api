@@ -1,4 +1,4 @@
-import { DbPost } from 'database/data-types';
+import { DbPost } from 'database/post';
 import { ObjectId } from 'mongodb';
 import { UserWrapper } from 'database/user/wrapper';
 import { createPost } from 'router/api-router';

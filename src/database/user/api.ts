@@ -1,11 +1,10 @@
-import { FilterQuery, ObjectId, UpdateQuery } from 'mongodb';
-import { DbPost, DbRatedPosts } from 'database/data-types';
-import { DbUser, Password } from 'database/user/user';
-import { DatabaseInterface } from 'database/dbi/database-interface';
-import { UserWrapper } from 'database/user/wrapper';
-import { RateAPI } from '../dbi/rate-api';
-import { DbComment } from '../comment/comment';
-import { deleteComment } from '../comment/api';
+import { DbPost } from 'database/post';
+import { RateAPI } from 'database/rate';
+import { DbRatedPosts } from 'database/rate';
+import { DatabaseInterface } from 'database/database-interface';
+import { FilterQuery, ObjectId } from 'mongodb';
+import { DbComment, deleteComment } from 'database/comment';
+import { DbUser, Password, UserWrapper } from 'database/user';
 
 export class UserAPI {
 
@@ -38,7 +37,7 @@ export class UserAPI {
 
     async getUserRateApi(id: ObjectId | string): Promise<RateAPI> {
         const userObjectId = typeof id === 'string' ? new ObjectId(id) : id;
-        const api = new RateAPI(this.rates, userObjectId);
+        const api = new RateAPI(userObjectId, this.rates, this.posts);
         await api.initialize();
         return api;
     }

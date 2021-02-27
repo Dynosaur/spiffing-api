@@ -1,10 +1,22 @@
-import { Collection, FilterQuery, ObjectId, OptionalId, UpdateQuery, WithId } from 'mongodb';
+import {
+    Collection,
+    FilterQuery,
+    OptionalId,
+    UpdateManyOptions,
+    UpdateOneOptions,
+    UpdateQuery,
+    WithId
+} from 'mongodb';
 
 export class DatabaseInterface<T> {
     private name: string;
 
     constructor(private collection: Collection<T>) {
-        this.name = collection.namespace;
+        this.name = collection.collectionName;
+    }
+
+    getName(): string {
+        return this.name;
     }
 
     async create(data: OptionalId<T>): Promise<WithId<T>> {
@@ -22,6 +34,13 @@ export class DatabaseInterface<T> {
              deleteCount: ${delOp.deletedCount}`);
     }
 
+    async deleteMany(query: FilterQuery<T>): Promise<number> {
+        const delOp = await this.collection.deleteMany(query);
+        if (delOp.deletedCount === 0)
+            throw new Error(`(${this.name}) deleteMany failed: deleteCount: ${delOp.deletedCount}`);
+        return delOp.deletedCount!;
+    }
+
     get(query: FilterQuery<T>): Promise<T | null> {
         return this.collection.findOne(query);
     }
@@ -31,20 +50,19 @@ export class DatabaseInterface<T> {
         return cursor.toArray();
     }
 
-    async updateOne(query: FilterQuery<T>, updates: UpdateQuery<T>): Promise<void> {
-        const upOp = await this.collection.updateOne(query, updates);
+    async updateOne(query: FilterQuery<T>, updates: UpdateQuery<T>, options?: UpdateOneOptions): Promise<void> {
+        const upOp = await this.collection.updateOne(query, updates, options);
         if (upOp.matchedCount !== 1)
             throw new Error(`(${this.name}) updateOne failed: matchedCount: ${upOp.matchedCount}`);
         if (upOp.modifiedCount !== 1)
             throw new Error(`(${this.name}) updateOne failed: modifiedCount: ${upOp.modifiedCount}`);
     }
 
-    async updateMany(query: FilterQuery<T>, updates: UpdateQuery<T>): Promise<void> {
-        const upOp = await this.collection.updateMany(query, updates);
+    async updateMany(query: FilterQuery<T>, updates: UpdateQuery<T>, options?: UpdateManyOptions): Promise<void> {
+        const upOp = await this.collection.updateMany(query, updates, options);
         if (upOp.matchedCount === 0)
             throw new Error(`(${this.name}) updateOne failed: matchedCount: ${upOp.matchedCount}`);
         if (upOp.modifiedCount === 0)
             throw new Error(`(${this.name}) updateOne failed: modifiedCount: ${upOp.modifiedCount}`);
     }
-
 }

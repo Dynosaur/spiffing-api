@@ -1,5 +1,5 @@
 import { DbComment } from 'app/database/comment/comment';
-import { BoundPost } from 'app/database/dbi/post-actions';
+import { DbPost, PostWrapper } from 'database/post';
 import { UserWrapper } from 'database/user/wrapper';
 import { IPostComment } from 'app/server/interface/responses/api-responses';
 import { IMissingDataError, INoCommentFoundError, INoPostFoundError, IUnauthenticatedError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
@@ -11,7 +11,7 @@ import { IntegrationEnvironment } from 'tests/mock/integration/integration-envir
 describe('postComment route handler', () => {
     let env: IntegrationEnvironment;
     let user: UserWrapper;
-    let post: BoundPost;
+    let post: PostWrapper;
     beforeEach(async done => {
         env = new IntegrationEnvironment('post-comment');
         await env.initialize();
@@ -75,7 +75,7 @@ describe('postComment route handler', () => {
     it('should create a comment on a post', async done => {
         env.request.headers.authorization = encodeBasicAuth(user.username, 'password');
         env.request.params.contentType = 'post';
-        env.request.params.id = post.getIdString();
+        env.request.params.id = post.id;
         env.request.body.content = 'Comment Content';
         const response = await env.executeRouteHandler(postComment);
         expect(response.payload).toStrictEqual<IPostComment.Success>({
@@ -87,20 +87,25 @@ describe('postComment route handler', () => {
                 dislikes: 0,
                 likes: 0,
                 parent: {
-                    _id: post.getIdString(),
+                    _id: post.id,
                     contentType: 'post'
                 },
                 replies: []
             }
         });
-        await post.sync();
-        expect(post.getComments()).toStrictEqual<ObjectId[]>([
-            expect.any(ObjectId)
-        ]);
+        expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
+            _id: expect.anything(),
+            author: expect.anything(),
+            comments: [expect.any(ObjectId)],
+            content: expect.anything(),
+            dislikes: expect.anything(),
+            likes: expect.anything(),
+            title: expect.anything()
+        });
         done();
     });
     it('should create a comment on a comment', async done => {
-        const parentComment = await env.comments.api.create(user._id, 'Content', 'post', post.getObjectId());
+        const parentComment = await env.comments.api.create(user._id, 'Content', 'post', post._id);
         env.request.headers.authorization = encodeBasicAuth(user.username, 'password');
         env.request.params.contentType = 'comment';
         env.request.params.id = parentComment._id.toHexString();
@@ -121,7 +126,6 @@ describe('postComment route handler', () => {
                 replies: []
             }
         });
-        await post.sync();
         expect(await env.comments.db.findOne({ _id: parentComment._id })).toStrictEqual<DbComment>({
             _id: parentComment._id,
             author: parentComment.author,
@@ -129,7 +133,7 @@ describe('postComment route handler', () => {
             dislikes: 0,
             likes: 0,
             parent: {
-                _id: post.getObjectId(),
+                _id: post._id,
                 contentType: 'post'
             },
             replies: [expect.any(ObjectId)]

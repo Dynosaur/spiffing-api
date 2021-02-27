@@ -1,6 +1,6 @@
+import { User } from 'interface/data-types';
 import { ObjectId } from 'mongodb';
-import { DbUser, Password } from 'database/user/user';
-import { User } from 'app/server/interface/data-types';
+import { DbUser, Password } from 'database/user';
 
 export class UserWrapper implements DbUser {
     _id!: ObjectId;

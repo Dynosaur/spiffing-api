@@ -1,4 +1,4 @@
-import { Password } from 'app/database/data-types';
+import { Password } from 'database/user';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 
 export function interlace(buf1: Buffer, buf2: Buffer, strategy = Math.round(Math.random() * 3)): Buffer {

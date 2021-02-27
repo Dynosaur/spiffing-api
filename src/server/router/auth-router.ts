@@ -1,8 +1,8 @@
-import { decodeBasicAuth } from 'app/tools/auth';
-import { RouteInfo, RouteHandler, RoutePayload } from 'server/route-handling/route-infra';
-import { Authorize, Deregister, Patch, Register } from '../interface-bindings/auth-responses';
+import { decodeBasicAuth } from 'tools/auth';
+import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
+import { Authorize, Deregister, Patch, Register } from 'interface-bindings/auth-responses';
 import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
-import { AuthHeaderIdParamError, UnauthenticatedError, UnauthorizedError } from '../interface-bindings/error-responses';
+import { AuthHeaderIdParamError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
 
 export const register: RouteHandler<IRegister.Tx> = async function register(request, actions): Promise<RoutePayload<IRegister.Tx>> {
         if (!request.headers.authorization) return new UnauthenticatedError();

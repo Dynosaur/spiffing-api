@@ -1,7 +1,5 @@
-import { Password } from 'database/user/user';
 import { Cipher, hash } from 'tools/crypto';
-import { UserAPI } from './user/api';
-import { UserWrapper } from 'database/user/wrapper';
+import { Password, UserAPI, UserWrapper } from 'database/user';
 
 export class CommonActions {
 

@@ -1,5 +1,5 @@
-import { User } from '../interface/data-types';
-import { UserWrapper } from 'app/database/user/wrapper';
+import { User } from 'interface/data-types';
+import { UserWrapper } from 'database/user';
 import { ErrorResponse, OkResponse } from './response';
 import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
 

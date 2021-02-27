@@ -1,15 +1,44 @@
-import { FilterQuery, ObjectId } from 'mongodb';
-import { UserWrapper } from 'database/user/wrapper';
-import { DbUser } from 'database/user/user';
+import { DbPost } from 'database/post';
 import { Post, User } from 'interface/data-types';
 import { decodeBasicAuth } from 'tools/auth';
 import { scopeMustHaveProps } from 'route-handling/route-handler';
+import { DbUser, UserWrapper } from 'database/user';
+import { FilterQuery, ObjectId } from 'mongodb';
 import { objectIdParseErrorMessage } from 'app/error-messages';
-import { convertDbRatedPosts, DbPost } from 'database/data-types';
 import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
-import { CreatePost, DeleteComment, GetPost, GetPosts, GetRatedPosts, GetUser, GetUsers, PostComment, RatePost } from 'interface-bindings/api-responses';
-import { ICreatePost, IDeleteComment, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IPostComment, IRatePost } from 'interface/responses/api-responses';
-import { AuthHeaderIdParamError, IllegalValueError, MissingDataError, NoCommentFoundError, NoPostFoundError, NoUserFoundError, ObjectIdParseError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
+import {
+    CreatePost,
+    DeleteComment,
+    GetPost,
+    GetPosts,
+    GetRatedPosts,
+    GetUser,
+    GetUsers,
+    PostComment,
+    RatePost
+} from 'interface-bindings/api-responses';
+import {
+    ICreatePost,
+    IDeleteComment,
+    IGetPost,
+    IGetPosts,
+    IGetRatedPosts,
+    IGetUser,
+    IGetUsers,
+    IPostComment,
+    IRatePost
+} from 'interface/responses/api-responses';
+import {
+    AuthHeaderIdParamError,
+    IllegalValueError,
+    MissingDataError,
+    NoCommentFoundError,
+    NoPostFoundError,
+    NoUserFoundError,
+    ObjectIdParseError,
+    UnauthenticatedError,
+    UnauthorizedError
+} from 'interface-bindings/error-responses';
 
 function query(accepted: string[], query: object): { allowed: string[]; blocked: string[]; } {
     if (Object.keys(query).length === 0) return { allowed: [], blocked: [] };
@@ -55,7 +84,7 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
     const allowed: string[] = [];
     const blocked: string[] = [];
     if (Object.keys(request.query).length === 0) {
-        const boundPosts = await actions.post.readPosts({});
+        const boundPosts = await actions.post.getManyByQuery({});
         posts = boundPosts.map(post => post.toInterface());
     } else {
         const allowedKeys = ['author', 'id', 'ids', 'include', 'title'];
@@ -96,7 +125,7 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
                 }
             } else blocked.push(query);
         }
-        const boundPosts = await actions.post.readPosts(dbQuery);
+        const boundPosts = await actions.post.getManyByQuery(dbQuery);
         posts = boundPosts.map(post => post.toInterface());
     }
     if (request.query.include === 'authorUser') {
@@ -124,7 +153,7 @@ export const getPost: RouteHandler<IGetPost.Tx> = async function getPost(request
             return new ObjectIdParseError(request.params.id);
         else throw error;
     }
-    const post = await actions.post.readPost(id);
+    const post = await actions.post.get(id);
     if (!post) return new NoPostFoundError(id.toHexString());
     return new GetPost.Success(post.toInterface());
 };
@@ -139,7 +168,7 @@ export const createPost: RouteHandler<ICreatePost.Tx> = async function createPos
 
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
-    const post = await actions.post.createPost(user._id, request.body.title, request.body.content);
+    const post = await actions.post.create(user._id, request.body.title, request.body.content);
     return new CreatePost.Success(post.toInterface());
 };
 
@@ -159,19 +188,19 @@ export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(requ
         else throw error;
     }
     const rating = Math.sign(request.body.rating);
-    const post = await actions.post.readPost(postId);
+    const post = await actions.post.get(postId);
     if (!post) return new NoPostFoundError(postId.toHexString());
     let result = false;
     let rate = await actions.user.getUserRateApi(user._id);
     switch (rating) {
         case -1:
-            result = await rate.dislikePost(post);
+            result = await rate.dislikePost(post._id);
             break;
         case 0:
-            result = await rate.unratePost(post);
+            result = await rate.unratePost(post._id);
             break;
         case 1:
-            result = await rate.likePost(post);
+            result = await rate.likePost(post._id);
             break;
     }
     return new RatePost.Success(post, rating, result);
@@ -185,8 +214,7 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
     if (!user) return new UnauthorizedError();
     if (user.id !== request.params.ownerId) return new AuthHeaderIdParamError(user.id, request.params.ownerId);
     let rate = await actions.user.getUserRateApi(user._id);
-    const rated = rate.getRatedPosts();
-    return new GetRatedPosts.Success(user, convertDbRatedPosts(rated));
+    return new GetRatedPosts.Success(user, rate.getInterfaceRatedPosts());
 };
 
 export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {
@@ -229,9 +257,9 @@ export const postComment: RouteHandler<IPostComment.Tx> = async function postCom
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
     if (request.params.contentType === 'post') {
-        const post = await actions.post.readPost(request.params.id);
+        const post = await actions.post.get(request.params.id);
         if (post === null) return new NoPostFoundError(request.params.id);
-        const comment = await actions.comment.create(user._id, request.body.content, 'post', post.getObjectId());
+        const comment = await actions.comment.create(user._id, request.body.content, 'post', post._id);
         return new PostComment.Success(comment);
     } else if (request.params.contentType === 'comment') {
         const comment = await actions.comment.get(request.params.id);

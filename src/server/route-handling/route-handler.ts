@@ -8,7 +8,8 @@ export async function executeRouteHandler(
     actions: DatabaseActions,
     handler: RouteHandler<any>,
     fingerprint: string,
-    verbose = true): Promise<void> {
+    verbose = true
+): Promise<void> {
     function sendPayload(request: Request, payload: RoutePayload<any>, verbose = true): void {
         request.res!.status(payload.code).send(payload.payload);
         if (verbose) {

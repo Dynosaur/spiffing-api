@@ -1,5 +1,5 @@
 import { RoutePayload } from 'route-handling/route-infra';
-import { IBaseResponse as IBaseResponse, IOkResponse as IOkResponse, IErrorResponse as IErrorResponse } from 'interface/response';
+import { IBaseResponse, IOkResponse, IErrorResponse } from 'interface/response';
 
 export class BaseResponse<PayloadType extends IBaseResponse> extends RoutePayload<PayloadType> {
     public payload: PayloadType = {} as any;

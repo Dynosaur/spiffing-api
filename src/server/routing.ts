@@ -1,5 +1,6 @@
 import { Request } from 'express';
-import { RouteInfo } from './route-handling/route-infra';
+import { RouteInfo } from 'route-handling/route-infra';
+import { HttpMethod } from 'server/server';
 
 export interface PathSegment {
     name: string;
@@ -62,8 +63,6 @@ export function registerMatch(fit: PathSegment[], path: string): boolean {
     }
     return true;
 }
-
-export type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
 interface RegisteredRoute {
     path: PathSegment[];

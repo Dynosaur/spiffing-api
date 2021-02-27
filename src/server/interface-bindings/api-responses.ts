@@ -1,9 +1,19 @@
-import { BoundPost } from 'database/dbi/post-actions';
-import { UserWrapper } from 'app/database/user/wrapper';
 import { OkResponse } from './response';
+import { PostWrapper } from 'database/post';
+import { UserWrapper } from 'database/user';
+import { CommentWrapper } from 'database/comment';
 import { Post, RatedPosts, User } from 'interface/data-types';
-import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost, IGetRatedPosts, IGetUsers, IPostComment, IDeleteComment } from 'interface/responses/api-responses';
-import { CommentWrapper } from 'app/database/comment/wrapper';
+import {
+    IGetPost,
+    IGetUser,
+    IGetPosts,
+    IGetUsers,
+    IRatePost,
+    ICreatePost,
+    IPostComment,
+    IDeleteComment,
+    IGetRatedPosts
+} from 'interface/responses/api-responses';
 
 export namespace GetUser {
     export class Success extends OkResponse<IGetUser.Success> {
@@ -47,9 +57,9 @@ export namespace CreatePost {
 
 export namespace RatePost {
     export class Success extends OkResponse<IRatePost.Success> {
-        constructor(post: BoundPost, rating: number, changed: boolean) {
+        constructor(post: PostWrapper, rating: number, changed: boolean) {
             super(changed
-                ? `Successfully rated post ${post.getTitle()} (${post.getIdString()}) with rating ${rating}.`
+                ? `Successfully rated post ${post.title} (${post.id}) with rating ${rating}.`
                 : `No change from rating ${rating}.`
                 , 201
             );

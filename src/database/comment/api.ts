@@ -1,8 +1,7 @@
-import { DbPost } from 'database/data-types';
-import { DbComment } from 'database/comment/comment';
-import { DatabaseInterface } from 'database/dbi/database-interface';
+import { DbPost } from 'database/post';
+import { DatabaseInterface } from 'database/database-interface';
 import { ObjectId, UpdateQuery } from 'mongodb';
-import { CommentWrapper } from './wrapper';
+import { CommentWrapper, DbComment } from 'database/comment';
 
 export async function createComment(
     author: ObjectId,

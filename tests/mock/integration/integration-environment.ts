@@ -5,14 +5,15 @@ import { MongoClient } from 'database/mongo-client';
 import { randomBytes } from 'crypto';
 import { IBaseResponse } from 'interface/response';
 import { CommonActions } from 'database/common-actions';
-import { DatabaseInterface } from 'database/dbi/database-interface';
-import { BoundPost, PostAPI } from 'database/dbi/post-actions';
+import { DatabaseInterface } from 'app/database/database-interface';
+import { PostAPI } from 'app/database/post/api';
 import { UserAPI } from 'app/database/user/api';
 import { Collection, ObjectId } from 'mongodb';
-import { DbPost, DbRatedPosts } from 'database/data-types';
+import { DbRatedPosts } from 'database/rate';
 import { DatabaseActions, RouteHandler, RoutePayload } from 'route-handling/route-infra';
 import { DbUser } from 'database/user/user';
 import { UserWrapper } from 'database/user/wrapper';
+import { DbPost, PostWrapper } from 'database/post';
 
 export class IntegrationEnvironment {
     mongo: MongoClient = null as any;
@@ -63,7 +64,7 @@ export class IntegrationEnvironment {
 
         this.comments.api = new CommentAPI(this.comments.dbi, this.posts.dbi);
 
-        this.posts.api = new PostAPI(this.posts.dbi, this.comments.api);
+        this.posts.api = new PostAPI(this.posts.dbi, this.comments.dbi);
 
 
         this.ratings = {} as any;
@@ -103,7 +104,7 @@ export class IntegrationEnvironment {
         return users;
     }
 
-    async generatePosts(amount: number, author: ObjectId): Promise<BoundPost[]> {
+    async generatePosts(amount: number, author: ObjectId): Promise<PostWrapper[]> {
         const posts: DbPost[] = [];
         for (let i = 0; i < amount; i++) {
             const post: DbPost = {
@@ -120,7 +121,7 @@ export class IntegrationEnvironment {
         }
         const insert = await this.posts.db.insertMany(posts);
         for (const index in insert.insertedIds) posts[index]._id = insert.insertedIds[index];
-        return posts.map(post => new BoundPost(this.posts.api, post));
+        return posts.map(post => new PostWrapper(post));
     }
 
     async executeRouteHandler<T extends IBaseResponse = IBaseResponse>(handler: RouteHandler<T>): Promise<RoutePayload<T>> {

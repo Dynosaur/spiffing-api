@@ -1,17 +1,17 @@
 import { ObjectId } from 'mongodb';
 import { ratePost } from 'router/api-router';
 import { UserWrapper } from 'database/user/wrapper';
-import { BoundPost } from 'database/dbi/post-actions';
 import { IRatePost } from 'interface/responses/api-responses';
 import { encodeBasicAuth } from 'tools/auth';
-import { DbPost, DbRatedPosts } from 'database/data-types';
+import { DbRatedPosts } from 'database/rate';
 import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
 import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { DbPost, PostWrapper } from 'database/post';
 
 describe('ratePost route handler', () => {
     let env: IntegrationEnvironment;
     let user: UserWrapper;
-    let posts: BoundPost[];
+    let posts: PostWrapper[];
     beforeEach(async done => {
         env = new IntegrationEnvironment('RatePost');
         await env.initialize();
@@ -58,18 +58,18 @@ describe('ratePost route handler', () => {
         done();
     });
     describe('likes', () => {
-        let post: BoundPost;
+        let post: PostWrapper;
         beforeEach(() => {
             post = posts[0];
             env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
             env.request.body.rating = 1;
-            env.request.params.id = post.getIdString();
+            env.request.params.id = post.id;
         });
         it('should like', async done => {
             const response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
-                _id: post.getObjectId(),
+            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
+                _id: post._id,
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -81,7 +81,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getObjectId(),
+                    _id: post._id,
                     rating: 1
                 }]
             });
@@ -92,8 +92,8 @@ describe('ratePost route handler', () => {
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
-                _id: post.getObjectId(),
+            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
+                _id: post._id,
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -105,7 +105,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getObjectId(),
+                    _id: post._id,
                     rating: 1
                 }]
             });
@@ -118,8 +118,8 @@ describe('ratePost route handler', () => {
             env.request.body.rating = 1;
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
-                _id: post.getObjectId(),
+            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
+                _id: post._id,
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -131,7 +131,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getObjectId(),
+                    _id: post._id,
                     rating: 1
                 }]
             });
@@ -139,18 +139,18 @@ describe('ratePost route handler', () => {
         });
     });
     describe('dislikes', () => {
-        let post: BoundPost;
+        let post: PostWrapper;
         beforeEach(() => {
             post = posts[0];
             env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
             env.request.body.rating = -1;
-            env.request.params.id = post.getIdString();
+            env.request.params.id = post.id;
         });
         it('should dislike', async done => {
             const response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
-                _id: post.getObjectId(),
+            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
+                _id: post._id,
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -162,7 +162,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getObjectId(),
+                    _id: post._id,
                     rating: -1
                 }]
             });
@@ -173,8 +173,8 @@ describe('ratePost route handler', () => {
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
-                _id: post.getObjectId(),
+            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
+                _id: post._id,
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -186,7 +186,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getObjectId(),
+                    _id: post._id,
                     rating: -1
                 }]
             });
@@ -199,8 +199,8 @@ describe('ratePost route handler', () => {
             env.request.body.rating = -1;
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
-                _id: post.getObjectId(),
+            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
+                _id: post._id,
                 author: user._id,
                 comments: [],
                 content: expect.any(String),
@@ -212,7 +212,7 @@ describe('ratePost route handler', () => {
                 _id: expect.any(ObjectId),
                 owner: user._id,
                 posts: [{
-                    _id: post.getObjectId(),
+                    _id: post._id,
                     rating: -1
                 }]
             });

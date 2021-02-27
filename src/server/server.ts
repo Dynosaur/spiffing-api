@@ -2,27 +2,26 @@ import cors from 'cors';
 import express from 'express';
 import { chalk } from 'tools/chalk';
 import { devInfo } from 'app/dev/dev-actions';
-import { UserAPI } from 'app/database/user/api';
-import { PostAPI } from 'app/database/dbi/post-actions';
-import { DbComment } from 'database/comment/comment';
-import { CommentAPI } from 'app/database/comment/api';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'database/mongo-client';
+import { DbRatedPosts } from 'database/rate';
 import { RouteRegister } from 'server/routing';
-import { CommonActions } from 'app/database/common-actions';
+import { CommonActions } from 'database/common-actions';
 import { prettyTimestamp } from 'tools/time';
-import { DatabaseActions } from 'server/route-handling/route-infra';
-import { DatabaseInterface } from 'app/database/dbi/database-interface';
-import { routes as apiRoutes } from 'server/router/api-router';
-import { executeRouteHandler } from 'server/route-handling/route-handler';
+import { DbPost, PostAPI } from 'database/post';
+import { DbUser, UserAPI } from 'database/user';
+import { DatabaseActions } from 'route-handling/route-infra';
+import { DatabaseInterface } from 'database/database-interface';
+import { routes as apiRoutes } from 'router/api-router';
+import { executeRouteHandler } from 'route-handling/route-handler';
 import { Server as NodeServer } from 'http';
 import { routes as miscRoutes } from 'router/misc-router';
 import { routes as authRoutes } from 'router/auth-router';
-import { DbPost, DbRatedPosts } from 'database/data-types';
-import { DbUser } from 'database/user/user';
+import { CommentAPI, DbComment } from 'database/comment';
+
+export type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
 export class Server {
-
     app = express();
     server!: NodeServer;
     mongo!: MongoClient;
@@ -73,7 +72,7 @@ export class Server {
         this.commentDbi = new DatabaseInterface<DbComment>(this.mongo.db.collection('comments'));
 
         this.commentApi = new CommentAPI(this.commentDbi, this.postDbi);
-        this.postApi = new PostAPI(this.postDbi, this.commentApi);
+        this.postApi = new PostAPI(this.postDbi, this.commentDbi);
         this.userApi = new UserAPI(this.userDbi, this.postDbi, this.rateDbi, this.commentDbi);
         this.commonApi = new CommonActions(this.userApi);
         this.actions = {
