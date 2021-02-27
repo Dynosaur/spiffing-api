@@ -12,7 +12,7 @@ export function convertPath(path: string): PathSegment[] {
     for (const node of nodes) {
         if (node.startsWith('/:')) {
             assigned.push({
-                name: /:([^\/]+)/.exec(node)[1],
+                name: /:([^\/]+)/.exec(node)![1],
                 type: 'param'
             });
         } else {
@@ -33,7 +33,7 @@ export function pathMatches(fit: PathSegment[], path: string): { matches: false;
         if (fit[i].type === 'path') {
             if (fit[i].name !== nodes[i].substring(1))
                 return { matches: false };
-        } else params[fit[i].name] = nodes[i].substring(1);
+        } else (params as any)[fit[i].name] = nodes[i].substring(1);
     return {
         matches: true,
         params
@@ -93,7 +93,7 @@ export class RouteRegister {
             }
             if (pathsMatch)
                 if (registeredPath.methods.has(method))
-                    throw new Error(`Handlers ${registeredPath.methods.get(method).handler.name} and ${info.handler.name} have the same path and method.`);
+                    throw new Error(`Handlers ${registeredPath.methods.get(method)!.handler.name} and ${info.handler.name} have the same path and method.`);
                 else {
                     registeredPath.methods.set(method, info);
                     return;
@@ -105,14 +105,14 @@ export class RouteRegister {
         });
     }
 
-    isRegistered(request: Request): RouteInfo {
+    isRegistered(request: Request): RouteInfo | null {
         const method = <HttpMethod> request.method;
         for (const registeredPath of this.paths) {
             const result = pathMatches(registeredPath.path, request.path);
             if (result.matches)
                 if (registeredPath.methods.has(method)) {
                     Object.assign(request.params, result.params);
-                    return registeredPath.methods.get(method);
+                    return registeredPath.methods.get(method)!;
                 }
                 else return null;
         }

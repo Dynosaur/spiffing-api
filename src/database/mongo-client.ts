@@ -3,8 +3,8 @@ import { MongoClient as DbClient, Db } from 'mongodb';
 
 export class MongoClient {
 
-    client: DbClient;
-    db: Db;
+    client: DbClient = null as any;
+    db: Db = null as any;
 
     constructor(private databaseUrl: string,
                 private databaseName: string,

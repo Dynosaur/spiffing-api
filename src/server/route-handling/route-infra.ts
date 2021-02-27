@@ -1,8 +1,8 @@
 import { Request } from 'express';
-import { UserAPI } from 'database/dbi/user-api';
+import { UserAPI } from 'app/database/user/api';
 import { PostAPI } from 'database/dbi/post-actions';
 import { HttpMethod } from 'server/routing';
-import { CommentAPI } from 'database/dbi/comment/comment-api';
+import { CommentAPI } from 'database/comment/api';
 import { IBaseResponse } from 'interface/response';
 import { CommonActions } from 'database/common-actions';
 

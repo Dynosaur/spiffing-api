@@ -34,4 +34,8 @@ export class SwitchMap<KeyType> {
             this.map.delete(key);
         }
     }
+
+    size(): number {
+        return this.map.size;
+    }
 }

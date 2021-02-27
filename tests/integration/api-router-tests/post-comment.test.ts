@@ -1,5 +1,6 @@
+import { DbComment } from 'app/database/comment/comment';
 import { BoundPost } from 'app/database/dbi/post-actions';
-import { BoundUser } from 'app/database/dbi/user-api';
+import { UserWrapper } from 'database/user/wrapper';
 import { IPostComment } from 'app/server/interface/responses/api-responses';
 import { IMissingDataError, INoCommentFoundError, INoPostFoundError, IUnauthenticatedError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
 import { postComment } from 'app/server/router/api-router';
@@ -9,7 +10,7 @@ import { IntegrationEnvironment } from 'tests/mock/integration/integration-envir
 
 describe('postComment route handler', () => {
     let env: IntegrationEnvironment;
-    let user: BoundUser;
+    let user: UserWrapper;
     let post: BoundPost;
     beforeEach(async done => {
         env = new IntegrationEnvironment('post-comment');
@@ -81,7 +82,7 @@ describe('postComment route handler', () => {
             ok: true,
             comment: {
                 _id: expect.stringMatching(/^[a-f\d]{24}$/),
-                author: user._id.toHexString(),
+                author: user.id,
                 content: expect.any(String),
                 dislikes: 0,
                 likes: 0,
@@ -99,32 +100,40 @@ describe('postComment route handler', () => {
         done();
     });
     it('should create a comment on a comment', async done => {
-        const parentComment = await env.comments.api.createComment(user._id, 'Content', post);
+        const parentComment = await env.comments.api.create(user._id, 'Content', 'post', post.getObjectId());
         env.request.headers.authorization = encodeBasicAuth(user.username, 'password');
         env.request.params.contentType = 'comment';
-        env.request.params.id = parentComment.getStringId();
+        env.request.params.id = parentComment._id.toHexString();
         env.request.body.content = 'Comment Content';
         const response = await env.executeRouteHandler(postComment);
         expect(response.payload).toStrictEqual<IPostComment.Success>({
             ok: true,
             comment: {
                 _id: expect.stringMatching(/^[a-f\d]{24}$/),
-                author: user._id.toHexString(),
+                author: user.id,
                 content: expect.any(String),
                 dislikes: 0,
                 likes: 0,
                 parent: {
-                    _id: parentComment.getStringId(),
+                    _id: parentComment._id.toHexString(),
                     contentType: 'comment'
                 },
                 replies: []
             }
         });
         await post.sync();
-        await parentComment.sync();
-        expect(parentComment.getReplies()).toStrictEqual<ObjectId[]>([
-            expect.any(ObjectId)
-        ]);
+        expect(await env.comments.db.findOne({ _id: parentComment._id })).toStrictEqual<DbComment>({
+            _id: parentComment._id,
+            author: parentComment.author,
+            content: parentComment.content,
+            dislikes: 0,
+            likes: 0,
+            parent: {
+                _id: post.getObjectId(),
+                contentType: 'post'
+            },
+            replies: [expect.any(ObjectId)]
+        });
         done();
     });
 });

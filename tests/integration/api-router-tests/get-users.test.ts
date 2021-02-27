@@ -1,11 +1,11 @@
 import { getUsers } from 'router/api-router';
-import { BoundUser } from 'app/database/dbi/user-api';
+import { UserWrapper } from 'app/database/user/wrapper';
 import { IGetUsers } from 'app/server/interface/responses/api-responses';
 import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
 
 describe('getUsers route handler', () => {
     let env: IntegrationEnvironment;
-    let users: BoundUser[];
+    let users: UserWrapper[];
     beforeEach(async done => {
         env = new IntegrationEnvironment('getPosts');
         await env.initialize();

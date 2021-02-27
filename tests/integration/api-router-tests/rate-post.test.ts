@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { ratePost } from 'router/api-router';
-import { BoundUser } from 'database/dbi/user-api';
+import { UserWrapper } from 'database/user/wrapper';
 import { BoundPost } from 'database/dbi/post-actions';
 import { IRatePost } from 'interface/responses/api-responses';
 import { encodeBasicAuth } from 'tools/auth';
@@ -10,7 +10,7 @@ import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'in
 
 describe('ratePost route handler', () => {
     let env: IntegrationEnvironment;
-    let user: BoundUser;
+    let user: UserWrapper;
     let posts: BoundPost[];
     beforeEach(async done => {
         env = new IntegrationEnvironment('RatePost');

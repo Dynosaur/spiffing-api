@@ -2,7 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { chalk } from 'tools/chalk';
 import { devInfo } from 'app/dev/dev-actions';
-import { UserAPI } from 'app/database/dbi/user-api';
+import { UserAPI } from 'app/database/user/api';
 import { PostAPI } from 'app/database/dbi/post-actions';
 import { DbComment } from 'database/comment/comment';
 import { CommentAPI } from 'app/database/comment/api';
@@ -18,25 +18,26 @@ import { executeRouteHandler } from 'server/route-handling/route-handler';
 import { Server as NodeServer } from 'http';
 import { routes as miscRoutes } from 'router/misc-router';
 import { routes as authRoutes } from 'router/auth-router';
-import { DbPost, DbRatedPosts, DbUser } from 'database/data-types';
+import { DbPost, DbRatedPosts } from 'database/data-types';
+import { DbUser } from 'database/user/user';
 
 export class Server {
 
     app = express();
-    server: NodeServer;
-    mongo: MongoClient;
+    server!: NodeServer;
+    mongo!: MongoClient;
     routeRegister = new RouteRegister();
 
-    private userDbi: DatabaseInterface<DbUser>;
-    private postDbi: DatabaseInterface<DbPost>;
-    private rateDbi: DatabaseInterface<DbRatedPosts>;
-    private commentDbi: DatabaseInterface<DbComment>;
+    private userDbi!: DatabaseInterface<DbUser>;
+    private postDbi!: DatabaseInterface<DbPost>;
+    private rateDbi!: DatabaseInterface<DbRatedPosts>;
+    private commentDbi!: DatabaseInterface<DbComment>;
 
-    private actions: DatabaseActions;
-    private postApi: PostAPI;
-    private userApi: UserAPI;
-    private commonApi: CommonActions;
-    private commentApi: CommentAPI;
+    private actions!: DatabaseActions;
+    private postApi!: PostAPI;
+    private userApi!: UserAPI;
+    private commonApi!: CommonActions;
+    private commentApi!: CommentAPI;
 
     private requestFingerprintSize = 3;
 
@@ -53,13 +54,13 @@ export class Server {
                 dbUri = 'mongodb://localhost:27017';
                 break;
             case 'PROD':
-                dbUri = process.env.DB_URL;
+                dbUri = process.env.DB_URL!;
                 break;
             default:
                 throw new Error(`process.env.environment key is ${process.env.environment}, please use "DEV" or "PROD"`);
         }
 
-        if (!process.env.KEY || !/[a-f\d]{32}/.test(process.env.key)) {
+        if (!process.env.KEY || !/[a-f\d]{32}/.test(process.env.key!)) {
             throw new Error(`Expected process.env.environment to be a string of 64 bits in hexadecimal. Received: ${process.env.key} of type ${typeof process.env.KEY}`);
         }
 
@@ -69,10 +70,11 @@ export class Server {
         this.userDbi = new DatabaseInterface<DbUser>(this.mongo.db.collection('users'));
         this.postDbi = new DatabaseInterface<DbPost>(this.mongo.db.collection('posts'));
         this.rateDbi = new DatabaseInterface<DbRatedPosts>(this.mongo.db.collection('rated'));
+        this.commentDbi = new DatabaseInterface<DbComment>(this.mongo.db.collection('comments'));
 
-        this.commentApi = new CommentAPI(this.commentDbi);
+        this.commentApi = new CommentAPI(this.commentDbi, this.postDbi);
         this.postApi = new PostAPI(this.postDbi, this.commentApi);
-        this.userApi = new UserAPI(this.userDbi, this.postApi, this.rateDbi);
+        this.userApi = new UserAPI(this.userDbi, this.postDbi, this.rateDbi, this.commentDbi);
         this.commonApi = new CommonActions(this.userApi);
         this.actions = {
             comment: this.commentApi,
@@ -93,7 +95,7 @@ export class Server {
             if (this.verbose) chalk.yellow(`${fingerprint} ${prettyTimestamp()} ${request.method} ${request.url}`);
             const info = this.routeRegister.isRegistered(request);
             if (info) {
-                if (info.stream) info.streamHandler(request, this.verbose, fingerprint);
+                if (info.streamHandler) info.streamHandler(request, this.verbose, fingerprint);
                 else executeRouteHandler(request, this.actions, info.handler, fingerprint, this.verbose);
             } else {
                 response.status(404).json({ message: 'Path not supported.' });

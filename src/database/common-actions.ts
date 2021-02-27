@@ -1,20 +1,20 @@
-import { Password } from './data-types';
+import { Password } from 'database/user/user';
 import { Cipher, hash } from 'tools/crypto';
-import { BoundUser, UserAPI } from './dbi/user-api';
+import { UserAPI } from './user/api';
+import { UserWrapper } from 'database/user/wrapper';
 
 export class CommonActions {
 
-    cipher = new Cipher(Buffer.from(process.env.KEY, 'hex'));
+    cipher = new Cipher(Buffer.from(process.env.KEY!, 'hex'));
 
     constructor(private userAPI: UserAPI) { }
 
-    async authorize(username: string, password: string): Promise<BoundUser> {
-        const user = await this.userAPI.readUser({ username });
+    async authorize(username: string, password: string): Promise<UserWrapper | null> {
+        const user = await this.userAPI.getByUsername(username);
         if (user)
             try {
                 const authorized = this.cipher.decrypt(user.password.hash) === hash(password, user.password.salt).hash;
-                if (authorized)
-                    return user;
+                if (authorized) return user;
             } catch (error) { }
         return null;
     }

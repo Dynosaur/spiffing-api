@@ -4,7 +4,7 @@ import { DbRatedPosts } from '../data-types';
 import { DatabaseInterface } from './database-interface';
 
 export class RateAPI {
-    private userRatedPosts: DbRatedPosts;
+    private userRatedPosts: DbRatedPosts = null as any;
 
     constructor(private dbi: DatabaseInterface<DbRatedPosts>, private uid: ObjectId) { }
 
@@ -22,7 +22,7 @@ export class RateAPI {
     }
 
     async initialize(): Promise<void> {
-        const result = await this.dbi.read({ owner: this.uid });
+        const result = await this.dbi.getMany({ owner: this.uid });
         if (result.length === 0) {
             this.userRatedPosts = {
                 _id: new ObjectId(),
@@ -41,7 +41,7 @@ export class RateAPI {
                 post.setLikes(post.getLikes() + 1);
                 ratedPost.rating = 1;
                 await post.flush();
-                await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
+                await this.dbi.updateOne({ owner: this.uid }, { $set: { posts: this.userRatedPosts.posts } });
                 return true;
             } else return false;
         } else {
@@ -49,7 +49,7 @@ export class RateAPI {
                 _id: post.getObjectId(),
                 rating: 1
             });
-            await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
+            await this.dbi.updateOne({ owner: this.uid }, { $set: { posts: this.userRatedPosts.posts } });
             post.setLikes(post.getLikes() + 1);
             await post.flush();
             return true;
@@ -64,7 +64,7 @@ export class RateAPI {
                 post.setDislikes(post.getDislikes() + 1);
                 ratedPost.rating = -1;
                 await post.flush();
-                await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
+                await this.dbi.updateOne({ owner: this.uid }, { $set: { posts: this.userRatedPosts.posts } });
                 return true;
             } else return false;
         } else {
@@ -72,7 +72,7 @@ export class RateAPI {
                 _id: post.getObjectId(),
                 rating: -1
             });
-            await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
+            await this.dbi.updateOne({ owner: this.uid }, { $set: { posts: this.userRatedPosts.posts } });
             post.setDislikes(post.getDislikes() + 1);
             await post.flush();
             return true;
@@ -88,7 +88,7 @@ export class RateAPI {
                 post.setLikes(post.getLikes() - 1);
             await post.flush();
             this.userRatedPosts.posts.splice(this.userRatedPosts.posts.indexOf(ratedPost), 1);
-            await this.dbi.update({ owner: this.uid }, { posts: this.userRatedPosts.posts });
+            await this.dbi.updateOne({ owner: this.uid }, { $set: { posts: this.userRatedPosts.posts } });
             return true;
         } else return false;
     }

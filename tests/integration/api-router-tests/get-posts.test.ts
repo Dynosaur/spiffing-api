@@ -1,12 +1,12 @@
 import { getPosts } from 'router/api-router';
-import { BoundUser } from 'database/dbi/user-api';
+import { UserWrapper } from 'database/user/wrapper';
 import { BoundPost } from 'database/dbi/post-actions';
 import { IGetPosts } from 'interface/responses/api-responses';
 import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
 
 describe('getPosts route handler', () => {
     let env: IntegrationEnvironment;
-    let author: BoundUser;
+    let author: UserWrapper;
     let posts: BoundPost[];
     beforeEach(async done => {
         env = new IntegrationEnvironment('getPosts');

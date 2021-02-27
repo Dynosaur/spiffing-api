@@ -41,6 +41,8 @@ export function interlace(buf1: Buffer, buf2: Buffer, strategy = Math.round(Math
             }
             return interlaced;
         }
+        default:
+            throw new Error();
     }
 }
 
@@ -102,6 +104,8 @@ export function deinterlace(interlaced: Buffer): { buf1: Buffer; buf2: Buffer; }
             }
             return { buf1, buf2 };
         }
+        default:
+            throw new Error();
     }
 }
 

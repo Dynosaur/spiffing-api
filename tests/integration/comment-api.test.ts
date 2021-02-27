@@ -1,14 +1,14 @@
 import { DbPost } from 'database/data-types';
 import { ObjectId } from 'mongodb';
-import { BoundUser } from 'database/dbi/user-api';
+import { UserWrapper } from 'database/user/wrapper';
 import { BoundPost } from 'database/dbi/post-actions';
-import { DbComment } from 'database/data-types/comment';
-import { CommentAPI } from 'database/dbi/comment/comment-api';
+import { DbComment } from 'database/comment/comment';
+import { CommentAPI } from 'database/comment/api';
 import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
 
 describe('Comment API', () => {
     let env: IntegrationEnvironment;
-    let user: BoundUser;
+    let user: UserWrapper;
     let post: BoundPost;
     let api: CommentAPI;
     beforeEach(async done => {
@@ -25,13 +25,13 @@ describe('Comment API', () => {
     });
     it('should create a comment on a post', async done => {
         const content = 'Hello.';
-        const bound = await api.createComment(user._id, content, post);
-        expect(await env.comments.db.findOne({ _id: bound.getObjectId() })).toStrictEqual<DbComment>({
+        const comment = await api.create(user._id, content, 'post', post.getObjectId());
+        expect(await env.comments.db.findOne({ _id: comment._id })).toStrictEqual<DbComment>({
             likes: 0,
             dislikes: 0,
             replies: [],
             author: user._id,
-            content: bound.getContent(),
+            content: comment.content,
             _id: expect.any(ObjectId),
             parent: {
                 _id: post.getObjectId(),
@@ -41,7 +41,7 @@ describe('Comment API', () => {
         expect(await env.posts.db.findOne({ _id: post.getObjectId() })).toStrictEqual<DbPost>({
             _id: post.getObjectId(),
             author: user._id,
-            comments: [bound.getObjectId()],
+            comments: [comment._id],
             content: expect.any(String),
             dislikes: 0,
             likes: 0,
@@ -50,25 +50,25 @@ describe('Comment API', () => {
         done();
     });
     it('should create a comment on another comment', async done => {
-        const originalComment = await api.createComment(user._id, 'Comment Content', post);
-        const subcomment = await api.createComment(user._id, 'Comment Content', originalComment);
-        expect(await env.comments.db.findOne({ _id: subcomment.getObjectId() })).toStrictEqual<DbComment>({
+        const originalComment = await api.create(user._id, 'Comment Content', 'post', post.getObjectId());
+        const subcomment = await api.create(user._id, 'Comment Content', 'comment', originalComment._id);
+        expect(await env.comments.db.findOne({ _id: subcomment._id })).toStrictEqual<DbComment>({
             likes: 0,
             dislikes: 0,
             replies: [],
-            _id: subcomment.getObjectId(),
+            _id: subcomment._id,
             content: expect.any(String),
             author: user._id,
             parent: {
-                _id: originalComment.getObjectId(),
+                _id: originalComment._id,
                 contentType: 'comment'
             }
         });
-        expect(await env.comments.db.findOne({ _id: originalComment.getObjectId() })).toStrictEqual<DbComment>({
+        expect(await env.comments.db.findOne({ _id: originalComment._id })).toStrictEqual<DbComment>({
             likes: 0,
             dislikes: 0,
-            replies: [subcomment.getObjectId()],
-            _id: originalComment.getObjectId(),
+            replies: [subcomment._id],
+            _id: originalComment._id,
             author: user._id,
             content: expect.any(String),
             parent: expect.anything()
@@ -76,23 +76,23 @@ describe('Comment API', () => {
         done();
     });
     it('should delete a comment', async done => {
-        let comment = await api.createComment(user._id, 'Comment Content', post);
-        await api.deleteComment(comment.getStringId());
-        expect(await env.comments.db.findOne({ _id: comment.getObjectId() })).toBeNull();
-        comment = await api.createComment(user._id, 'Comment Content', post);
-        const subcomment = await api.createComment(user._id, 'Comment Content', comment);
-        await comment.delete();
-        expect(await env.comments.db.findOne({ _id: comment.getObjectId() })).toStrictEqual<DbComment>({
-            _id: comment.getObjectId(),
-            author: null,
-            content: null,
+        let comment = await api.create(user._id, 'Comment Content', 'post', post.getObjectId());
+        await api.delete(comment._id.toHexString());
+        expect(await env.comments.db.findOne({ _id: comment._id })).toBeNull();
+        comment = await api.create(user._id, 'Comment Content', 'post', post.getObjectId());
+        const subcomment = await api.create(user._id, 'Comment Content', 'comment', comment._id);
+        await env.comments.api.delete(comment._id.toHexString());
+        expect(await env.comments.db.findOne({ _id: comment._id })).toStrictEqual<DbComment>({
+            _id: comment._id,
+            author: null as any,
+            content: null as any,
             dislikes: 0,
             likes: 0,
             parent: {
                 _id: post.getObjectId(),
                 contentType: 'post'
             },
-            replies: [subcomment.getObjectId()]
+            replies: [subcomment._id]
         });
         done();
     });

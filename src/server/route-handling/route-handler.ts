@@ -10,7 +10,7 @@ export async function executeRouteHandler(
     fingerprint: string,
     verbose = true): Promise<void> {
     function sendPayload(request: Request, payload: RoutePayload<any>, verbose = true): void {
-        request.res.status(payload.code).send(payload.payload);
+        request.res!.status(payload.code).send(payload.payload);
         if (verbose) {
             const message = `[${payload.code}] ${payload.message}`;
             if (payload.payload.ok) {
@@ -38,7 +38,7 @@ export async function executeRouteHandler(
 
     if (!routePayload) {
         chalk.red(`${fingerprint} ERROR: route handler "${handler.name}" returned null. Responding with error.`);
-        request.res.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
+        request.res!.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
     } else {
         sendPayload(request, routePayload, verbose);
     }
@@ -48,11 +48,12 @@ export async function executeRouteHandler(
     }
 }
 
-export function scopeMustHaveProps(scope: object, scopeName: string, props: string[]): MissingDataError {
+export function scopeMustHaveProps(scope: object, scopeName: string, props: string[]): MissingDataError | undefined {
     let missing: string[] = [];
     for (const prop of props)
         if (!scope.hasOwnProperty(prop))
             missing.push(prop);
     if (missing.length)
         return new MissingDataError(scopeName, Object.keys(scope), missing);
+    return undefined;
 }

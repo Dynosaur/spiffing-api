@@ -7,41 +7,43 @@ import { IBaseResponse } from 'interface/response';
 import { CommonActions } from 'database/common-actions';
 import { DatabaseInterface } from 'database/dbi/database-interface';
 import { BoundPost, PostAPI } from 'database/dbi/post-actions';
-import { BoundUser, UserAPI } from 'database/dbi/user-api';
+import { UserAPI } from 'app/database/user/api';
 import { Collection, ObjectId } from 'mongodb';
-import { DbPost, DbRatedPosts, DbUser } from 'database/data-types';
+import { DbPost, DbRatedPosts } from 'database/data-types';
 import { DatabaseActions, RouteHandler, RoutePayload } from 'route-handling/route-infra';
+import { DbUser } from 'database/user/user';
+import { UserWrapper } from 'database/user/wrapper';
 
 export class IntegrationEnvironment {
-    mongo: MongoClient;
-    common: CommonActions;
+    mongo: MongoClient = null as any;
+    common: CommonActions = null as any;
     request = {
         headers: {} as any,
         params: {} as any,
         query: {} as any,
         body: {} as any
     };
-    actions: DatabaseActions;
+    actions: DatabaseActions = null as any;
     defaultPassword = 'password';
     comments: {
         db: Collection<DbComment>;
-        interface: DatabaseInterface<DbComment>;
+        dbi: DatabaseInterface<DbComment>;
         api: CommentAPI;
-    };
+    } = null as any;
     posts: {
         db: Collection<DbPost>;
-        interface: DatabaseInterface<DbPost>;
+        dbi: DatabaseInterface<DbPost>;
         api: PostAPI;
-    };
+    } = null as any;
     ratings: {
         db: Collection<DbRatedPosts>;
-        interface: DatabaseInterface<DbRatedPosts>;
-    };
+        dbi: DatabaseInterface<DbRatedPosts>;
+    } = null as any;
     users: {
         db: Collection<DbUser>;
-        interface: DatabaseInterface<DbUser>;
+        dbi: DatabaseInterface<DbUser>;
         api: UserAPI;
-    };
+    } = null as any;
 
     constructor(public suiteName: string) {
         process.env.KEY = randomBytes(32).toString('hex');
@@ -53,24 +55,25 @@ export class IntegrationEnvironment {
 
         this.comments = {} as any;
         this.comments.db = this.mongo.db.collection(`${this.suiteName}Comments`);
-        this.comments.interface = new DatabaseInterface(this.comments.db);
-        this.comments.api = new CommentAPI(this.comments.interface);
+        this.comments.dbi = new DatabaseInterface(this.comments.db);
 
         this.posts = {} as any;
         this.posts.db = this.mongo.db.collection(`${this.suiteName}Posts`);
-        this.posts.interface = new DatabaseInterface(this.posts.db);
-        this.posts.api = new PostAPI(this.posts.interface, this.comments.api);
+        this.posts.dbi = new DatabaseInterface(this.posts.db);
 
-        this.comments.api.postApi = this.posts.api;
+        this.comments.api = new CommentAPI(this.comments.dbi, this.posts.dbi);
+
+        this.posts.api = new PostAPI(this.posts.dbi, this.comments.api);
+
 
         this.ratings = {} as any;
         this.ratings.db = this.mongo.db.collection(`${this.suiteName}Ratings`);
-        this.ratings.interface = new DatabaseInterface(this.ratings.db);
+        this.ratings.dbi = new DatabaseInterface(this.ratings.db);
 
         this.users = {} as any;
         this.users.db = this.mongo.db.collection(`${this.suiteName}Users`);
-        this.users.interface = new DatabaseInterface(this.users.db);
-        this.users.api = new UserAPI(this.users.interface, this.posts.api, this.ratings.interface);
+        this.users.dbi = new DatabaseInterface(this.users.db);
+        this.users.api = new UserAPI(this.users.dbi, this.posts.dbi, this.ratings.dbi, this.comments.dbi);
 
         this.common = new CommonActions(this.users.api);
 
@@ -87,15 +90,15 @@ export class IntegrationEnvironment {
         await this.mongo.client.close();
     }
 
-    async generateUser(): Promise<BoundUser> {
-        return await this.users.api.createUser(
+    generateUser(): Promise<UserWrapper> {
+        return this.users.api.create(
             `test-user-${Math.round(Math.random() * 999) + 1}`,
             this.common.securePassword(this.defaultPassword)
         );
     }
 
-    async generateUsers(length: number): Promise<BoundUser[]> {
-        const users: BoundUser[] = [];
+    async generateUsers(length: number): Promise<UserWrapper[]> {
+        const users: UserWrapper[] = [];
         for (let i = 0; i < length; i++) users.push(await this.generateUser());
         return users;
     }
@@ -104,7 +107,7 @@ export class IntegrationEnvironment {
         const posts: DbPost[] = [];
         for (let i = 0; i < amount; i++) {
             const post: DbPost = {
-                _id: undefined,
+                _id: undefined as any,
                 author,
                 comments: [],
                 content: 'Post Content',
@@ -112,7 +115,7 @@ export class IntegrationEnvironment {
                 likes: 0,
                 title: 'Post Title'
             };
-            delete post._id;
+            delete (post as any)._id;
             posts.push(post);
         }
         const insert = await this.posts.db.insertMany(posts);

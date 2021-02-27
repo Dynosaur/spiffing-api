@@ -1,34 +1,50 @@
-import { Collection, FilterQuery, ObjectId } from 'mongodb';
+import { Collection, FilterQuery, ObjectId, OptionalId, UpdateQuery, WithId } from 'mongodb';
 
-export interface Identifiable {
-    _id: ObjectId;
-}
+export class DatabaseInterface<T> {
+    private name: string;
 
-export class DatabaseInterface<T extends Identifiable> {
+    constructor(private collection: Collection<T>) {
+        this.name = collection.namespace;
+    }
 
-    constructor(private collection: Collection<T>) { }
-
-    async create(data: T): Promise<void> {
-        await this.collection.insertOne(data as any);
+    async create(data: OptionalId<T>): Promise<WithId<T>> {
+        const insertOp = await this.collection.insertOne(data);
+        if (insertOp.insertedCount !== 1)
+            throw new Error(`${this.collection.collectionName}: insert failed:
+             insertedCount: ${insertOp.insertedCount}`);
+        return insertOp.ops[0];
     }
 
     async delete(query: FilterQuery<T>): Promise<void> {
-        await this.collection.deleteMany(query);
+        const delOp = await this.collection.deleteOne(query);
+        if (delOp.deletedCount !== 1)
+            throw new Error(`${this.collection.collectionName}: delete failed:
+             deleteCount: ${delOp.deletedCount}`);
     }
 
-    async read(query: FilterQuery<T>): Promise<T[]> {
-        const cursor = this.collection.find<T>(query);
-        const items: T[] = [];
-        await cursor.forEach(item => items.push(item));
-        return items;
+    get(query: FilterQuery<T>): Promise<T | null> {
+        return this.collection.findOne(query);
     }
 
-    async update(query: FilterQuery<T>, updates: Partial<T>): Promise<{ matched: number; modified: number; }> {
-        const updateRequest = await this.collection.updateMany(query, { $set: updates });
-        return {
-            matched: updateRequest.matchedCount,
-            modified: updateRequest.modifiedCount
-        };
+    getMany(query: FilterQuery<T>): Promise<T[]> {
+        const cursor = this.collection.find(query);
+        return cursor.toArray();
+    }
+
+    async updateOne(query: FilterQuery<T>, updates: UpdateQuery<T>): Promise<void> {
+        const upOp = await this.collection.updateOne(query, updates);
+        if (upOp.matchedCount !== 1)
+            throw new Error(`(${this.name}) updateOne failed: matchedCount: ${upOp.matchedCount}`);
+        if (upOp.modifiedCount !== 1)
+            throw new Error(`(${this.name}) updateOne failed: modifiedCount: ${upOp.modifiedCount}`);
+    }
+
+    async updateMany(query: FilterQuery<T>, updates: UpdateQuery<T>): Promise<void> {
+        const upOp = await this.collection.updateMany(query, updates);
+        if (upOp.matchedCount === 0)
+            throw new Error(`(${this.name}) updateOne failed: matchedCount: ${upOp.matchedCount}`);
+        if (upOp.modifiedCount === 0)
+            throw new Error(`(${this.name}) updateOne failed: modifiedCount: ${upOp.modifiedCount}`);
     }
 
 }

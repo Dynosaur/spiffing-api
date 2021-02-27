@@ -1,9 +1,9 @@
 import { BoundPost } from 'database/dbi/post-actions';
-import { BoundUser } from 'database/dbi/user-api';
+import { UserWrapper } from 'app/database/user/wrapper';
 import { OkResponse } from './response';
 import { Post, RatedPosts, User } from 'interface/data-types';
 import { IGetPosts, IGetUser, IGetPost, ICreatePost, IRatePost, IGetRatedPosts, IGetUsers, IPostComment, IDeleteComment } from 'interface/responses/api-responses';
-import { BoundComment } from 'app/database/dbi/comment/bound-comment';
+import { CommentWrapper } from 'app/database/comment/wrapper';
 
 export namespace GetUser {
     export class Success extends OkResponse<IGetUser.Success> {
@@ -59,7 +59,7 @@ export namespace RatePost {
 
 export namespace GetRatedPosts {
     export class Success extends OkResponse<IGetRatedPosts.Success> {
-        constructor(user: BoundUser, ratedPosts: RatedPosts) {
+        constructor(user: UserWrapper, ratedPosts: RatedPosts) {
             super(`Successfully found posts rated by user ${user.username} (${user.id}).`);
             this.payload.ratedPosts = ratedPosts;
         }
@@ -79,8 +79,8 @@ export namespace GetUsers {
 
 export namespace PostComment {
     export class Success extends OkResponse<IPostComment.Success> {
-        constructor(comment: BoundComment) {
-            super(`Successfully created comment ${comment.getStringId()}.`);
+        constructor(comment: CommentWrapper) {
+            super(`Successfully created comment ${comment.id}.`);
             this.payload.comment = comment.toInterface();
         }
     }
@@ -88,8 +88,8 @@ export namespace PostComment {
 
 export namespace DeleteComment {
     export class Success extends OkResponse<IDeleteComment.Success> {
-        constructor(comment: BoundComment, fullyDeleted: boolean) {
-            super(`Successfully deleted comment ${comment.getStringId()}.`);
+        constructor(comment: CommentWrapper, fullyDeleted: boolean) {
+            super(`Successfully deleted comment ${comment.id}.`);
             this.payload.fullyDeleted = fullyDeleted;
         }
     }

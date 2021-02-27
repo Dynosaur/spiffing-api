@@ -1,9 +1,9 @@
 import { Post } from 'interface/data-types';
 import { DbPost } from 'database/data-types';
-import { ObjectId } from 'mongodb';
+import { ObjectId, UpdateQuery } from 'mongodb';
 import { SwitchMap } from 'tools/switch-map';
-import { CommentAPI } from 'database/dbi/comment/comment-api';
-import { BoundComment } from 'database/dbi/comment/bound-comment';
+import { CommentAPI } from 'database/comment/api';
+import { CommentWrapper } from 'app/database/comment/wrapper';
 import { DatabaseInterface } from 'database/dbi/database-interface';
 
 export class BoundPost {
@@ -59,16 +59,16 @@ export class BoundPost {
         return this.dbPost.title;
     }
 
-    addComment(comment: BoundComment): void {
-        this.dbPost.comments.push(comment.getObjectId());
+    addComment(comment: CommentWrapper): void {
+        this.dbPost.comments.push(comment._id);
         this.changed.on('comments');
     }
 
-    deleteComment(comment: BoundComment): boolean {
+    deleteComment(comment: CommentWrapper): boolean {
         let index = -1;
         for (let i = 0; i < this.dbPost.comments.length; i++) {
             const commentId = this.dbPost.comments[i].toHexString();
-            if (commentId === comment.getStringId()) {
+            if (commentId === comment.id) {
                 index = i;
                 break;
             }
@@ -76,6 +76,7 @@ export class BoundPost {
         if (index === -1) return false;
         this.dbPost.comments.splice(index, 1);
         this.changed.on('comments');
+        return true;
     }
 
     getComments(): ObjectId[] {
@@ -94,8 +95,8 @@ export class BoundPost {
         if (Array.from(this.changed.keys()).length === 0) return;
         const changed = {};
         for (const key of this.changed.keys())
-            changed[key] = this.dbPost[key];
-        await this.postApi.updatePost(id, changed);
+            (changed as any)[key] = this.dbPost[key];
+        await this.postApi.updatePost(id, { $set: { ...changed }});
         this.changed.clear();
     }
 
@@ -127,22 +128,22 @@ export class PostAPI {
         return new BoundPost(this, post);
     }
 
-    async readPost(id: ObjectId | string): Promise<BoundPost> {
+    async readPost(id: ObjectId | string): Promise<BoundPost | null> {
         let posts: DbPost[];
         if (id instanceof ObjectId)
-            posts = await this.dbi.read({ _id: id });
+            posts = await this.dbi.getMany({ _id: id });
         else
-            posts = await this.dbi.read({ _id: new ObjectId(id) });
+            posts = await this.dbi.getMany({ _id: new ObjectId(id) });
         return posts.length ? new BoundPost(this, posts[0]) : null;
     }
 
     async readPosts(query: Partial<DbPost>): Promise<BoundPost[]> {
-        const posts = await this.dbi.read(query);
+        const posts = await this.dbi.getMany(query);
         return posts.map(post => new BoundPost(this, post));
     }
 
-    async updatePost(id: string, updates: Partial<DbPost>): Promise<void> {
-        await this.dbi.update({ _id: new ObjectId(id) }, updates);
+    async updatePost(id: string, updates: UpdateQuery<DbPost>): Promise<void> {
+        await this.dbi.updateOne({ _id: new ObjectId(id) }, updates);
     }
 
     async deletePosts(query: Partial<DbPost>): Promise<void> {

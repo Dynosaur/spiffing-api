@@ -1,5 +1,5 @@
 import { User } from '../interface/data-types';
-import { BoundUser } from 'app/database/dbi/user-api';
+import { UserWrapper } from 'app/database/user/wrapper';
 import { ErrorResponse, OkResponse } from './response';
 import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
 
@@ -20,8 +20,8 @@ export namespace Register {
 
 export namespace Authorize {
     export class Success extends OkResponse<IAuthorize.Success> {
-        constructor(user: BoundUser) {
-            super(`Successfully authorized user ${user.username} (${user._id.toHexString()}).`);
+        constructor(user: UserWrapper) {
+            super(`Successfully authorized user ${user.username} (${user.id}).`);
             this.payload.user = user.toInterface();
         }
     }
@@ -29,16 +29,16 @@ export namespace Authorize {
 
 export namespace Deregister {
     export class Success extends OkResponse<IDeregister.Success> {
-        constructor(user: BoundUser) {
-            super(`Successfully deleted user ${user.username} (${user._id.toHexString()}).`);
+        constructor(user: UserWrapper) {
+            super(`Successfully deleted user ${user.username} (${user.id}).`);
         }
     }
 }
 
 export namespace Patch {
     export class Success extends OkResponse<IPatch.Success> {
-        constructor(user: BoundUser, public updated: string[], public rejected: string[]) {
-            super(`Successfully updated user ${user.username} (${user._id.toHexString()}) ${updated.join(', ')}.`);
+        constructor(user: UserWrapper, public updated: string[], public rejected: string[]) {
+            super(`Successfully updated user ${user.username} (${user.id}) ${updated.join(', ')}.`);
             this.payload.updated = this.updated;
             this.payload['rejected-props'] = this.rejected;
         }

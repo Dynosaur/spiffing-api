@@ -17,10 +17,10 @@ function streamFile(path: string): Readable {
 
 function streamFileHandler(request: Request, name: string, verbose: boolean, id: string): void {
     try {
-        streamFile(`src/server/interface/${name}.ts`).pipe(request.res);
+        streamFile(`src/server/interface/${name}.ts`).pipe(request.res!);
         if (verbose) chalk.lime(id + ' Stream was successful.\n');
     } catch (e) {
-        request.res.status(500).send({
+        request.res!.status(500).send({
             message: 'An error occurred.',
             error: e.message
         });
@@ -30,7 +30,7 @@ function streamFileHandler(request: Request, name: string, verbose: boolean, id:
 
 export const devInfo: RouteInfo[] = [
     { method: 'GET', path: '/dev/:name',
-        handler: null,
+        handler: null as any,
         stream: true,
         streamHandler: (request, verbose, id) => streamFileHandler(request, request.params.name, verbose, id) },
     { method: 'GET', path: '/dev/responses/:name',

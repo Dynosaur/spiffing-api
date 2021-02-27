@@ -1,57 +1,67 @@
-import { ObjectId } from 'mongodb';
+import { DbPost } from 'database/data-types';
 import { DbComment } from 'database/comment/comment';
-import { BoundComment } from 'database/comment/bound';
 import { DatabaseInterface } from 'database/dbi/database-interface';
-import { BoundPost, PostAPI } from 'database/dbi/post-actions';
+import { ObjectId, UpdateQuery } from 'mongodb';
+import { CommentWrapper } from './wrapper';
+
+export async function createComment(
+    author: ObjectId,
+    content: string,
+    parentType: 'post' | 'comment',
+    parentId: ObjectId,
+    commentDbi: DatabaseInterface<DbComment>,
+    postDbi: DatabaseInterface<DbPost>
+): Promise<CommentWrapper> {
+    const comment = await commentDbi.create({
+        parent: {
+            _id: parentId,
+            contentType: parentType
+        },
+        author, content,
+        dislikes: 0, likes: 0,
+        replies: []
+    });
+    if (parentType === 'post') await postDbi.updateOne({ _id: parentId }, { $push: { comments: comment._id } });
+    else await commentDbi.updateOne({ _id: parentId }, { $push: { replies: comment._id } });
+    return new CommentWrapper(comment);
+}
+
+export async function deleteComment(
+    id: ObjectId | string,
+    commentDbi: DatabaseInterface<DbComment>,
+    postDbi: DatabaseInterface<DbPost>
+): Promise<boolean> {
+    const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+    const comment = await commentDbi.get({ _id: objectId });
+    if (comment === null) throw new Error(`Could not delete comment ${id}: does not exist.`);
+    if (comment.replies.length > 0) {
+        await commentDbi.updateOne({ _id: objectId }, { $set: { author: undefined, content: undefined } });
+        return false;
+    }
+    if (comment.parent.contentType === 'post')
+        await postDbi.updateOne({ _id: comment.parent._id }, { $pull: { comments: objectId } });
+    else await commentDbi.updateOne({ _id: comment.parent._id }, { $pull: { replies: objectId } });
+    await commentDbi.delete({ _id: new ObjectId(id) });
+    return true;
+}
 
 export class CommentAPI {
-    postApi: PostAPI;
-    constructor(public dbi: DatabaseInterface<DbComment>) { }
+    constructor(private comments: DatabaseInterface<DbComment>, private posts: DatabaseInterface<DbPost>) { }
 
-    async createComment(author: ObjectId, content: string, parent: BoundPost | BoundComment): Promise<BoundComment> {
-        let contentType: 'post' | 'comment';
-        let parentId: ObjectId;
-        if (parent instanceof BoundPost) {
-            contentType = 'post';
-            parentId = parent.getObjectId();
-        } else {
-            contentType = 'comment';
-            parentId = parent.getObjectId();
-        }
-        const post: DbComment = {
-            replies: [],
-            _id: undefined,
-            author, content,
-            likes: 0, dislikes: 0,
-            parent: {
-                contentType,
-                _id: parentId
-            }
-        };
-        await this.dbi.create(post);
-        const boundComment = new BoundComment(this, this.postApi, post);
-        if (parent instanceof BoundPost) {
-            parent.addComment(boundComment);
-            await parent.flush();
-        } else {
-            parent.addReply(boundComment);
-            await parent.flush();
-        }
-        return boundComment;
+    async create(author: ObjectId, content: string, parentType: 'post' | 'comment', parentId: ObjectId): Promise<CommentWrapper> {
+        return createComment(author, content, parentType, parentId, this.comments, this.posts);
     }
 
-    async readComment(id: string): Promise<BoundComment> {
-        const comments = await this.dbi.read({ _id: new ObjectId(id) });
-        if (comments.length === 0) return null;
-        return new BoundComment(this, this.postApi, comments[0]);
+    async get(id: string): Promise<CommentWrapper | null> {
+        const comment = await this.comments.get({ _id: new ObjectId(id) });
+        return comment === null ? null : new CommentWrapper(comment);
     }
 
-    async updateComment(id: string, updates: Partial<DbComment>): Promise<void> {
-        await this.dbi.update({ _id: new ObjectId(id) }, updates);
+    update(id: string, updates: UpdateQuery<DbComment>): Promise<void> {
+        return this.comments.updateOne({ _id: new ObjectId(id) }, updates);
     }
 
-    async deleteComment(id: string): Promise<void> {
-        await this.dbi.delete({ _id: new ObjectId(id) });
+    delete(id: string): Promise<boolean> {
+        return deleteComment(id, this.comments, this.posts);
     }
-
 }

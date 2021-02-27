@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { BoundUser } from 'database/dbi/user-api';
+import { UserWrapper } from 'database/user/wrapper';
 import { BoundPost } from 'database/dbi/post-actions';
 import { DbComment } from 'database/comment/comment';
 import { deleteComment } from 'router/api-router';
@@ -10,7 +10,7 @@ import { INoCommentFoundError, IUnauthenticatedError, IUnauthorizedError } from 
 
 describe('deleteComment route handler', () => {
     let env: IntegrationEnvironment;
-    let user: BoundUser;
+    let user: UserWrapper;
     let post: BoundPost;
     beforeEach(async done => {
         env = new IntegrationEnvironment('delete-comment');
@@ -35,9 +35,9 @@ describe('deleteComment route handler', () => {
             ok: false,
             error: 'Unauthorized'
         });
-        const comment = await env.comments.api.createComment(user._id, 'Content', post);
+        const comment = await env.comments.api.create(user._id, 'Content', 'post', post.getObjectId());
         const otherUser = await env.generateUser();
-        env.request.params.commentId = comment.getStringId();
+        env.request.params.commentId = comment._id.toHexString();
         env.request.headers.authorization = encodeBasicAuth(otherUser.username, 'password');
         response = await env.executeRouteHandler(deleteComment);
         expect(response.payload).toStrictEqual<IUnauthorizedError>({
@@ -55,48 +55,59 @@ describe('deleteComment route handler', () => {
             expect(response.payload).toStrictEqual<INoCommentFoundError>({
                 error: 'No Comment Found',
                 ok: false,
-                id: undefined
+                id: undefined as any
             });
             done();
         });
         it('should delete a comment', async done => {
-            const comment = await env.comments.api.createComment(user._id, 'Content', post);
-            env.request.params.commentId = comment.getStringId();
+            const comment = await env.comments.api.create(user._id, 'Content', 'post', post.getObjectId());
+            env.request.params.commentId = comment._id.toHexString();
             const response = await env.executeRouteHandler(deleteComment);
             expect(response.payload).toStrictEqual<IDeleteComment.Success>({
                 ok: true,
                 fullyDeleted: true
             });
-            expect(await env.actions.comment.readComment(comment.getStringId())).toBeNull();
+            expect(await env.actions.comment.get(comment._id.toHexString())).toBeNull();
             await post.sync();
             expect(post.getComments().length).toBe(0);
             done();
         });
         it('shouldn\'t fully delete the comment if there are subcomments', async done => {
-            const comment = await env.comments.api.createComment(user._id, 'Content', post);
-            const subcomment = await env.comments.api.createComment(user._id, 'Content', comment);
-            env.request.params.commentId = comment.getStringId();
+            const comment = await env.comments.api.create(user._id, 'Content', 'post', post.getObjectId());
+            const subcomment = await env.comments.api.create(user._id, 'Content', 'comment', comment._id);
+            env.request.params.commentId = comment._id.toHexString();
             const response = await env.executeRouteHandler(deleteComment);
             expect(response.payload).toStrictEqual<IDeleteComment.Success>({
                 ok: true,
                 fullyDeleted: false
             });
-            await comment.sync();
-            expect(comment.getDbComment()).toStrictEqual<DbComment>({
+            expect(await env.comments.db.findOne({ _id: comment._id })).toStrictEqual<DbComment>({
                 _id: expect.any(ObjectId),
-                author: null,
-                content: null,
+                author: null as any,
+                content: null as any,
                 dislikes: 0,
                 likes: 0,
                 parent: {
                     _id: post.getObjectId(),
                     contentType: 'post'
                 },
-                replies: [subcomment.getObjectId()]
+                replies: [subcomment._id]
             });
             await post.sync();
-            expect(post.getComments()).toContainEqual(comment.getObjectId());
-            expect(comment.getReplies()).toContainEqual(subcomment.getObjectId());
+            expect(post.getComments()).toContainEqual(comment._id);
+            // expect(comment.replies).toContainEqual(subcomment._id);
+            expect(await env.comments.db.findOne({ _id: comment._id })).toStrictEqual<DbComment>({
+                _id: comment._id,
+                author: null!,
+                content: null!,
+                dislikes: 0,
+                likes: 0,
+                parent: {
+                    _id: post.getObjectId(),
+                    contentType: 'post'
+                },
+                replies: [subcomment._id]
+            });
             done();
         });
     });

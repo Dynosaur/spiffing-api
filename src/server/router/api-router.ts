@@ -1,10 +1,11 @@
-import { ObjectId } from 'mongodb';
-import { BoundUser } from 'database/dbi/user-api';
+import { FilterQuery, ObjectId } from 'mongodb';
+import { UserWrapper } from 'database/user/wrapper';
+import { DbUser } from 'database/user/user';
 import { Post, User } from 'interface/data-types';
 import { decodeBasicAuth } from 'tools/auth';
 import { scopeMustHaveProps } from 'route-handling/route-handler';
 import { objectIdParseErrorMessage } from 'app/error-messages';
-import { convertDbRatedPosts, DbPost, DbUser } from 'database/data-types';
+import { convertDbRatedPosts, DbPost } from 'database/data-types';
 import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
 import { CreatePost, DeleteComment, GetPost, GetPosts, GetRatedPosts, GetUser, GetUsers, PostComment, RatePost } from 'interface-bindings/api-responses';
 import { ICreatePost, IDeleteComment, IGetPost, IGetPosts, IGetRatedPosts, IGetUser, IGetUsers, IPostComment, IRatePost } from 'interface/responses/api-responses';
@@ -20,7 +21,7 @@ function query(accepted: string[], query: object): { allowed: string[]; blocked:
     return { allowed, blocked };
 }
 
-function toObjectId(s: string): ObjectId {
+function toObjectId(s: string): ObjectId | null {
     try {
         return new ObjectId(s);
     } catch (error) {
@@ -41,9 +42,9 @@ export const getUser: RouteHandler<IGetUser.Tx> = async function getUser(request
             id = request.params.id;
         else throw error;
     }
-    let user: BoundUser;
-    if (id instanceof ObjectId) user = await actions.user.readUser({ _id: id });
-    else user = await actions.user.readUser({ username: id });
+    let user: UserWrapper | null;
+    if (id instanceof ObjectId) user = await actions.user.getById(id);
+    else user = await actions.user.getByUsername(id);
     if (!user) return new NoUserFoundError(id instanceof ObjectId ? id.toHexString() : id);
 
     return new GetUser.Success(user.toInterface());
@@ -83,14 +84,14 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
                         }
                         break;
                     case 'ids': {
-                        const ids = queryValue.match(/[a-f\d]{24}/g).map(match => new ObjectId(match));
+                        const ids = queryValue.match(/[a-f\d]{24}/g)!.map(match => new ObjectId(match));
                         dbQuery._id = { $in: ids } as any;
                         break;
                     }
                     case 'include':
                         break;
                     default:
-                        dbQuery[query] = queryValue;
+                        (dbQuery as any)[query] = queryValue;
                         break;
                 }
             } else blocked.push(query);
@@ -100,12 +101,12 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
     }
     if (request.query.include === 'authorUser') {
         const authorMap = new Map<string, User>();
-        for (const post of posts) authorMap.set(post.author as string, null);
-        const authors = await actions.user.getUsersById(Array.from(authorMap.keys()).map(id => new ObjectId(id)));
-        authors.forEach(author => authorMap.set(author._id.toHexString(), author.toInterface()));
+        for (const post of posts) authorMap.set(post.author as string, null as any);
+        const authors = await actions.user.getManyById(Array.from(authorMap.keys()).map(id => new ObjectId(id)));
+        authors.forEach(author => authorMap.set(author.id, author.toInterface()));
         posts.forEach(post => {
             post.author = post.author as string;
-            if (authorMap.has(post.author)) post.author = authorMap.get(post.author);
+            if (authorMap.has(post.author)) (post as any).author = authorMap.get(post.author);
         });
     }
     return new GetPosts.Success(posts, allowed, blocked);
@@ -160,8 +161,8 @@ export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(requ
     const rating = Math.sign(request.body.rating);
     const post = await actions.post.readPost(postId);
     if (!post) return new NoPostFoundError(postId.toHexString());
-    let result: boolean;
-    let rate = await user.getRateApi();
+    let result = false;
+    let rate = await actions.user.getUserRateApi(user._id);
     switch (rating) {
         case -1:
             result = await rate.dislikePost(post);
@@ -183,14 +184,14 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
     if (user.id !== request.params.ownerId) return new AuthHeaderIdParamError(user.id, request.params.ownerId);
-    let rate = await user.getRateApi();
+    let rate = await actions.user.getUserRateApi(user._id);
     const rated = rate.getRatedPosts();
     return new GetRatedPosts.Success(user, convertDbRatedPosts(rated));
 };
 
 export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {
     const queryCheck = query(['id', 'ids', 'username', 'usernames'], request.query);
-    const databaseQuery: Partial<DbUser> = {};
+    const databaseQuery: FilterQuery<DbUser> = {};
     queryCheck.allowed.forEach(key => {
         switch (key) {
             case 'id':
@@ -204,17 +205,18 @@ export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(requ
                 const ids = Array.from(request.query.ids.matchAll(/([a-f\d]{24})/g)).map(regexMatch => regexMatch[1]);
                 if (ids.length === 0) break;
                 const objectIds = ids.map(id => new ObjectId(id));
-                databaseQuery._id = { $in: objectIds } as any;
+                databaseQuery._id = { $in: objectIds };
                 break;
             case 'username':
                 databaseQuery.username = request.query.username as string;
                 break;
             case 'usernames':
-                databaseQuery.username = { $in: (request.query.usernames as string).split(',') } as any;
+                databaseQuery.username = { $in: (request.query.usernames as string).split(',') };
                 break;
         }
+        return;
     });
-    const users: User[] = (await actions.user.readUsers(databaseQuery)).map(user => user.toInterface());
+    const users: User[] = (await actions.user.getByQuery(databaseQuery)).map(user => user.toInterface());
     return new GetUsers.Success(users, queryCheck.allowed, queryCheck.blocked);
 };
 
@@ -229,16 +231,14 @@ export const postComment: RouteHandler<IPostComment.Tx> = async function postCom
     if (request.params.contentType === 'post') {
         const post = await actions.post.readPost(request.params.id);
         if (post === null) return new NoPostFoundError(request.params.id);
-        const comment = await actions.comment.createComment(user._id, request.body.content, post);
+        const comment = await actions.comment.create(user._id, request.body.content, 'post', post.getObjectId());
         return new PostComment.Success(comment);
     } else if (request.params.contentType === 'comment') {
-        const comment = await actions.comment.readComment(request.params.id);
+        const comment = await actions.comment.get(request.params.id);
         if (comment === null) return new NoCommentFoundError(request.params.id);
-        const subcomment = await actions.comment.createComment(user._id, request.body.content, comment);
+        const subcomment = await actions.comment.create(user._id, request.body.content, 'comment', comment._id);
         return new PostComment.Success(subcomment);
-    } else {
-        return new IllegalValueError(request.params.contentType, ['post', 'comment'], 'params');
-    }
+    } else return new IllegalValueError(request.params.contentType, ['post', 'comment'], 'params');
 };
 
 export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function deleteComment(request, actions): Promise<RoutePayload<IDeleteComment.Tx>> {
@@ -247,11 +247,11 @@ export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function del
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
-    const comment = await actions.comment.readComment(request.params.commentId);
+    const comment = await actions.comment.get(request.params.commentId);
     if (comment === null) return new NoCommentFoundError(request.params.commentId);
-    if (user.id !== comment.getStringAuthor()) return new UnauthorizedError();
-    await comment.delete();
-    return new DeleteComment.Success(comment, !comment.alive);
+    if (user.id !== comment.authorString) return new UnauthorizedError();
+    const deleteResult = await actions.comment.delete(comment.id);
+    return new DeleteComment.Success(comment, deleteResult);
 };
 
 export const routes: RouteInfo[] = [

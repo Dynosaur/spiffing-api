@@ -11,11 +11,11 @@ export function copyArray<T>(arr: T[]): T[] {
     } else return Array.from(arr);
 }
 
-export function defensiveCopy<T>(object: T): T {
+export function defensiveCopy<T>(object: any): T | null {
     if (object === null) return null;
     if (object instanceof ObjectId) return new ObjectId(object) as any;
     if (typeof object === 'object') {
-        const newObject = {};
+        const newObject = {} as any;
         for (const property of Object.keys(object))
             if (typeof object[property] === 'object')
                 if (object[property] instanceof Array) newObject[property] = copyArray(object[property]);

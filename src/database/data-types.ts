@@ -1,17 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { Post, RatedPost, RatedPosts, User } from 'interface/data-types';
-
-export interface Password {
-    hash: string;
-    salt: string;
-}
-
-export interface DbUser {
-    _id: ObjectId;
-    password: Password;
-    screenname: string;
-    username: string;
-}
+import { Post, RatedPost, RatedPosts } from 'interface/data-types';
 
 export interface DbPost {
     _id: ObjectId;
@@ -32,15 +20,6 @@ export interface DbRatedPosts {
     _id: ObjectId;
     owner: ObjectId;
     posts: DbRatedPost[];
-}
-
-export function convertDbUser(dbUser: DbUser): User {
-    return {
-        _id: dbUser._id.toHexString(),
-        created: dbUser._id.generationTime,
-        screenname: dbUser.screenname,
-        username: dbUser.username
-    };
 }
 
 export function convertDbPost(dbPost: DbPost): Post {

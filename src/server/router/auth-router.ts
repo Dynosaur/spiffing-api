@@ -10,10 +10,10 @@ export const register: RouteHandler<IRegister.Tx> = async function register(requ
         const decodeAttempt = decodeBasicAuth(request.headers.authorization);
         if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
 
-        if (await actions.user.readUser({ username: decodeAttempt.username }))
+        if (await actions.user.getByUsername(decodeAttempt.username))
             return new Register.UserExistsError(decodeAttempt.username);
 
-        const user = await actions.user.createUser(
+        const user = await actions.user.create(
             decodeAttempt.username,
             actions.common.securePassword(decodeAttempt.password)
         );
@@ -41,7 +41,7 @@ export const deregister: RouteHandler<IDeregister.Tx> = async function deregiste
     if (!user) return new UnauthorizedError();
     if (user.username !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
 
-    await user.delete();
+    await actions.user.delete(user._id);
     return new Deregister.Success(user);
 };
 
@@ -59,13 +59,13 @@ export const patchUser: RouteHandler<IPatch.Tx> = async function patchUser(reque
 
     for (const key of Object.keys(request.body))
         if (key === 'password') {
-            await user.update({ password: actions.common.securePassword(request.body.password) });
+            await actions.user.updateSet(user._id, { password: actions.common.securePassword(request.body.password) });
             updated.push('password');
         } else if (key === 'screenname') {
-            await user.update({ screenname: request.body.screenname });
+            await actions.user.updateSet(user._id, { screenname: request.body.screenname });
             updated.push('screenname');
         } else if (key === 'username') {
-            await user.update({ username: request.body.username });
+            await actions.user.updateSet(user._id, { username: request.body.username });
             updated.push('username');
         } else
             rejected.push(key);

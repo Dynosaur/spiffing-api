@@ -1,6 +1,6 @@
 import { DbPost } from 'database/data-types';
 import { ObjectId } from 'mongodb';
-import { BoundUser } from 'database/dbi/user-api';
+import { UserWrapper } from 'database/user/wrapper';
 import { createPost } from 'router/api-router';
 import { ICreatePost } from 'interface/responses/api-responses';
 import { encodeBasicAuth } from 'tools/auth';
@@ -9,7 +9,7 @@ import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'in
 
 describe('createPost route handler', () => {
     let env: IntegrationEnvironment;
-    let user: BoundUser;
+    let user: UserWrapper;
     beforeEach(async done => {
         env = new IntegrationEnvironment('createPost');
         await env.initialize();
