@@ -5,7 +5,6 @@
         "lib": ["ES2020.String"],
         "moduleResolution": "Node",
         "paths": {
-            "app/*": ["src/*"],
             "database/*": ["src/database/*"],
             "interface/*": ["src/server/interface/*"],
             "tests/*": ["tests/*"],
@@ -13,7 +12,8 @@
             "tools/*": ["src/tools/*"],
             "interface-bindings/*": ["src/server/interface-bindings/*"],
             "route-handling/*": ["src/server/route-handling/*"],
-            "router/*": ["src/server/router/*"]
+            "router/*": ["src/server/router/*"],
+            "dev/*": ["src/dev/*"]
         },
         "target": "ES6",
         "strict": true,
