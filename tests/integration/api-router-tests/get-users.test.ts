@@ -1,7 +1,7 @@
 import { getUsers } from 'router/api-router';
-import { UserWrapper } from 'app/database/user/wrapper';
-import { IGetUsers } from 'app/server/interface/responses/api-responses';
-import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
+import { IGetUsers } from 'interface/responses/api-responses';
+import { UserWrapper } from 'database/user/wrapper';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 
 describe('getUsers route handler', () => {
     let env: IntegrationEnvironment;

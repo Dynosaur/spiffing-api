@@ -9,10 +9,12 @@ export class UserWrapper implements DbUser {
     screenname!: string;
 
     id: string;
+    created: number;
 
     constructor(user: DbUser) {
         Object.assign(this, user);
         this.id = this._id.toHexString();
+        this.created = this._id.generationTime;
     }
 
     toInterface(): User {

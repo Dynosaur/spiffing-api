@@ -1,8 +1,8 @@
-import { RouteInfo } from 'app/server/route-handling/route-infra';
-import { chalk } from 'app/tools/chalk';
+import { chalk } from 'tools/chalk';
 import { Request } from 'express';
-import { createReadStream, accessSync, constants } from 'fs';
+import { RouteInfo } from 'route-handling/route-infra';
 import { Transform, Readable } from 'stream';
+import { createReadStream, accessSync, constants } from 'fs';
 
 function streamFile(path: string): Readable {
     accessSync(path, constants.R_OK);

@@ -1,18 +1,16 @@
 import { DbPost } from 'database/post';
+import { DbUser } from 'database/user';
 import { Post, User } from 'interface/data-types';
 import { decodeBasicAuth } from 'tools/auth';
 import { scopeMustHaveProps } from 'route-handling/route-handler';
-import { DbUser, UserWrapper } from 'database/user';
 import { FilterQuery, ObjectId } from 'mongodb';
-import { objectIdParseErrorMessage } from 'app/error-messages';
+import { objectIdParseErrorMessage } from '../../error-messages';
 import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
 import {
     CreatePost,
     DeleteComment,
-    GetPost,
     GetPosts,
     GetRatedPosts,
-    GetUser,
     GetUsers,
     PostComment,
     RatePost
@@ -20,10 +18,8 @@ import {
 import {
     ICreatePost,
     IDeleteComment,
-    IGetPost,
     IGetPosts,
     IGetRatedPosts,
-    IGetUser,
     IGetUsers,
     IPostComment,
     IRatePost
@@ -34,7 +30,6 @@ import {
     MissingDataError,
     NoCommentFoundError,
     NoPostFoundError,
-    NoUserFoundError,
     ObjectIdParseError,
     UnauthenticatedError,
     UnauthorizedError
@@ -50,37 +45,9 @@ function query(accepted: string[], query: object): { allowed: string[]; blocked:
     return { allowed, blocked };
 }
 
-function toObjectId(s: string): ObjectId | null {
-    try {
-        return new ObjectId(s);
-    } catch (error) {
-        if (error.message === objectIdParseErrorMessage) return null;
-        else throw error;
-    }
-}
-
-/**
- * @deprecated
- */
-export const getUser: RouteHandler<IGetUser.Tx> = async function getUser(request, actions): Promise<RoutePayload<IGetUser.Tx>> {
-    let id: ObjectId | string;
-    try {
-        id = new ObjectId(request.params.id);
-    } catch (error) {
-        if (error.message === objectIdParseErrorMessage)
-            id = request.params.id;
-        else throw error;
-    }
-    let user: UserWrapper | null;
-    if (id instanceof ObjectId) user = await actions.user.getById(id);
-    else user = await actions.user.getByUsername(id);
-    if (!user) return new NoUserFoundError(id instanceof ObjectId ? id.toHexString() : id);
-
-    return new GetUser.Success(user.toInterface());
-};
-
 export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(request, actions): Promise<RoutePayload<IGetPosts.Tx>> {
     let posts: Post[] = [];
+    const failed: any = {};
     const allowed: string[] = [];
     const blocked: string[] = [];
     if (Object.keys(request.query).length === 0) {
@@ -88,7 +55,7 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
         posts = boundPosts.map(post => post.toInterface());
     } else {
         const allowedKeys = ['author', 'id', 'ids', 'include', 'title'];
-        const dbQuery: Partial<DbPost> = {};
+        const dbQuery: FilterQuery<DbPost> = {};
         for (const query in request.query) {
             const queryValue = request.query[query] as string;
             if (allowedKeys.includes(query)) {
@@ -113,8 +80,22 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
                         }
                         break;
                     case 'ids': {
-                        const ids = queryValue.match(/[a-f\d]{24}/g)!.map(match => new ObjectId(match));
-                        dbQuery._id = { $in: ids } as any;
+                        const ids = queryValue.match(/[a-f\d]{24}/g);
+                        if (ids === null) {
+                            failed.ids = { error: 'No ObjectIds could be found', value: queryValue };
+                            break;
+                        }
+                        const failedIds: string[] = [];
+                        const objectIds: ObjectId[] = [];
+                        for (const match of ids)
+                            try {
+                                objectIds.push(new ObjectId(match));
+                            } catch (e) {
+                                if (e.message === objectIdParseErrorMessage) failedIds.push(match);
+                                else throw e;
+                            }
+                        if (failedIds.length) failed.ids = failedIds;
+                        if (objectIds.length) dbQuery._id = { $in: objectIds };
                         break;
                     }
                     case 'include':
@@ -138,24 +119,7 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
             if (authorMap.has(post.author)) (post as any).author = authorMap.get(post.author);
         });
     }
-    return new GetPosts.Success(posts, allowed, blocked);
-};
-
-/**
- * @deprecated
- */
-export const getPost: RouteHandler<IGetPost.Tx> = async function getPost(request, actions): Promise<RoutePayload<IGetPost.Tx>> {
-    let id: ObjectId;
-    try {
-        id = new ObjectId(request.params.id);
-    } catch (error) {
-        if (error.message === objectIdParseErrorMessage)
-            return new ObjectIdParseError(request.params.id);
-        else throw error;
-    }
-    const post = await actions.post.get(id);
-    if (!post) return new NoPostFoundError(id.toHexString());
-    return new GetPost.Success(post.toInterface());
+    return new GetPosts.Success(posts, allowed, blocked, failed);
 };
 
 export const createPost: RouteHandler<ICreatePost.Tx> = async function createPost(request, actions): Promise<RoutePayload<ICreatePost.Tx>> {
@@ -224,9 +188,14 @@ export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(requ
         switch (key) {
             case 'id':
                 request.query.id = request.query.id as string;
-                const id = toObjectId(request.query.id);
-                if (id === null) return new ObjectIdParseError(request.query.id);
-                else databaseQuery._id = id;
+                let id: ObjectId;
+                try {
+                    id = new ObjectId(request.query.id);
+                } catch (error) {
+                    if (error.message === objectIdParseErrorMessage) return new ObjectIdParseError(request.query.id);
+                    else throw error;
+                }
+                databaseQuery._id = id;
                 break;
             case 'ids':
                 request.query.ids = request.query.ids as string;
@@ -283,10 +252,8 @@ export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function del
 };
 
 export const routes: RouteInfo[] = [
-    { method: 'GET',    path: '/api/user/:id',           handler: getUser       },
     { method: 'GET',    path: '/api/posts',              handler: getPosts      },
     { method: 'POST',   path: '/api/post',               handler: createPost    },
-    { method: 'GET',    path: '/api/post/:id',           handler: getPost       },
     { method: 'POST',   path: '/api/rate/post/:id',      handler: ratePost      },
     { method: 'GET',    path: '/api/rated/:ownerId',     handler: getRatedPosts },
     { method: 'GET',    path: '/api/users',              handler: getUsers      },

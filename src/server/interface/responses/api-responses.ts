@@ -1,34 +1,24 @@
 import { IOkResponse } from '../response';
 import { Post, RatedPosts, User, Comment } from '../data-types';
-import { AuthorizedRequestError, IAuthHeaderIdParamMismatchError, IIllegalValueError, IMissingDataError, INoCommentFoundError, INoPostFoundError, INoUserFoundError, IObjectIdParseError } from './error-responses';
-
-export namespace IGetUser {
-    export type ErrorTx = INoUserFoundError;
-
-    export interface Success extends IOkResponse {
-        user: User;
-    }
-
-    export type Tx = ErrorTx | Success;
-}
+import {
+    IMissingDataError,
+    INoPostFoundError,
+    INoUserFoundError,
+    IIllegalValueError,
+    IObjectIdParseError,
+    INoCommentFoundError,
+    AuthorizedRequestError,
+    IAuthHeaderIdParamMismatchError
+} from './error-responses';
 
 export namespace IGetPosts {
     export type ErrorTx = INoPostFoundError | IObjectIdParseError;
 
     export interface Success extends IOkResponse {
         posts: Post[];
+        failed?: any;
         'query-blocked'?: string[];
         'query-allowed'?: string[];
-    }
-
-    export type Tx = ErrorTx | Success;
-}
-
-export namespace IGetPost {
-    export type ErrorTx = INoPostFoundError | IObjectIdParseError;
-
-    export interface Success extends IOkResponse {
-        post: Post;
     }
 
     export type Tx = ErrorTx | Success;

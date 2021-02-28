@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { chalk } from 'tools/chalk';
-import { devInfo } from 'app/dev/dev-actions';
+import { devInfo } from 'dev/dev-actions';
 import { randomBytes } from 'crypto';
 import { MongoClient } from 'database/mongo-client';
 import { DbRatedPosts } from 'database/rate';
@@ -27,18 +27,18 @@ export class Server {
     mongo!: MongoClient;
     routeRegister = new RouteRegister();
 
-    private userDbi!: DatabaseInterface<DbUser>;
-    private postDbi!: DatabaseInterface<DbPost>;
-    private rateDbi!: DatabaseInterface<DbRatedPosts>;
-    private commentDbi!: DatabaseInterface<DbComment>;
+    userDbi!: DatabaseInterface<DbUser>;
+    postDbi!: DatabaseInterface<DbPost>;
+    rateDbi!: DatabaseInterface<DbRatedPosts>;
+    commentDbi!: DatabaseInterface<DbComment>;
 
-    private actions!: DatabaseActions;
-    private postApi!: PostAPI;
-    private userApi!: UserAPI;
-    private commonApi!: CommonActions;
-    private commentApi!: CommentAPI;
+    actions!: DatabaseActions;
+    postApi!: PostAPI;
+    userApi!: UserAPI;
+    commonApi!: CommonActions;
+    commentApi!: CommentAPI;
 
-    private requestFingerprintSize = 3;
+    requestFingerprintSize = 3;
 
     constructor(private verbose = true) { }
 
@@ -48,28 +48,35 @@ export class Server {
         }
 
         let dbUri: string;
+        let dbName: string;
         switch (process.env.environment) {
             case 'DEV':
                 dbUri = 'mongodb://localhost:27017';
+                dbName = 'spiffing';
+                break;
+            case 'TEST':
+                dbUri = 'mongodb://localhost:27017';
+                dbName = 'spiffing_valid_testing';
                 break;
             case 'PROD':
                 dbUri = process.env.DB_URL!;
+                dbName = 'spiffing';
                 break;
             default:
-                throw new Error(`process.env.environment key is ${process.env.environment}, please use "DEV" or "PROD"`);
+                throw new Error(`process.env.environment key is ${process.env.environment}, please use "DEV", "PROD", or "TEST".`);
         }
 
         if (!process.env.KEY || !/[a-f\d]{32}/.test(process.env.key!)) {
             throw new Error(`Expected process.env.environment to be a string of 64 bits in hexadecimal. Received: ${process.env.key} of type ${typeof process.env.KEY}`);
         }
 
-        this.mongo = new MongoClient(dbUri, 'spiffing', this.verbose);
+        this.mongo = new MongoClient(dbUri, dbName, this.verbose);
         await this.mongo.initialize();
 
-        this.userDbi = new DatabaseInterface<DbUser>(this.mongo.db.collection('users'));
-        this.postDbi = new DatabaseInterface<DbPost>(this.mongo.db.collection('posts'));
-        this.rateDbi = new DatabaseInterface<DbRatedPosts>(this.mongo.db.collection('rated'));
-        this.commentDbi = new DatabaseInterface<DbComment>(this.mongo.db.collection('comments'));
+        this.userDbi = new DatabaseInterface<DbUser>(this.mongo.getCollection('users'));
+        this.postDbi = new DatabaseInterface<DbPost>(this.mongo.getCollection('posts'));
+        this.rateDbi = new DatabaseInterface<DbRatedPosts>(this.mongo.getCollection('rated'));
+        this.commentDbi = new DatabaseInterface<DbComment>(this.mongo.getCollection('comments'));
 
         this.commentApi = new CommentAPI(this.commentDbi, this.postDbi);
         this.postApi = new PostAPI(this.postDbi, this.commentDbi);

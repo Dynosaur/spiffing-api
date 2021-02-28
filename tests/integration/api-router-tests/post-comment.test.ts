@@ -1,12 +1,18 @@
-import { DbComment } from 'app/database/comment/comment';
-import { DbPost, PostWrapper } from 'database/post';
-import { UserWrapper } from 'database/user/wrapper';
-import { IPostComment } from 'app/server/interface/responses/api-responses';
-import { IMissingDataError, INoCommentFoundError, INoPostFoundError, IUnauthenticatedError, IUnauthorizedError } from 'app/server/interface/responses/error-responses';
-import { postComment } from 'app/server/router/api-router';
-import { encodeBasicAuth } from 'app/tools/auth';
 import { ObjectId } from 'mongodb';
-import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
+import { DbComment } from 'database/comment/comment';
+import { postComment } from 'router/api-router';
+import { UserWrapper } from 'database/user/wrapper';
+import { IPostComment } from 'interface/responses/api-responses';
+import { encodeBasicAuth } from 'tools/auth';
+import { DbPost, PostWrapper } from 'database/post';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
+import {
+    IMissingDataError,
+    INoPostFoundError,
+    IUnauthorizedError,
+    INoCommentFoundError,
+    IUnauthenticatedError
+} from 'interface/responses/error-responses';
 
 describe('postComment route handler', () => {
     let env: IntegrationEnvironment;

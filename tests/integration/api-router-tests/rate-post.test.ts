@@ -1,12 +1,12 @@
 import { ObjectId } from 'mongodb';
 import { ratePost } from 'router/api-router';
-import { UserWrapper } from 'database/user/wrapper';
 import { IRatePost } from 'interface/responses/api-responses';
-import { encodeBasicAuth } from 'tools/auth';
+import { UserWrapper } from 'database/user/wrapper';
 import { DbRatedPosts } from 'database/rate';
-import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
-import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { encodeBasicAuth } from 'tools/auth';
 import { DbPost, PostWrapper } from 'database/post';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
+import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 describe('ratePost route handler', () => {
     let env: IntegrationEnvironment;

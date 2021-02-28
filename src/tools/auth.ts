@@ -1,6 +1,6 @@
-import { RoutePayload } from 'server/route-handling/route-infra';
-import { UndefinedError } from './undefined-error';
-import { AuthorizationParseError } from 'app/server/interface-bindings/error-responses';
+import { RoutePayload } from 'route-handling/route-infra';
+import { UndefinedError } from 'tools/undefined-error';
+import { AuthorizationParseError } from 'interface-bindings/error-responses';
 import { IAuthorizationParseError } from 'interface/responses/error-responses';
 
 const encodeMap = new Map();

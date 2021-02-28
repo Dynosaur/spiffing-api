@@ -1,6 +1,6 @@
 import { Request } from 'express';
-import { UserAPI } from 'app/database/user/api';
-import { PostAPI } from 'app/database/post/api';
+import { UserAPI } from 'database/user/api';
+import { PostAPI } from 'database/post/api';
 import { HttpMethod } from 'server/server';
 import { CommentAPI } from 'database/comment/api';
 import { IBaseResponse } from 'interface/response';

@@ -1,11 +1,11 @@
 import { ObjectId } from 'mongodb';
-import { UserWrapper } from 'database/user/wrapper';
-import { DbPost, PostWrapper } from 'database/post';
-import { DbComment } from 'database/comment/comment';
+import { DbComment } from 'database/comment';
+import { UserWrapper } from 'database/user';
 import { deleteComment } from 'router/api-router';
 import { IDeleteComment } from 'interface/responses/api-responses';
 import { encodeBasicAuth } from 'tools/auth';
-import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
+import { DbPost, PostWrapper } from 'database/post';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 import { INoCommentFoundError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 describe('deleteComment route handler', () => {

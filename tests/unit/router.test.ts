@@ -1,6 +1,6 @@
 import { Request } from 'express';
-import { RouteInfo } from 'app/server/route-handling/route-infra';
-import { convertPath, pathMatches, PathSegment, registerMatch, RouteRegister } from 'app/server/routing';
+import { RouteInfo } from 'route-handling/route-infra';
+import { convertPath, pathMatches, PathSegment, registerMatch, RouteRegister } from 'server/routing';
 
 function fakeRequest(path: string, method: string): Request {
     return {
@@ -33,7 +33,7 @@ describe('routing unit', () => {
     describe('Register class', () => {
         let register: RouteRegister;
         let routeInfo: RouteInfo = {
-            handler: function helloHandler() { return null; },
+            handler: function helloHandler() { return null!; },
             method: 'GET',
             path: '/api/hello'
         };
@@ -47,7 +47,7 @@ describe('routing unit', () => {
             expect(() => register.register('/api/test', 'GET', routeInfo)).toThrowError('Handlers helloHandler and helloHandler have the same path and method.');
         });
         it('should throw an error if params are null', () => {
-            expect(() => register.register(null, 'GET', routeInfo)).toThrowError('Path must be a string: received: object');
+            expect(() => register.register(null!, 'GET', routeInfo)).toThrowError('Path must be a string: received: object');
         });
     });
     describe('registerMatch', () => {

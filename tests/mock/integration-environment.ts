@@ -5,9 +5,9 @@ import { MongoClient } from 'database/mongo-client';
 import { randomBytes } from 'crypto';
 import { IBaseResponse } from 'interface/response';
 import { CommonActions } from 'database/common-actions';
-import { DatabaseInterface } from 'app/database/database-interface';
-import { PostAPI } from 'app/database/post/api';
-import { UserAPI } from 'app/database/user/api';
+import { DatabaseInterface } from 'database/database-interface';
+import { PostAPI } from 'database/post/api';
+import { UserAPI } from 'database/user/api';
 import { Collection, ObjectId } from 'mongodb';
 import { DbRatedPosts } from 'database/rate';
 import { DatabaseActions, RouteHandler, RoutePayload } from 'route-handling/route-infra';
@@ -55,11 +55,11 @@ export class IntegrationEnvironment {
         await this.mongo.initialize();
 
         this.comments = {} as any;
-        this.comments.db = this.mongo.db.collection(`${this.suiteName}Comments`);
+        this.comments.db = this.mongo.getCollection(`${this.suiteName}Comments`);
         this.comments.dbi = new DatabaseInterface(this.comments.db);
 
         this.posts = {} as any;
-        this.posts.db = this.mongo.db.collection(`${this.suiteName}Posts`);
+        this.posts.db = this.mongo.getCollection(`${this.suiteName}Posts`);
         this.posts.dbi = new DatabaseInterface(this.posts.db);
 
         this.comments.api = new CommentAPI(this.comments.dbi, this.posts.dbi);
@@ -68,11 +68,11 @@ export class IntegrationEnvironment {
 
 
         this.ratings = {} as any;
-        this.ratings.db = this.mongo.db.collection(`${this.suiteName}Ratings`);
+        this.ratings.db = this.mongo.getCollection(`${this.suiteName}Ratings`);
         this.ratings.dbi = new DatabaseInterface(this.ratings.db);
 
         this.users = {} as any;
-        this.users.db = this.mongo.db.collection(`${this.suiteName}Users`);
+        this.users.db = this.mongo.getCollection(`${this.suiteName}Users`);
         this.users.dbi = new DatabaseInterface(this.users.db);
         this.users.api = new UserAPI(this.users.dbi, this.posts.dbi, this.ratings.dbi, this.comments.dbi);
 
@@ -87,8 +87,8 @@ export class IntegrationEnvironment {
     }
 
     async closeConnections(): Promise<void> {
-        await this.mongo.db.dropDatabase();
-        await this.mongo.client.close();
+        await this.mongo.dropDatabase();
+        await this.mongo.close();
     }
 
     generateUser(): Promise<UserWrapper> {

@@ -1,5 +1,5 @@
-import { AuthorizationParseError } from 'app/server/interface-bindings/error-responses';
-import { decodeBasicAuth, decodeHttp, encodeBasicAuth, encodeHttp } from '../../src/tools/auth';
+import { AuthorizationParseError } from 'interface-bindings/error-responses';
+import { decodeBasicAuth, decodeHttp, encodeBasicAuth, encodeHttp } from 'tools/auth';
 
 describe('auth tools', () => {
 

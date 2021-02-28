@@ -1,10 +1,10 @@
 import { DbPost } from 'database/post';
 import { ObjectId } from 'mongodb';
-import { UserWrapper } from 'database/user/wrapper';
 import { createPost } from 'router/api-router';
+import { UserWrapper } from 'database/user';
 import { ICreatePost } from 'interface/responses/api-responses';
 import { encodeBasicAuth } from 'tools/auth';
-import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
 
 describe('createPost route handler', () => {

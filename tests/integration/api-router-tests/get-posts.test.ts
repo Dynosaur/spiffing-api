@@ -2,7 +2,7 @@ import { getPosts } from 'router/api-router';
 import { UserWrapper } from 'database/user/wrapper';
 import { PostWrapper } from 'database/post';
 import { IGetPosts } from 'interface/responses/api-responses';
-import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 
 describe('getPosts route handler', () => {
     let env: IntegrationEnvironment;

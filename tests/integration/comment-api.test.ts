@@ -1,9 +1,8 @@
 import { ObjectId } from 'mongodb';
 import { UserWrapper } from 'database/user/wrapper';
-import { DbComment } from 'database/comment/comment';
-import { CommentAPI } from 'database/comment/api';
-import { IntegrationEnvironment } from 'tests/mock/integration/integration-environment';
 import { DbPost, PostWrapper } from 'database/post';
+import { CommentAPI, DbComment } from 'database/comment';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 
 describe('Comment API', () => {
     let env: IntegrationEnvironment;

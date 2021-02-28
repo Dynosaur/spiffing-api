@@ -1,10 +1,9 @@
 import { chalk } from 'tools/chalk';
-import { MongoClient as DbClient, Db } from 'mongodb';
+import { MongoClient as DbClient, Db, Collection } from 'mongodb';
 
 export class MongoClient {
-
-    client!: DbClient;
-    db!: Db;
+    private client!: DbClient;
+    private db!: Db;
 
     constructor(private databaseUrl: string,
                 private databaseName: string,
@@ -35,6 +34,19 @@ export class MongoClient {
         if (this.verbose) chalk.lime('\tSuccessfully connected');
         this.db = this.client.db(this.databaseName);
         if (this.verbose) chalk.lime('\tMongoDB client successfully initialized');
+    }
+
+    async close(): Promise<void> {
+        if (process.env.environment === 'TEST') await this.db.dropDatabase();
+        await this.client.close();
+    }
+
+    getCollection(name: string): Collection {
+        return this.db.collection(name);
+    }
+
+    dropDatabase(): Promise<void> {
+        return this.db.dropDatabase();
     }
 
 }

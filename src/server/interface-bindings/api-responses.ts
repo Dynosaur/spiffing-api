@@ -4,8 +4,6 @@ import { UserWrapper } from 'database/user';
 import { CommentWrapper } from 'database/comment';
 import { Post, RatedPosts, User } from 'interface/data-types';
 import {
-    IGetPost,
-    IGetUser,
     IGetPosts,
     IGetUsers,
     IRatePost,
@@ -15,33 +13,17 @@ import {
     IGetRatedPosts
 } from 'interface/responses/api-responses';
 
-export namespace GetUser {
-    export class Success extends OkResponse<IGetUser.Success> {
-        constructor(public user: User) {
-            super(`Successfully found user ${user.username} (${user._id}).`);
-            this.payload.user = this.user;
-        }
-    }
-}
-
 export namespace GetPosts {
     export class Success extends OkResponse<IGetPosts.Success> {
-        constructor(public posts: Post[], public allowed: string[], public blocked: string[]) {
+        constructor(public posts: Post[], public allowed: string[], public blocked: string[], public failed: any[]) {
             super(`Successfully found ${posts.length} posts.`);
             this.payload.posts = this.posts;
             if (this.allowed.length)
                 this.payload['query-allowed'] = this.allowed;
             if (this.blocked.length)
                 this.payload['query-blocked'] = this.blocked;
-        }
-    }
-}
-
-export namespace GetPost {
-    export class Success extends OkResponse<IGetPost.Success> {
-        constructor(public post: Post) {
-            super(`Successfully found post ${post.title} (${post._id}).`);
-            this.payload.post = this.post;
+            if (Object.keys(this.failed).length)
+                this.payload.failed = this.failed;
         }
     }
 }
