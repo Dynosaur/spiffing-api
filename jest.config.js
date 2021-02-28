@@ -5,7 +5,7 @@ function createProject(name, path, serial = false, other) {
     return {
         displayName: name,
         moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' }),
-        testMatch: [`<rootDir>/tests/${path}/**/*.ts`],
+        testMatch: [`<rootDir>/tests/${path}/**/*.test.ts`],
         transform: { '^.+\\.(ts|tsx)$': 'ts-jest' },
         ...serial && { runner: 'jest-serial-runner' },
         ...other
@@ -20,6 +20,7 @@ module.exports = {
         createProject('unit-tests/router', 'unit/router-tests'),
         createProject('unit-tests/router/api', 'unit/router-tests/api-router-tests', true),
         createProject('unit-tests/database', 'unit/database-tests'),
-        createProject('validation-tests', 'validation', true)
+        createProject('validation-tests', 'validation', true),
+        createProject('all', '', true)
     ]
 };
