@@ -252,11 +252,11 @@ export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function del
 };
 
 export const routes: RouteInfo[] = [
-    { method: 'GET',    path: '/api/posts',              handler: getPosts      },
-    { method: 'POST',   path: '/api/post',               handler: createPost    },
-    { method: 'POST',   path: '/api/rate/post/:id',      handler: ratePost      },
-    { method: 'GET',    path: '/api/rated/:ownerId',     handler: getRatedPosts },
-    { method: 'GET',    path: '/api/users',              handler: getUsers      },
-    { method: 'POST',   path: '/api/:contentType/:id',   handler: postComment   },
-    { method: 'DELETE', path: '/api/comment/:commentId', handler: deleteComment }
+    { method: 'GET',    path: '/api/posts',                    handler: getPosts      },
+    { method: 'POST',   path: '/api/post',                     handler: createPost    },
+    { method: 'POST',   path: '/api/rate/post/:id',            handler: ratePost      },
+    { method: 'GET',    path: '/api/rated/:ownerId',           handler: getRatedPosts },
+    { method: 'GET',    path: '/api/users',                    handler: getUsers      },
+    { method: 'POST',   path: '/api/comment/:contentType/:id', handler: postComment   },
+    { method: 'DELETE', path: '/api/comment/:commentId',       handler: deleteComment }
 ];
