@@ -95,6 +95,7 @@ export class Server {
         this.app.use(express.json());
         this.app.use(cors({ origin: '*' }));
         this.app.use(express.urlencoded({ extended: true }));
+        this.app.use(express.static('spiffing'));
 
         this.app.use((request, response) => {
             const fingerprint = randomBytes(this.requestFingerprintSize).toString('hex');
