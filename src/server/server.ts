@@ -18,6 +18,7 @@ import { Server as NodeServer } from 'http';
 import { routes as miscRoutes } from 'router/misc-router';
 import { routes as authRoutes } from 'router/auth-router';
 import { CommentAPI, DbComment } from 'database/comment';
+import { resolve } from 'path';
 
 export type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
@@ -97,23 +98,21 @@ export class Server {
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(express.static('spiffing'));
 
-        this.app.use((request, response) => {
+        this.app.use((request, response, next) => {
             const fingerprint = randomBytes(this.requestFingerprintSize).toString('hex');
             if (this.verbose) chalk.yellow(`${fingerprint} ${prettyTimestamp()} ${request.method} ${request.url}`);
             const info = this.routeRegister.isRegistered(request);
             if (info) {
                 if (info.streamHandler) info.streamHandler(request, this.verbose, fingerprint);
                 else executeRouteHandler(request, this.actions, info.handler, fingerprint, this.verbose);
-            } else {
-                response.status(404).json({ message: 'Path not supported.' });
-                if (this.verbose) chalk.yellow(`${fingerprint} Path is not supported.\n`);
-            }
+            } else next();
         });
 
         apiRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         authRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         devInfo.forEach(info => this.routeRegister.register(info.path, info.method, info));
         miscRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
+        this.app.use('', (req, res) => res.sendFile(resolve(__dirname, '../../spiffing/index.html')));
     }
 
     async start(port: number): Promise<void> {
