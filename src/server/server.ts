@@ -66,8 +66,8 @@ export class Server {
                 throw new Error(`process.env.environment key is ${process.env.environment}, please use "DEV", "PROD", or "TEST".`);
         }
 
-        if (!process.env.KEY || !/[a-f\d]{32}/.test(process.env.key!)) {
-            throw new Error(`Expected process.env.environment to be a string of 64 bits in hexadecimal. Received: ${process.env.key} of type ${typeof process.env.KEY}`);
+        if (!process.env.KEY || !/[a-f\d]{32}/.test(process.env.KEY!)) {
+            throw new Error(`Expected process.env.KEY to be a string of 64 bits in hexadecimal. Received: ${process.env.KEY} of type ${typeof process.env.KEY}`);
         }
 
         this.mongo = new MongoClient(dbUri, dbName, this.verbose);
