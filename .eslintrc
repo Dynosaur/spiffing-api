@@ -15,10 +15,13 @@
         "jest/no-focused-tests": "warn",
         "no-console": "warn",
         "no-namespace": "off",
+        "no-prototype-builtins": "off",
         "quotes": [
             1, "single"
         ],
         "semi": "warn",
+        "@typescript-eslint/no-empty-interface": "off",
+        "@typescript-eslint/no-namespace": "off",
         "@typescript-eslint/no-non-null-assertion": "off"
     }
 }
