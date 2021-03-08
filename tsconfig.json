@@ -17,6 +17,7 @@
         },
         "target": "ES6",
         "strict": true,
-        "noImplicitReturns": true
+        "noImplicitReturns": true,
+        "noImplicitAny": true
     }
 }
