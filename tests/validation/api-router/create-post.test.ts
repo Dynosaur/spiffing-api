@@ -1,7 +1,6 @@
 import supertest from 'supertest';
 import { Server } from 'server/server';
 import { Express } from 'express';
-import { randomBytes } from 'crypto';
 import { UserWrapper } from 'database/user';
 import { ICreatePost } from 'interface/responses/api-responses';
 import {
@@ -17,8 +16,6 @@ describe('createPost route handler validation', () => {
     let user: UserWrapper;
     const password = 'password';
     beforeEach(async done => {
-        process.env.environment = 'TEST';
-        process.env.KEY = randomBytes(32).toString('hex');
         server = new Server(false);
         await server.initialize();
         app = server.app;

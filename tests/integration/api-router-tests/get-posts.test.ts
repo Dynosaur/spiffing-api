@@ -1,22 +1,22 @@
-import { getPosts } from 'router/api-router';
-import { UserWrapper } from 'database/user/wrapper';
-import { PostWrapper } from 'database/post';
-import { IGetPosts } from 'interface/responses/api-responses';
+import { PostWrapper }            from 'database/post';
+import { UserWrapper }            from 'database/user';
+import { IGetPosts }              from 'interface/responses/api-responses';
+import { getPosts }               from 'router/api-router';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 
-describe('getPosts route handler', () => {
+describe('get-posts route handler', () => {
     let env: IntegrationEnvironment;
     let author: UserWrapper;
     let posts: PostWrapper[];
     beforeEach(async done => {
-        env = new IntegrationEnvironment('getPosts');
+        env = new IntegrationEnvironment('get-posts');
         await env.initialize();
         author = await env.generateUser();
         posts = await env.generatePosts(5, author._id);
         done();
     });
     afterEach(async done => {
-        await env.closeConnections();
+        await env.destroy();
         done();
     });
     describe('allowed queries', () => {

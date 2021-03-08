@@ -1,11 +1,10 @@
 import { ObjectId } from 'mongodb';
-import { DbComment } from 'database/comment/comment';
-import { postComment } from 'router/api-router';
-import { UserWrapper } from 'database/user/wrapper';
-import { IPostComment } from 'interface/responses/api-responses';
-import { encodeBasicAuth } from 'tools/auth';
-import { DbPost, PostWrapper } from 'database/post';
+import { PostWrapper }            from 'database/post';
+import { UserWrapper }            from 'database/user';
+import { IPostComment }           from 'interface/responses/api-responses';
+import { postComment }            from 'router/api-router';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
+import { encodeBasicAuth }        from 'tools/auth';
 import {
     IMissingDataError,
     INoPostFoundError,
@@ -14,7 +13,7 @@ import {
     IUnauthenticatedError
 } from 'interface/responses/error-responses';
 
-describe('postComment route handler', () => {
+describe('post-comment route handler', () => {
     let env: IntegrationEnvironment;
     let user: UserWrapper;
     let post: PostWrapper;
@@ -22,11 +21,11 @@ describe('postComment route handler', () => {
         env = new IntegrationEnvironment('post-comment');
         await env.initialize();
         user = await env.generateUser();
-        post = (await env.generatePosts(1, user._id))[0];
+        post = await env.generatePost(user._id);
         done();
     });
     afterEach(async done => {
-        await env.closeConnections();
+        await env.destroy();
         done();
     });
     it('should require authentication', async done => {
@@ -46,7 +45,7 @@ describe('postComment route handler', () => {
     });
     it('should require content in request body', async done => {
         env.request.headers.authorization = encodeBasicAuth(user.username, 'password');
-        let response = await env.executeRouteHandler(postComment);
+        const response = await env.executeRouteHandler(postComment);
         expect(response.payload).toStrictEqual<IMissingDataError>({
             ok: false,
             error: 'Missing Data',
@@ -99,19 +98,10 @@ describe('postComment route handler', () => {
                 replies: []
             }
         });
-        expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
-            _id: expect.anything(),
-            author: expect.anything(),
-            comments: [expect.any(ObjectId)],
-            content: expect.anything(),
-            dislikes: expect.anything(),
-            likes: expect.anything(),
-            title: expect.anything()
-        });
         done();
     });
     it('should create a comment on a comment', async done => {
-        const parentComment = await env.comments.api.create(user._id, 'Content', 'post', post._id);
+        const parentComment = await env.api.comment.create(user._id, 'Content', 'post', post._id);
         env.request.headers.authorization = encodeBasicAuth(user.username, 'password');
         env.request.params.contentType = 'comment';
         env.request.params.id = parentComment._id.toHexString();
@@ -131,18 +121,6 @@ describe('postComment route handler', () => {
                 },
                 replies: []
             }
-        });
-        expect(await env.comments.db.findOne({ _id: parentComment._id })).toStrictEqual<DbComment>({
-            _id: parentComment._id,
-            author: parentComment.author,
-            content: parentComment.content,
-            dislikes: 0,
-            likes: 0,
-            parent: {
-                _id: post._id,
-                contentType: 'post'
-            },
-            replies: [expect.any(ObjectId)]
         });
         done();
     });

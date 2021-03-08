@@ -40,7 +40,7 @@ export interface IAuthHeaderIdParamMismatchError extends IErrorResponse<'Authori
 }
 
 export interface IIllegalValueError extends IErrorResponse<'Illegal Value'> {
-    providedValue: any;
-    allowedValues: any[];
+    providedValue: any;   // eslint-disable-line @typescript-eslint/no-explicit-any
+    allowedValues: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     context: string;
 }

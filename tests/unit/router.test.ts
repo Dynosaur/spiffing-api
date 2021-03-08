@@ -1,6 +1,12 @@
 import { Request } from 'express';
 import { RouteInfo } from 'route-handling/route-infra';
-import { convertPath, pathMatches, PathSegment, registerMatch, RouteRegister } from 'server/routing';
+import {
+    convertPath,
+    pathMatches,
+    PathSegment,
+    registerMatch,
+    RouteRegister
+} from 'server/routing';
 
 function fakeRequest(path: string, method: string): Request {
     return {
@@ -32,7 +38,7 @@ describe('routing unit', () => {
     });
     describe('Register class', () => {
         let register: RouteRegister;
-        let routeInfo: RouteInfo = {
+        const routeInfo: RouteInfo = {
             handler: function helloHandler() { return null!; },
             method: 'GET',
             path: '/api/hello'

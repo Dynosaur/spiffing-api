@@ -83,6 +83,7 @@ export class NoCommentFoundError extends ErrorResponse<INoCommentFoundError> {
 }
 
 export class IllegalValueError extends ErrorResponse<IIllegalValueError> {
+    // eslint-disable-next-line
     constructor(public value: any, public allowed: any[], public context: string) {
         super('Illegal Value', `Illegal value '${JSON.stringify(value)}' in request ${context}.`);
         this.payload.allowedValues = allowed;

@@ -1,13 +1,13 @@
 import { Request } from 'express';
-import { UserAPI } from 'database/user/api';
-import { PostAPI } from 'database/post/api';
-import { HttpMethod } from 'server/server';
-import { CommentAPI } from 'database/comment/api';
-import { IBaseResponse } from 'interface/response';
+import { CommentAPI }    from 'database/comment';
 import { CommonActions } from 'database/common-actions';
+import { UserAPI }       from 'database/user';
+import { PostAPI }       from 'database/post';
+import { IBaseResponse } from 'interface/response';
+import { HttpMethod }    from 'server/server';
 
 export class RoutePayload<PayloadType extends IBaseResponse> {
-    constructor(public message: string, public payload: PayloadType, public code = 200) { }
+    constructor(public message: string, public payload: PayloadType, public code = 200) {}
 }
 
 export interface DatabaseActions {
@@ -17,34 +17,29 @@ export interface DatabaseActions {
     user: UserAPI;
 }
 
-export interface RouteHandler<ResponseType extends IBaseResponse> {
-    (request: Request<any, ResponseType>, actions: DatabaseActions): Promise<RoutePayload<ResponseType>>
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type RouteHandler<Tx extends IBaseResponse> = (request: Request<any, Tx>, actions: DatabaseActions) => Promise<RoutePayload<Tx>>;
 
-export type RequiredParam = { param: string; strategy?: 'AND' | 'OR'; } | { param: string; strategy: 'REPLACE'; replacement: any; };
-
-export interface RequiredScope {
-    required: string | string[] | string[][];
-    replacements: object;
-}
-
-export interface RouteHandlerRequirements {
-    scope?: {
-        body?:    RequiredScope;
-        headers?: RequiredScope;
-        params?:  RequiredScope;
-        query?:   RequiredScope;
-    };
-    auth?: {
-        checkParamUsername?: boolean;
-        method: 'authenticate' | 'pass';
-    };
-};
-
-export interface RouteInfo {
+export interface Route {
     method: HttpMethod;
     path: string;
+}
+
+export interface HandlerRoute extends Route {
     handler: RouteHandler<IBaseResponse>;
-    stream?: boolean;
-    streamHandler?: (request: Request, verbose: boolean, id: string) => void;
+}
+
+export interface StreamRoute extends Route {
+    streamHandler: (request: Request, verbose: boolean, id: string) => void;
+}
+
+
+export type RouteInfo = HandlerRoute | StreamRoute;
+
+export function isHandlerRoute(info: RouteInfo): info is HandlerRoute {
+    return (info as HandlerRoute).handler !== undefined;
+}
+
+export function getNameOfRouteInfo(info: RouteInfo): string {
+    return isHandlerRoute(info) ? info.handler.name : info.streamHandler.name;
 }

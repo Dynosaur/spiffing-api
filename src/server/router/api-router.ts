@@ -35,7 +35,7 @@ import {
     UnauthorizedError
 } from 'interface-bindings/error-responses';
 
-function query(accepted: string[], query: object): { allowed: string[]; blocked: string[]; } {
+function query(accepted: string[], query: Record<string, string>): { allowed: string[]; blocked: string[]; } {
     if (Object.keys(query).length === 0) return { allowed: [], blocked: [] };
     const allowed: string[] = [];
     const blocked: string[] = [];
@@ -47,7 +47,7 @@ function query(accepted: string[], query: object): { allowed: string[]; blocked:
 
 export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(request, actions): Promise<RoutePayload<IGetPosts.Tx>> {
     let posts: Post[] = [];
-    const failed: any = {};
+    const failed: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
     const allowed: string[] = [];
     const blocked: string[] = [];
     if (Object.keys(request.query).length === 0) {
@@ -101,7 +101,7 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
                     case 'include':
                         break;
                     default:
-                        (dbQuery as any)[query] = queryValue;
+                        dbQuery[query] = queryValue;
                         break;
                 }
             } else blocked.push(query);
@@ -111,12 +111,12 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
     }
     if (request.query.include === 'authorUser') {
         const authorMap = new Map<string, User>();
-        for (const post of posts) authorMap.set(post.author as string, null as any);
+        for (const post of posts) authorMap.set(post.author as string, null!);
         const authors = await actions.user.getManyById(Array.from(authorMap.keys()).map(id => new ObjectId(id)));
         authors.forEach(author => authorMap.set(author.id, author.toInterface()));
         posts.forEach(post => {
             post.author = post.author as string;
-            if (authorMap.has(post.author)) (post as any).author = authorMap.get(post.author);
+            if (authorMap.has(post.author)) post.author = authorMap.get(post.author)!;
         });
     }
     return new GetPosts.Success(posts, allowed, blocked, failed);
@@ -155,7 +155,7 @@ export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(requ
     const post = await actions.post.get(postId);
     if (!post) return new NoPostFoundError(postId.toHexString());
     let result = false;
-    let rate = await actions.user.getUserRateApi(user._id);
+    const rate = await actions.user.getUserRateApi(user._id);
     switch (rating) {
         case -1:
             result = await rate.dislikePost(post._id);
@@ -177,16 +177,17 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
     if (user.id !== request.params.ownerId) return new AuthHeaderIdParamError(user.id, request.params.ownerId);
-    let rate = await actions.user.getUserRateApi(user._id);
+    const rate = await actions.user.getUserRateApi(user._id);
     return new GetRatedPosts.Success(user, rate.getInterfaceRatedPosts());
 };
 
 export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {
-    const queryCheck = query(['id', 'ids', 'username', 'usernames'], request.query);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const queryCheck = query(['id', 'ids', 'username', 'usernames'], request.query as any);
     const databaseQuery: FilterQuery<DbUser> = {};
     queryCheck.allowed.forEach(key => {
         switch (key) {
-            case 'id':
+            case 'id': {
                 request.query.id = request.query.id as string;
                 let id: ObjectId;
                 try {
@@ -197,13 +198,15 @@ export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(requ
                 }
                 databaseQuery._id = id;
                 break;
-            case 'ids':
+            }
+            case 'ids': {
                 request.query.ids = request.query.ids as string;
                 const ids = Array.from(request.query.ids.matchAll(/([a-f\d]{24})/g)).map(regexMatch => regexMatch[1]);
                 if (ids.length === 0) break;
                 const objectIds = ids.map(id => new ObjectId(id));
                 databaseQuery._id = { $in: objectIds };
                 break;
+            }
             case 'username':
                 databaseQuery.username = request.query.username as string;
                 break;
@@ -213,7 +216,7 @@ export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(requ
         }
         return;
     });
-    const users: User[] = (await actions.user.getByQuery(databaseQuery)).map(user => user.toInterface());
+    const users: User[] = (await actions.user.getManyByQuery(databaseQuery)).map(user => user.toInterface());
     return new GetUsers.Success(users, queryCheck.allowed, queryCheck.blocked);
 };
 
@@ -252,11 +255,11 @@ export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function del
 };
 
 export const routes: RouteInfo[] = [
-    { method: 'GET',    path: '/api/posts',                    handler: getPosts      },
-    { method: 'POST',   path: '/api/post',                     handler: createPost    },
-    { method: 'POST',   path: '/api/rate/post/:id',            handler: ratePost      },
-    { method: 'GET',    path: '/api/rated/:ownerId',           handler: getRatedPosts },
-    { method: 'GET',    path: '/api/users',                    handler: getUsers      },
-    { method: 'POST',   path: '/api/comment/:contentType/:id', handler: postComment   },
-    { method: 'DELETE', path: '/api/comment/:commentId',       handler: deleteComment }
+    { method: 'GET',    path: '/posts',                    handler: getPosts      },
+    { method: 'POST',   path: '/post',                     handler: createPost    },
+    { method: 'POST',   path: '/rate/post/:id',            handler: ratePost      },
+    { method: 'GET',    path: '/rated/:ownerId',           handler: getRatedPosts },
+    { method: 'GET',    path: '/users',                    handler: getUsers      },
+    { method: 'POST',   path: '/comment/:contentType/:id', handler: postComment   },
+    { method: 'DELETE', path: '/comment/:commentId',       handler: deleteComment }
 ];

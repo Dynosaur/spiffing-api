@@ -1,8 +1,12 @@
-import { decodeBasicAuth } from 'tools/auth';
+import { IAuthorize, IPatch, IRegister }         from 'interface/responses/auth-endpoints';
+import { Authorize, Patch, Register }            from 'interface-bindings/auth-responses';
 import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
-import { Authorize, Deregister, Patch, Register } from 'interface-bindings/auth-responses';
-import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
-import { AuthHeaderIdParamError, UnauthenticatedError, UnauthorizedError } from 'interface-bindings/error-responses';
+import { decodeBasicAuth }                       from 'tools/auth';
+import {
+    AuthHeaderIdParamError,
+    UnauthenticatedError,
+    UnauthorizedError
+} from 'interface-bindings/error-responses';
 
 export const register: RouteHandler<IRegister.Tx> = async function register(request, actions): Promise<RoutePayload<IRegister.Tx>> {
         if (!request.headers.authorization) return new UnauthenticatedError();
@@ -30,19 +34,6 @@ export const authorize: RouteHandler<IAuthorize.Tx> = async function authenticat
     if (!user) return new UnauthorizedError();
 
     return new Authorize.Success(user);
-};
-
-export const deregister: RouteHandler<IDeregister.Tx> = async function deregister(request, actions): Promise<RoutePayload<IDeregister.Tx>> {
-    if (!request.headers.authorization) return new UnauthenticatedError();
-
-    const decodeAttempt = decodeBasicAuth(request.headers.authorization);
-    if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
-    const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
-    if (!user) return new UnauthorizedError();
-    if (user.username !== request.params.id) return new AuthHeaderIdParamError(user.id, request.params.id);
-
-    await actions.user.delete(user._id);
-    return new Deregister.Success(user);
 };
 
 export const patchUser: RouteHandler<IPatch.Tx> = async function patchUser(request, actions): Promise<RoutePayload<IPatch.Tx>> {
@@ -74,8 +65,7 @@ export const patchUser: RouteHandler<IPatch.Tx> = async function patchUser(reque
 };
 
 export const routes: RouteInfo[] = [
-    { method: 'POST',   path: '/api/user/:id',  handler: register },
-    { method: 'POST',   path: '/api/authorize', handler: authorize },
-    { method: 'DELETE', path: '/api/user/:id',  handler: deregister },
-    { method: 'PATCH',  path: '/api/user/:id',  handler: patchUser }
+    { method: 'POST',   path: '/user/:id',  handler: register },
+    { method: 'POST',   path: '/authorize', handler: authorize },
+    { method: 'PATCH',  path: '/user/:id',  handler: patchUser }
 ];

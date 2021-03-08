@@ -1,7 +1,7 @@
-import { RoutePayload } from 'route-handling/route-infra';
-import { UndefinedError } from 'tools/undefined-error';
-import { AuthorizationParseError } from 'interface-bindings/error-responses';
+import { AuthorizationParseError }  from 'interface-bindings/error-responses';
 import { IAuthorizationParseError } from 'interface/responses/error-responses';
+import { RoutePayload }             from 'route-handling/route-infra';
+import { UndefinedError }           from 'tools/undefined-error';
 
 const encodeMap = new Map();
 encodeMap.set(' ', '%20');

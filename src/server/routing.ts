@@ -1,6 +1,12 @@
-import { Request } from 'express';
-import { RouteInfo } from 'route-handling/route-infra';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Request }    from 'express';
 import { HttpMethod } from 'server/server';
+import {
+    getNameOfRouteInfo,
+    isHandlerRoute,
+    RouteInfo
+} from 'route-handling/route-infra';
 
 export interface PathSegment {
     name: string;
@@ -8,12 +14,12 @@ export interface PathSegment {
 }
 
 export function convertPath(path: string): PathSegment[] {
-    const nodes = path.match(/\/[^\/]+/g) || [];
+    const nodes = path.match(/\/[^/]+/g) || [];
     const assigned: PathSegment[] = [];
     for (const node of nodes) {
         if (node.startsWith('/:')) {
             assigned.push({
-                name: /:([^\/]+)/.exec(node)![1],
+                name: /:([^/]+)/.exec(node)![1],
                 type: 'param'
             });
         } else {
@@ -26,15 +32,15 @@ export function convertPath(path: string): PathSegment[] {
     return assigned;
 }
 
-export function pathMatches(fit: PathSegment[], path: string): { matches: false; } | { matches: true; params: object; } {
-    const nodes = path.match(/\/([^\/]+)/g) || [];
+export function pathMatches(fit: PathSegment[], path: string): { matches: false; } | { matches: true; params: Record<string, string>; } {
+    const nodes = path.match(/\/([^/]+)/g) || [];
     if (fit.length !== nodes.length) return { matches: false };
-    const params: object = {};
+    const params: Record<string, string> = {};
     for (let i = 0; i < fit.length; i++)
         if (fit[i].type === 'path') {
             if (fit[i].name !== nodes[i].substring(1))
                 return { matches: false };
-        } else (params as any)[fit[i].name] = nodes[i].substring(1);
+        } else params[fit[i].name] = nodes[i].substring(1);
     return {
         matches: true,
         params
@@ -74,6 +80,7 @@ export class RouteRegister {
 
     register(path: string, method: HttpMethod, info: RouteInfo): void {
         if (path === undefined || path === null ) throw new Error(`Path must be a string: received: ${typeof path}`);
+        const handlerName = isHandlerRoute(info) ? info.handler.name : info.streamHandler.name;
         for (const registeredPath of this.paths) {
             let pathsMatch: boolean;
             try {
@@ -81,19 +88,27 @@ export class RouteRegister {
             } catch (error) {
                 if (error instanceof ParamMismatch) {
                     const existingHandlers: string[] = [];
-                    registeredPath.methods.forEach(rInfo => existingHandlers.push(`${rInfo.method}  ${rInfo.path} => ${rInfo.handler.name}`));
-                    const existingPath = '/' + registeredPath.path.map(p => (p.type === 'path') ? p.name : ':' + p.name).join('/');
-                    throw new Error(`handler "${info.handler.name}" has a different path param name than others of the same path: ${error.attempted}\n
-                                     \nstandard path: ${existingPath}
-                                     \nattempted path: ${info.path}
-                                     \texisting handlers:\n\t${existingHandlers.join('\n\t')}
-                                     \tmalformed handler: ${method} => ${info.handler.name}`);
+                    registeredPath.methods.forEach(rInfo =>
+                        existingHandlers.push(`${rInfo.method}  ${rInfo.path} => ` +
+                        `${isHandlerRoute(rInfo) ? rInfo.handler.name : rInfo.streamHandler.name}`)
+                    );
+                    const pathSegments = registeredPath.path.map(p => (p.type === 'path') ? p.name : ':' + p.name);
+                    const existingPath = '/' + pathSegments.join('/');
+                    throw new Error(
+                        `handler "${handlerName}" has a different path param name than others of the same path: ${error.attempted}\n` +
+                        `standard path: ${existingPath}\n` +
+                        `attempted path: ${info.path}\n\t` +
+                            'existing handlers:\n\t\t' +
+                                `${existingHandlers.join('\n\t\t')}\n\t` +
+                            `malformed handler: ${method} => ${handlerName}`
+                    );
                 } else throw error;
             }
             if (pathsMatch)
-                if (registeredPath.methods.has(method))
-                    throw new Error(`Handlers ${registeredPath.methods.get(method)!.handler.name} and ${info.handler.name} have the same path and method.`);
-                else {
+                if (registeredPath.methods.has(method)) {
+                    const offenderName = getNameOfRouteInfo(registeredPath.methods.get(method)!);
+                    throw new Error(`Handlers ${offenderName} and ${handlerName} have the same path and method.`);
+                } else {
                     registeredPath.methods.set(method, info);
                     return;
                 }

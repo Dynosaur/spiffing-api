@@ -1,26 +1,28 @@
-import { ObjectId } from 'mongodb';
-import { ratePost } from 'router/api-router';
-import { IRatePost } from 'interface/responses/api-responses';
-import { UserWrapper } from 'database/user/wrapper';
-import { DbRatedPosts } from 'database/rate';
-import { encodeBasicAuth } from 'tools/auth';
-import { DbPost, PostWrapper } from 'database/post';
+import { PostWrapper }            from 'database/post';
+import { UserWrapper }            from 'database/user';
+import { IRatePost }              from 'interface/responses/api-responses';
+import { ratePost }               from 'router/api-router';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
-import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { encodeBasicAuth }        from 'tools/auth';
+import {
+    IMissingDataError,
+    IUnauthenticatedError,
+    IUnauthorizedError
+} from 'interface/responses/error-responses';
 
-describe('ratePost route handler', () => {
+describe('rate-post route handler', () => {
     let env: IntegrationEnvironment;
     let user: UserWrapper;
     let posts: PostWrapper[];
     beforeEach(async done => {
-        env = new IntegrationEnvironment('RatePost');
+        env = new IntegrationEnvironment('rate-post');
         await env.initialize();
         user = await env.generateUser();
         posts = await env.generatePosts(1, user._id);
         done();
     });
     afterEach(async done => {
-        await env.closeConnections();
+        await env.destroy();
         done();
     });
     describe('authorization', () => {
@@ -68,23 +70,6 @@ describe('ratePost route handler', () => {
         it('should like', async done => {
             const response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
-                _id: post._id,
-                author: user._id,
-                comments: [],
-                content: expect.any(String),
-                dislikes: 0,
-                likes: 1,
-                title: expect.any(String)
-            });
-            expect(await env.ratings.db.findOne({ owner: user._id })).toStrictEqual<DbRatedPosts>({
-                _id: expect.any(ObjectId),
-                owner: user._id,
-                posts: [{
-                    _id: post._id,
-                    rating: 1
-                }]
-            });
             done();
         });
         it('should not affect a previously liked post', async done => {
@@ -92,23 +77,6 @@ describe('ratePost route handler', () => {
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
-                _id: post._id,
-                author: user._id,
-                comments: [],
-                content: expect.any(String),
-                dislikes: 0,
-                likes: 1,
-                title: expect.any(String)
-            });
-            expect(await env.ratings.db.findOne({ owner: user._id })).toStrictEqual<DbRatedPosts>({
-                _id: expect.any(ObjectId),
-                owner: user._id,
-                posts: [{
-                    _id: post._id,
-                    rating: 1
-                }]
-            });
             done();
         });
         it('should undo a dislike', async done => {
@@ -118,23 +86,6 @@ describe('ratePost route handler', () => {
             env.request.body.rating = 1;
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
-                _id: post._id,
-                author: user._id,
-                comments: [],
-                content: expect.any(String),
-                dislikes: 0,
-                likes: 1,
-                title: expect.any(String)
-            });
-            expect(await env.ratings.db.findOne({ owner: user._id })).toStrictEqual<DbRatedPosts>({
-                _id: expect.any(ObjectId),
-                owner: user._id,
-                posts: [{
-                    _id: post._id,
-                    rating: 1
-                }]
-            });
             done();
         });
     });
@@ -149,23 +100,6 @@ describe('ratePost route handler', () => {
         it('should dislike', async done => {
             const response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
-                _id: post._id,
-                author: user._id,
-                comments: [],
-                content: expect.any(String),
-                dislikes: 1,
-                likes: 0,
-                title: expect.any(String)
-            });
-            expect(await env.ratings.db.findOne({ owner: user._id })).toStrictEqual<DbRatedPosts>({
-                _id: expect.any(ObjectId),
-                owner: user._id,
-                posts: [{
-                    _id: post._id,
-                    rating: -1
-                }]
-            });
             done();
         });
         it('should not affect a previously disliked post', async done => {
@@ -173,23 +107,6 @@ describe('ratePost route handler', () => {
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
-                _id: post._id,
-                author: user._id,
-                comments: [],
-                content: expect.any(String),
-                dislikes: 1,
-                likes: 0,
-                title: expect.any(String)
-            });
-            expect(await env.ratings.db.findOne({ owner: user._id })).toStrictEqual<DbRatedPosts>({
-                _id: expect.any(ObjectId),
-                owner: user._id,
-                posts: [{
-                    _id: post._id,
-                    rating: -1
-                }]
-            });
             done();
         });
         it('should undo a like', async done => {
@@ -199,23 +116,6 @@ describe('ratePost route handler', () => {
             env.request.body.rating = -1;
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({ ok: true });
-            expect(await env.posts.db.findOne({ _id: post._id })).toStrictEqual<DbPost>({
-                _id: post._id,
-                author: user._id,
-                comments: [],
-                content: expect.any(String),
-                dislikes: 1,
-                likes: 0,
-                title: expect.any(String)
-            });
-            expect(await env.ratings.db.findOne({ owner: user._id })).toStrictEqual<DbRatedPosts>({
-                _id: expect.any(ObjectId),
-                owner: user._id,
-                posts: [{
-                    _id: post._id,
-                    rating: -1
-                }]
-            });
             done();
         });
     });

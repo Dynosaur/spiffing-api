@@ -1,7 +1,13 @@
-import { User } from '../data-types';
+import { User }                        from '../data-types';
 import { IErrorResponse, IOkResponse } from '../response';
-import { AuthorizedRequestError, IAuthHeaderIdParamMismatchError, IAuthorizationParseError,
-INoUserFoundError, IObjectIdParseError, IUnauthenticatedError } from './error-responses';
+import {
+    AuthorizedRequestError,
+    IAuthHeaderIdParamMismatchError,
+    IAuthorizationParseError,
+    INoUserFoundError,
+    IObjectIdParseError,
+    IUnauthenticatedError,
+} from './error-responses';
 
 export namespace IRegister {
     export namespace Failed {
@@ -26,7 +32,7 @@ export namespace IAuthorize {
     export type Tx = ErrTx | Success;
 }
 
-export namespace IDeregister {
+export namespace IDeleteUser {
     export type ErrTx = AuthorizedRequestError | IAuthHeaderIdParamMismatchError | INoUserFoundError | IObjectIdParseError;
 
     export interface Success extends IOkResponse { }

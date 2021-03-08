@@ -45,8 +45,4 @@ export class MongoClient {
         return this.db.collection(name);
     }
 
-    dropDatabase(): Promise<void> {
-        return this.db.dropDatabase();
-    }
-
 }

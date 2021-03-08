@@ -1,19 +1,19 @@
-import { getUsers } from 'router/api-router';
-import { IGetUsers } from 'interface/responses/api-responses';
-import { UserWrapper } from 'database/user/wrapper';
+import { UserWrapper }            from 'database/user/wrapper';
+import { IGetUsers }              from 'interface/responses/api-responses';
+import { getUsers }               from 'router/api-router';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 
-describe('getUsers route handler', () => {
+describe('get-users route handler', () => {
     let env: IntegrationEnvironment;
     let users: UserWrapper[];
     beforeEach(async done => {
-        env = new IntegrationEnvironment('getPosts');
+        env = new IntegrationEnvironment('get-users');
         await env.initialize();
         users = await env.generateUsers(5);
         done();
     });
     afterEach(async done => {
-        await env.closeConnections();
+        await env.destroy();
         done();
     });
     it('should find a user by their id', async done => {

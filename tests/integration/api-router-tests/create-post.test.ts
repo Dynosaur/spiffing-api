@@ -1,23 +1,27 @@
-import { DbPost } from 'database/post';
 import { ObjectId } from 'mongodb';
-import { createPost } from 'router/api-router';
-import { UserWrapper } from 'database/user';
-import { ICreatePost } from 'interface/responses/api-responses';
-import { encodeBasicAuth } from 'tools/auth';
+import { DbPost }                 from 'database/post';
+import { UserWrapper }            from 'database/user';
+import { ICreatePost }            from 'interface/responses/api-responses';
+import { createPost }             from 'router/api-router';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
-import { IMissingDataError, IUnauthenticatedError, IUnauthorizedError } from 'interface/responses/error-responses';
+import { encodeBasicAuth }        from 'tools/auth';
+import {
+    IMissingDataError,
+    IUnauthenticatedError,
+    IUnauthorizedError
+} from 'interface/responses/error-responses';
 
-describe('createPost route handler', () => {
+describe('create-post route handler', () => {
     let env: IntegrationEnvironment;
     let user: UserWrapper;
     beforeEach(async done => {
-        env = new IntegrationEnvironment('createPost');
+        env = new IntegrationEnvironment('create-post');
         await env.initialize();
         user = await env.generateUser();
         done();
     });
     afterEach(async done => {
-        await env.closeConnections();
+        await env.destroy();
         done();
     });
     describe('authorization', () => {
@@ -107,8 +111,8 @@ describe('createPost route handler', () => {
                 title
             }
         });
-        const _id = new ObjectId((response.payload as any).post._id);
-        expect(await env.posts.db.findOne({ _id })).toStrictEqual<DbPost>({
+        const _id = new ObjectId((response.payload as ICreatePost.Success).post._id);
+        expect(await env.db.collection.posts.findOne({ _id })).toStrictEqual<DbPost>({
             _id,
             author: user._id,
             comments: [],

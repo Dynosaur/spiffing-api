@@ -21,8 +21,6 @@ describe('createPost route handler validation', () => {
     let posts: PostWrapper[];
     const password = 'password';
     beforeEach(async done => {
-        process.env.environment = 'TEST';
-        process.env.KEY = randomBytes(32).toString('hex');
         server = new Server(false);
         await server.initialize();
         app = server.app;

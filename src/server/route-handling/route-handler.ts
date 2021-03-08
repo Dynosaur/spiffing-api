@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { chalk } from 'tools/chalk';
 import { Request } from 'express';
 import { MissingDataError } from 'interface-bindings/error-responses';
@@ -28,29 +30,26 @@ export async function executeRouteHandler(
     let routePayload: RoutePayload<any>;
     try {
         routePayload = await handler(request, actions);
-    } catch (error) {
-        if (error.message === 'Topology is closed, please connect') {
-            // sendPayload(request, noDatabaseConnection(), verbose);
-            return;
+        if (!routePayload) {
+            chalk.red(`${fingerprint} ERROR: route handler "${handler.name}" returned null. Responding with error.`);
+            request.res!.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
+        } else {
+            sendPayload(request, routePayload, verbose);
         }
-        sendPayload(request, { code: 500, message: error.message, payload: { ok: false, error: error.message } }, verbose);
-        return;
+    } catch (error) {
+        sendPayload(request, {
+            code: 500,
+            message: error.message,
+            payload: { ok: false, error: error.message }
+        }, verbose);
     }
-
-    if (!routePayload) {
-        chalk.red(`${fingerprint} ERROR: route handler "${handler.name}" returned null. Responding with error.`);
-        request.res!.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
-    } else {
-        sendPayload(request, routePayload, verbose);
-    }
-
     if (verbose) {
-        console.log(''); // eslint-disable-line
+        console.log(''); // eslint-disable-line no-console
     }
 }
 
-export function scopeMustHaveProps(scope: object, scopeName: string, props: string[]): MissingDataError | undefined {
-    let missing: string[] = [];
+export function scopeMustHaveProps(scope: Record<string, string>, scopeName: string, props: string[]): MissingDataError | undefined {
+    const missing: string[] = [];
     for (const prop of props)
         if (!scope.hasOwnProperty(prop))
             missing.push(prop);
