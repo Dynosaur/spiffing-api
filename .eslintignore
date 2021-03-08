@@ -2,6 +2,7 @@
 .eslintrc
 .gitignore
 *.json
+*.txt
 coverage
 node_modules
 jest.config.js
