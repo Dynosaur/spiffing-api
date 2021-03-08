@@ -1,5 +1,9 @@
-const { compilerOptions } = require('./tsconfig');
+const { randomBytes } =             require('crypto');
 const { pathsToModuleNameMapper } = require('ts-jest/utils');
+const { compilerOptions } =         require('./tsconfig');
+
+process.env.environment = 'TEST';
+process.env.KEY = randomBytes(32).toString('hex');
 
 function createProject(name, path, serial = false, other) {
     return {
