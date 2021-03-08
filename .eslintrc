@@ -1,16 +1,24 @@
 {
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
     "root": true,
     "parser": "@typescript-eslint/parser",
     "plugins": [
-        "@typescript-eslint"
+        "@typescript-eslint",
+        "jest"
     ],
     "rules": {
-        "no-console": "warn",
         "eol-last": "warn",
-        "semi": "warn",
+        "jest/no-disabled-tests": "warn",
+        "jest/no-focused-tests": "warn",
+        "no-console": "warn",
         "no-namespace": "off",
         "quotes": [
             1, "single"
-        ]
+        ],
+        "semi": "warn",
+        "@typescript-eslint/no-non-null-assertion": "off"
     }
 }
