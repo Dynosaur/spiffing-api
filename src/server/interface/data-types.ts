@@ -18,7 +18,7 @@ export interface User {
 
 export interface Comment {
     _id: string;
-    author: string;
+    author: string | User;
     content: string;
     dislikes: number;
     likes: number;
