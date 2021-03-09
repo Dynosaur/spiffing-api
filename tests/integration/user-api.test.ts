@@ -33,8 +33,6 @@ describe('user-api', () => {
     let env: DatabaseEnvironment;
     let api: UserAPI;
     let common: CommonActions;
-    let write = false;
-    let deleteName: string = undefined!;
     beforeEach(async done => {
         env = new DatabaseEnvironment('user-api');
         await env.initialize();
@@ -48,8 +46,7 @@ describe('user-api', () => {
         done();
     });
     afterEach(async done => {
-        await env.destroy(write, deleteName);
-        write = false;
+        await env.destroy();
         done();
     });
     describe('create', () => {
@@ -139,8 +136,6 @@ describe('user-api', () => {
             done();
         });
         it('should remove the user\'s comments', async done => {
-            write = true;
-            deleteName = 'should remove the user\'s comments';
             const postAuthor = await api.create('author', common.securePassword('password'));
             const postApi = new PostAPI(env.interface.posts, env.interface.comments);
             const commentApi = new CommentAPI(env.interface.comments, env.interface.posts);
