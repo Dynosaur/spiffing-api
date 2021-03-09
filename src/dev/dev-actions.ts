@@ -1,11 +1,15 @@
-import { chalk } from 'tools/chalk';
-import { Request } from 'express';
-import { RouteInfo } from 'route-handling/route-infra';
-import { Transform, Readable } from 'stream';
+import { Request }                                 from 'express';
 import { createReadStream, accessSync, constants } from 'fs';
+import { Transform, Readable }                     from 'stream';
+import { RouteInfo } from 'route-handling/route-infra';
+import { chalk }     from 'tools/chalk';
 
 function streamFile(path: string): Readable {
-    accessSync(path, constants.R_OK);
+    try {
+        accessSync(path, constants.F_OK);
+    } catch (e) {
+        throw new Error(`File does not exist: '${path}'.`);
+    }
     const stream = new Transform({ transform: function(chunk, buffer, next: () => void) {
         this.push(chunk);
         next();
@@ -24,17 +28,21 @@ function streamFileHandler(request: Request, name: string, verbose: boolean, id:
             message: 'An error occurred.',
             error: e.message
         });
-        if (verbose) chalk.rust(id + ' An error occurred during the stream.\n');
+        if (verbose) chalk.rust(`${id} An error occurred during the stream: \n\t${e.message}\n`);
     }
 }
 
 export const devInfo: RouteInfo[] = [
-    { method: 'GET', path: '/dev/:name',
-        handler: null as any,
-        stream: true,
-        streamHandler: (request, verbose, id) => streamFileHandler(request, request.params.name, verbose, id) },
-    { method: 'GET', path: '/dev/responses/:name',
-        handler: null,
-        stream: true,
-        streamHandler: (request, verbose, id) => streamFileHandler(request, `responses/${request.params.name}`, verbose, id) }
+    {
+        method: 'GET',
+        path: '/dev/:name',
+        streamHandler: (request: Request, verbose: boolean, id: string): void =>
+            streamFileHandler(request, request.params.name, verbose, id)
+    },
+    {
+        method: 'GET',
+        path: '/dev/responses/:name',
+        streamHandler: (request: Request, verbose: boolean, id: string): void =>
+            streamFileHandler(request, `responses/${request.params.name}`, verbose, id)
+    }
 ];
