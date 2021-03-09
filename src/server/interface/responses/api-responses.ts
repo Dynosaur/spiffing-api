@@ -1,14 +1,14 @@
-import { IOkResponse } from '../response';
 import { Post, RatedPosts, User, Comment } from '../data-types';
+import { IErrorResponse, IOkResponse }     from '../response';
 import {
+    AuthorizedRequestError,
+    IAuthHeaderIdParamMismatchError,
+    IIllegalValueError,
     IMissingDataError,
+    INoCommentFoundError,
     INoPostFoundError,
     INoUserFoundError,
-    IIllegalValueError,
     IObjectIdParseError,
-    INoCommentFoundError,
-    AuthorizedRequestError,
-    IAuthHeaderIdParamMismatchError
 } from './error-responses';
 
 export namespace IGetPosts {
@@ -37,7 +37,7 @@ export namespace ICreatePost {
 export namespace IRatePost {
     export type ErrorTx = AuthorizedRequestError | IMissingDataError | INoPostFoundError | IObjectIdParseError;
 
-    export interface Success extends IOkResponse { }
+    export interface Success extends IOkResponse {}
 
     export type Tx = ErrorTx | Success;
 }
@@ -80,6 +80,26 @@ export namespace IDeleteComment {
 
     export interface Success extends IOkResponse {
         fullyDeleted: boolean;
+    }
+
+    export type Tx = ErrorTx | Success;
+}
+
+export namespace IGetComments {
+    export interface IInvalidInputError extends IErrorResponse<'Invalid Input'> {
+        allowed: string | string[];
+        context: 'params';
+        key: string;
+        provided: string;
+    }
+
+    export type ErrorTx = IInvalidInputError | IMissingDataError;
+
+    export interface Success extends IOkResponse {
+        comments: Comment[];
+        acceptedParams?: string[];
+        ignoredParams?: string[];
+        includeSuccessful?: boolean;
     }
 
     export type Tx = ErrorTx | Success;

@@ -1,13 +1,14 @@
-import { OkResponse } from './response';
-import { PostWrapper } from 'database/post';
-import { UserWrapper } from 'database/user';
-import { CommentWrapper } from 'database/comment';
-import { Post, RatedPosts, User } from 'interface/data-types';
+import { CommentWrapper }                  from 'database/comment';
+import { PostWrapper }                     from 'database/post';
+import { UserWrapper }                     from 'database/user';
+import { Comment, Post, RatedPosts, User } from 'interface/data-types';
+import { ErrorResponse, OkResponse }       from './response';
 import {
     IGetPosts,
     IGetUsers,
     IRatePost,
     ICreatePost,
+    IGetComments,
     IPostComment,
     IDeleteComment,
     IGetRatedPosts
@@ -83,6 +84,27 @@ export namespace DeleteComment {
         constructor(comment: CommentWrapper, fullyDeleted: boolean) {
             super(`Successfully deleted comment ${comment.id}.`);
             this.payload.fullyDeleted = fullyDeleted;
+        }
+    }
+}
+
+export namespace GetComments {
+    export class Success extends OkResponse<IGetComments.Success> {
+        constructor(comments: Comment[], accepted?: string[], ignored?: string[], include?: boolean) {
+            super(`Successfully found ${comments.length} comments.`);
+            this.payload.comments = comments;
+            if (accepted && accepted.length) this.payload.acceptedParams = accepted;
+            if (ignored && ignored.length) this.payload.ignoredParams = ignored;
+            if (include !== undefined && include !== null) this.payload.includeSuccessful = include;
+        }
+    }
+    export class InvalidInputError extends ErrorResponse<IGetComments.IInvalidInputError> {
+        constructor(allowed: string | string[], context: 'params', key: string, provided: string) {
+            super('Invalid Input', '', 400);
+            this.payload.allowed = allowed;
+            this.payload.context = context;
+            this.payload.key = key;
+            this.payload.provided = provided;
         }
     }
 }
