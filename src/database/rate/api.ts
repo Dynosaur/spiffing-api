@@ -1,43 +1,75 @@
-import { DbPost } from 'database/post';
 import { ObjectId } from 'mongodb';
-import { RatedPosts } from 'interface/data-types';
-import { DbRatedPosts } from 'database/rate';
 import { DatabaseInterface } from 'database/database-interface';
+import { DbPost }            from 'database/post';
+import { DbRates }           from 'database/rate';
+import { RatedPosts }        from 'interface/data-types';
 
 export class RateAPI {
-    private userRatedPosts!: DbRatedPosts;
+    private userRates!: DbRates;
+    private ratedCommentMap = new Map<string, 1 | -1>();
+    private ratedPostMap = new Map<string, 1 | -1>();
 
-    constructor(private userId: ObjectId, private rateDbi: DatabaseInterface<DbRatedPosts>, private postDbi: DatabaseInterface<DbPost>) {}
+    constructor(private userId: ObjectId, private rateDbi: DatabaseInterface<DbRates>, private postDbi: DatabaseInterface<DbPost>) {}
 
     async refreshUserRatedPosts(): Promise<void> {
         const rates = await this.rateDbi.get({ owner: this.userId });
-        if (rates === null) this.userRatedPosts = await this.rateDbi.create({
+        if (rates === null) this.userRates = await this.rateDbi.create({
             owner: this.userId,
-            posts: []
+            comments: {
+                liked: [],
+                disliked: []
+            },
+            posts: {
+                liked: [],
+                disliked: []
+            }
         });
-        else this.userRatedPosts = rates;
+        else {
+            this.userRates = rates;
+            this.ratedCommentMap.clear();
+            this.ratedPostMap.clear();
+            this.userRates.comments.liked.forEach(id =>
+                this.ratedCommentMap.set(id.toHexString(), 1)
+            );
+            this.userRates.comments.disliked.forEach(id =>
+                this.ratedCommentMap.set(id.toHexString(), -1)
+            );
+            this.userRates.posts.liked.forEach(id =>
+                this.ratedPostMap.set(id.toHexString(), 1)
+            );
+            this.userRates.posts.disliked.forEach(id =>
+                this.ratedPostMap.set(id.toHexString(), -1)
+            );
+        }
     }
 
-    getRatedPosts(): DbRatedPosts {
+    getRatedPosts(): DbRates {
         return {
-            _id: new ObjectId(this.userRatedPosts._id),
-            owner: new ObjectId(this.userRatedPosts.owner),
-            posts: this.userRatedPosts.posts.map(post => {
-                return {
-                    _id: new ObjectId(post._id),
-                    rating: post.rating,
-                };
-            })
+            _id: new ObjectId(this.userRates._id),
+            owner: new ObjectId(this.userRates.owner),
+            comments: {
+                liked: this.userRates.comments.liked.map(id => new ObjectId(id)),
+                disliked: this.userRates.comments.disliked.map(id => new ObjectId(id))
+            },
+            posts: {
+                liked: this.userRates.posts.liked.map(id => new ObjectId(id)),
+                disliked: this.userRates.posts.disliked.map(id => new ObjectId(id))
+            }
         };
     }
 
     getInterfaceRatedPosts(): RatedPosts {
         return {
-            _id: this.userRatedPosts._id.toHexString(),
-            owner: this.userRatedPosts.owner.toHexString(),
-            posts: this.userRatedPosts.posts.map(ratedPost => {
-                return { _id: ratedPost._id.toHexString(), rating: ratedPost.rating };
-            })
+            _id: this.userRates._id.toHexString(),
+            owner: this.userRates.owner.toHexString(),
+            comments: {
+                liked: this.userRates.comments.liked.map(id => id.toHexString()),
+                disliked: this.userRates.comments.disliked.map(id => id.toHexString())
+            },
+            posts: {
+                liked: this.userRates.posts.liked.map(id => id.toHexString()),
+                disliked: this.userRates.posts.disliked.map(id => id.toHexString())
+            }
         };
     }
 
@@ -46,13 +78,10 @@ export class RateAPI {
     }
 
     async likePost(postId: ObjectId): Promise<boolean> {
-        const ratedPost = this.userRatedPosts.posts.find(ratedPost =>
-            ratedPost._id.toHexString() === postId.toHexString()
-        );
-        if (ratedPost === undefined) {
+        if (!this.ratedPostMap.has(postId.toHexString())) {
             await this.rateDbi.updateOne(
                 { owner: this.userId },
-                { $push: { posts: { _id: postId, rating: 1 } } }
+                { $push: { 'posts.liked': postId } }
             );
             await this.postDbi.updateOne(
                 { _id: postId },
@@ -60,67 +89,72 @@ export class RateAPI {
             );
             return true;
         }
-        if (ratedPost.rating === -1) {
+        if (this.ratedPostMap.get(postId.toHexString()) === -1) {
             await this.rateDbi.updateOne(
-                { owner: this.userId, 'posts._id': postId },
-                { $set: { 'posts.$.rating': 1 } }
+                { owner: this.userId },
+                {
+                    $pull: { 'posts.disliked': postId },
+                    $push: { 'posts.liked': postId }
+                }
             );
-            await this.postDbi.updateOne({ _id: postId }, { $inc: { dislikes: -1, likes: 1 } });
+            await this.postDbi.updateOne(
+                { _id: postId },
+                { $inc: { dislikes: -1, likes: 1 } }
+            );
             return true;
         } else return false;
     }
 
     async dislikePost(postId: ObjectId): Promise<boolean> {
-        const ratedPost = this.userRatedPosts.posts.find(ratedPost =>
-            ratedPost._id.toHexString() === postId.toHexString()
-        );
-        if (ratedPost === undefined) {
+        if (!this.ratedPostMap.has(postId.toHexString())) {
             await this.rateDbi.updateOne(
                 { owner: this.userId },
-                { $push: { posts: { _id: postId, rating: -1 } } }
+                { $push: { 'posts.disliked': postId } }
             );
             await this.postDbi.updateOne(
                 { _id: postId },
                 { $inc: { dislikes: 1 } }
             );
             return true;
-        } else {
-            if (ratedPost.rating === 1) {
-                await this.rateDbi.updateOne(
-                    { owner: this.userId, 'posts._id': postId },
-                    { $set: { 'posts.$.rating': -1 } }
-                );
-                await this.postDbi.updateOne(
-                    { _id: postId },
-                    { $inc: { dislikes: 1, likes: -1 } }
-                );
-                return true;
-            } else return false;
         }
+        if (this.ratedPostMap.get(postId.toHexString()) === 1) {
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                {
+                    $pull: { 'posts.liked': postId },
+                    $push: { 'posts.disliked': postId }
+                }
+            );
+            await this.postDbi.updateOne(
+                { _id: postId },
+                { $inc: { dislikes: 1, likes: -1 } }
+            );
+            return true;
+        } else return false;
     }
 
     async unratePost(postId: ObjectId): Promise<boolean> {
-        const ratedPost = this.userRatedPosts.posts.find(ratedPost =>
-            ratedPost._id.toHexString() === postId.toHexString()
-        );
-        if (ratedPost === undefined) return false;
-        else {
-            if (ratedPost.rating === -1)
-                await this.postDbi.updateOne(
-                    { _id: postId },
-                    { $inc: { dislikes: -1 } }
-                );
-            else
-                await this.postDbi.updateOne(
-                    { _id: postId },
-                    { $inc: { likes: -1 } }
-                );
+        if (!this.ratedPostMap.has(postId.toHexString())) return false;
+        if (this.ratedPostMap.get(postId.toHexString()) === -1) {
+            await this.postDbi.updateOne(
+                { _id: postId },
+                { $inc: { dislikes: -1 } }
+            );
             await this.rateDbi.updateOne(
                 { owner: this.userId },
-                { $pull: { posts: { _id: postId } } }
+                { $pull: { 'posts.disliked': postId } }
             );
-            return true;
+        } else {
+            await this.postDbi.updateOne(
+                { _id: postId },
+                { $inc: { likes: -1 } }
+            );
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                { $pull: { 'posts.liked': postId } }
+            );
         }
+        return true;
     }
 
 }

@@ -29,13 +29,15 @@ export interface Comment {
     }
 }
 
-export interface RatedPost {
-    _id: string;
-    rating: -1 | 1;
-}
-
 export interface RatedPosts {
     _id: string;
     owner: string;
-    posts: RatedPost[];
+    comments: {
+        liked: string[];
+        disliked: string[];
+    }
+    posts: {
+        liked: string[];
+        disliked: string[];
+    }
 }

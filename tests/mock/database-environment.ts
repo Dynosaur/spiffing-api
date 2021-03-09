@@ -12,7 +12,7 @@ import { DbComment }         from 'database/comment';
 import { DatabaseInterface } from 'database/database-interface';
 import { MongoClient }       from 'database/mongo-client';
 import { DbPost }            from 'database/post';
-import { DbRatedPosts }      from 'database/rate';
+import { DbRates }           from 'database/rate';
 import { DbUser }            from 'database/user';
 
 export class DatabaseEnvironment {
@@ -22,14 +22,14 @@ export class DatabaseEnvironment {
     collection!: {
         comments: Collection<DbComment>;
         posts: Collection<DbPost>;
-        rates: Collection<DbRatedPosts>;
+        rates: Collection<DbRates>;
         users: Collection<DbUser>;
     };
 
     interface!: {
         comments: DatabaseInterface<DbComment>;
         posts: DatabaseInterface<DbPost>;
-        rates: DatabaseInterface<DbRatedPosts>;
+        rates: DatabaseInterface<DbRates>;
         users: DatabaseInterface<DbUser>;
     }
 

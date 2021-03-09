@@ -8,7 +8,7 @@ import { CommonActions }         from 'database/common-actions';
 import { DatabaseInterface }     from 'database/database-interface';
 import { MongoClient }           from 'database/mongo-client';
 import { DbPost, PostAPI }       from 'database/post';
-import { DbRatedPosts }          from 'database/rate';
+import { DbRates }               from 'database/rate';
 import { DbUser, UserAPI }       from 'database/user';
 import { devInfo }               from 'dev/dev-actions';
 import { RouteRegister }         from 'server/routing';
@@ -34,7 +34,7 @@ export class Server {
 
     userDbi!: DatabaseInterface<DbUser>;
     postDbi!: DatabaseInterface<DbPost>;
-    rateDbi!: DatabaseInterface<DbRatedPosts>;
+    rateDbi!: DatabaseInterface<DbRates>;
     commentDbi!: DatabaseInterface<DbComment>;
 
     actions!: DatabaseActions;

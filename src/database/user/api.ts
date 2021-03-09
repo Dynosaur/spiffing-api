@@ -2,15 +2,15 @@ import { FilterQuery, ObjectId } from 'mongodb';
 import { DbComment, deleteComment }      from 'database/comment';
 import { DatabaseInterface }             from 'database/database-interface';
 import { DbPost }                        from 'database/post';
-import { DbRatedPosts, RateAPI }         from 'database/rate';
+import { DbRates, RateAPI }              from 'database/rate';
 import { DbUser, Password, UserWrapper } from 'database/user';
 
 export class UserAPI {
 
     constructor(private user: DatabaseInterface<DbUser>,
                 private posts: DatabaseInterface<DbPost>,
-                private rates: DatabaseInterface<DbRatedPosts>,
-                private comments: DatabaseInterface<DbComment>) { }
+                private rates: DatabaseInterface<DbRates>,
+                private comments: DatabaseInterface<DbComment>) {}
 
     async create(username: string, password: Password): Promise<UserWrapper> {
         const user = await this.user.create({
@@ -19,7 +19,14 @@ export class UserAPI {
         });
         await this.rates.create({
             owner: user._id,
-            posts: []
+            comments: {
+                liked: [],
+                disliked: []
+            },
+            posts: {
+                liked: [],
+                disliked: []
+            }
         });
         return new UserWrapper(user);
     }
@@ -53,18 +60,16 @@ export class UserAPI {
     async delete(id: ObjectId): Promise<void> {
         const rateApi = await this.getUserRateApi(id);
         const ratedPosts = rateApi.getRatedPosts().posts;
-        if (ratedPosts.length) {
-            const likedPosts = ratedPosts.filter(post => post.rating === 1).map(rated => rated._id);
-            const dislikedPosts = ratedPosts.filter(post => post.rating === -1).map(rated => rated._id);
+        if (ratedPosts.liked.length)
             await this.posts.updateMany(
-                { _id: { $in: likedPosts } },
+                { _id: { $in: ratedPosts.liked } },
                 { $inc: { likes: -1 } }
             );
+        if (ratedPosts.disliked.length)
             await this.posts.updateMany(
-                { _id: { $in: dislikedPosts } },
+                { _id: { $in: ratedPosts.disliked } },
                 { $inc: { dislikes: -1 }}
             );
-        }
         await this.user.delete({ _id: id });
         await this.rates.delete({ owner: id });
         await this.posts.deleteMany({ author: id }, false);

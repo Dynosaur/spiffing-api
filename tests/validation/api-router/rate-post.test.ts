@@ -1,16 +1,15 @@
-import supertest from 'supertest';
-import { Server } from 'server/server';
-import { Express } from 'express';
-import { IRatePost } from 'interface/responses/api-responses';
 import { randomBytes } from 'crypto';
+import { Express }     from 'express';
+import supertest       from 'supertest';
 import { UserWrapper } from 'database/user';
 import { PostWrapper } from 'database/post';
-import { DbRatedPost } from 'database/rate';
+import { IRatePost }   from 'interface/responses/api-responses';
+import { Server }      from 'server/server';
 import {
     INoPostFoundError,
-    IUnauthorizedError,
     IObjectIdParseError,
-    IUnauthenticatedError
+    IUnauthenticatedError,
+    IUnauthorizedError
 } from 'interface/responses/error-responses';
 
 describe('createPost route handler validation', () => {
@@ -97,7 +96,7 @@ describe('createPost route handler validation', () => {
         });
         done();
     });
-    it('should like post an unrated post', async done => {
+    it('should like an unrated post', async done => {
         const targetPost = posts[0];
         const response = await supertest(app)
             .post(`/api/rate/post/${targetPost.id}`)
@@ -111,12 +110,15 @@ describe('createPost route handler validation', () => {
             expect(post.dislikes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts).toStrictEqual<DbRatedPost[]>([{
-            _id: targetPost._id,
-            rating: 1
-        }]);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [targetPost._id],
+            disliked: []
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should like an already liked post', async done => {
@@ -138,12 +140,15 @@ describe('createPost route handler validation', () => {
             expect(post.dislikes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts).toStrictEqual<DbRatedPost[]>([{
-            _id: targetPost._id,
-            rating: 1
-        }]);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [targetPost._id],
+            disliked: []
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should like a disliked post', async done => {
@@ -165,12 +170,15 @@ describe('createPost route handler validation', () => {
             expect(post.dislikes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts).toStrictEqual<DbRatedPost[]>([{
-            _id: targetPost._id,
-            rating: 1
-        }]);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [targetPost._id],
+            disliked: []
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should dislike an unrated post', async done => {
@@ -187,12 +195,15 @@ describe('createPost route handler validation', () => {
             expect(post.likes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts).toStrictEqual<DbRatedPost[]>([{
-            _id: targetPost._id,
-            rating: -1
-        }]);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: [targetPost._id]
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should dislike an already disliked post', async done => {
@@ -214,12 +225,15 @@ describe('createPost route handler validation', () => {
             expect(post.likes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts).toStrictEqual<DbRatedPost[]>([{
-            _id: targetPost._id,
-            rating: -1
-        }]);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: [targetPost._id]
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should dislike a liked post', async done => {
@@ -241,12 +255,15 @@ describe('createPost route handler validation', () => {
             expect(post.likes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts).toStrictEqual<DbRatedPost[]>([{
-            _id: targetPost._id,
-            rating: -1
-        }]);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: [targetPost._id]
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should unrate an already unrated post', async done => {
@@ -262,9 +279,15 @@ describe('createPost route handler validation', () => {
             expect(post.likes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts.length).toBe(0);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should unrate a liked post', async done => {
@@ -285,9 +308,15 @@ describe('createPost route handler validation', () => {
             expect(post.likes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts.length).toBe(0);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
     it('should unrate a disliked post', async done => {
@@ -308,9 +337,15 @@ describe('createPost route handler validation', () => {
             expect(post.likes).toBe(0);
         }
         const userRatedPosts = (await server.userApi.getUserRateApi(user._id)).getRatedPosts();
-        expect(userRatedPosts.posts.length).toBe(0);
+        expect(userRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         const secondUserRatedPosts = (await server.userApi.getUserRateApi(secondUser._id)).getRatedPosts();
-        expect(secondUserRatedPosts.posts.length).toBe(0);
+        expect(secondUserRatedPosts.posts).toStrictEqual({
+            liked: [],
+            disliked: []
+        });
         done();
     });
 });

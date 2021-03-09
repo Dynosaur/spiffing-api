@@ -3,7 +3,7 @@ import { CommentAPI }                   from 'database/comment';
 import { CommonActions }                from 'database/common-actions';
 import { DatabaseInterface }            from 'database/database-interface';
 import { DbPost, PostAPI, PostWrapper } from 'database/post';
-import { DbRatedPosts }                 from 'database/rate';
+import { DbRates }                      from 'database/rate';
 import { DbUser, UserAPI, UserWrapper } from 'database/user';
 import { DatabaseEnvironment }          from 'tests/mock/database-environment';
 
@@ -78,10 +78,17 @@ describe('user-api', () => {
         });
         it('should create a rate entry belonging to the user', async done => {
             const wrapper = await api.create('username', common.securePassword('password'));
-            expect(await env.collection.rates.findOne({ owner: wrapper._id })).toStrictEqual<DbRatedPosts>({
+            expect(await env.collection.rates.findOne({ owner: wrapper._id })).toStrictEqual<DbRates>({
                 _id: expect.any(ObjectId),
                 owner: wrapper._id,
-                posts: []
+                comments: {
+                    liked: [],
+                    disliked: []
+                },
+                posts: {
+                    liked: [],
+                    disliked: []
+                }
             });
             done();
         });

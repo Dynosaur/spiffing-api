@@ -1,12 +1,14 @@
 import { ObjectId } from 'mongodb';
 
-export interface DbRatedPost {
-    _id: ObjectId;
-    rating: -1 | 1;
-}
-
-export interface DbRatedPosts {
+export interface DbRates {
     _id: ObjectId;
     owner: ObjectId;
-    posts: DbRatedPost[];
+    posts: {
+        liked: ObjectId[];
+        disliked: ObjectId[];
+    };
+    comments: {
+        liked: ObjectId[];
+        disliked: ObjectId[];
+    }
 }
