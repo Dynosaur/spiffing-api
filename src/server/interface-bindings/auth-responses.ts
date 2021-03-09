@@ -1,7 +1,7 @@
 import { User } from 'interface/data-types';
 import { UserWrapper } from 'database/user';
 import { ErrorResponse, OkResponse } from './response';
-import { IAuthorize, IDeregister, IPatch, IRegister } from 'interface/responses/auth-endpoints';
+import { IAuthorize, IDeleteUser, IPatch, IRegister } from 'interface/responses/auth-endpoints';
 
 export namespace Register {
     export class UserExistsError extends ErrorResponse<IRegister.Failed.UserExists> {
@@ -27,8 +27,8 @@ export namespace Authorize {
     }
 }
 
-export namespace Deregister {
-    export class Success extends OkResponse<IDeregister.Success> {
+export namespace DeleteUser {
+    export class Success extends OkResponse<IDeleteUser.Success> {
         constructor(user: UserWrapper) {
             super(`Successfully deleted user ${user.username} (${user.id}).`);
         }
