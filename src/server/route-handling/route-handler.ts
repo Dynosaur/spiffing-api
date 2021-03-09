@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { chalk } from 'tools/chalk';
 import { Request } from 'express';
 import { MissingDataError } from 'interface-bindings/error-responses';

@@ -47,7 +47,7 @@ function query(accepted: string[], query: Record<string, string>): { allowed: st
 
 export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(request, actions): Promise<RoutePayload<IGetPosts.Tx>> {
     let posts: Post[] = [];
-    const failed: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const failed: any = {};
     const allowed: string[] = [];
     const blocked: string[] = [];
     if (Object.keys(request.query).length === 0) {
@@ -182,7 +182,6 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
 };
 
 export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const queryCheck = query(['id', 'ids', 'username', 'usernames'], request.query as any);
     const databaseQuery: FilterQuery<DbUser> = {};
     queryCheck.allowed.forEach(key => {

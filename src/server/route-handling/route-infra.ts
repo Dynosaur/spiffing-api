@@ -17,7 +17,6 @@ export interface DatabaseActions {
     user: UserAPI;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type RouteHandler<Tx extends IBaseResponse> = (request: Request<any, Tx>, actions: DatabaseActions) => Promise<RoutePayload<Tx>>;
 
 export interface Route {

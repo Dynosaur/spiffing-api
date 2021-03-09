@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { RouteHandler, RouteInfo, RoutePayload } from 'server/route-handling/route-infra';
 
 const indexRoute: RouteHandler<any> = async () => {

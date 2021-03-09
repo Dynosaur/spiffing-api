@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { Request }    from 'express';
 import { HttpMethod } from 'server/server';
 import {
