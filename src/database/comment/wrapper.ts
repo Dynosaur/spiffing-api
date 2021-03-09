@@ -1,6 +1,6 @@
-import { Comment } from 'interface/data-types';
 import { ObjectId } from 'mongodb';
-import { DbComment } from 'database/comment';
+import { DbComment }     from 'database/comment';
+import { Comment, User } from 'interface/data-types';
 
 export class CommentWrapper implements DbComment {
     _id!: ObjectId;
@@ -23,10 +23,10 @@ export class CommentWrapper implements DbComment {
         this.authorString = this.author.toHexString();
     }
 
-    toInterface(): Comment {
+    private _toInterface(author: string | User): Comment {
         return {
             _id: this.id,
-            author: this.authorString,
+            author: author,
             content: this.content,
             dislikes: this.dislikes,
             likes: this.likes,
@@ -36,5 +36,9 @@ export class CommentWrapper implements DbComment {
             },
             replies: this.replies.map(comment => comment.toHexString())
         };
+    }
+
+    toInterface(author: string | User = this.authorString): Comment {
+        return this._toInterface(author);
     }
 }
