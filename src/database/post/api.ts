@@ -1,7 +1,16 @@
-import { DbComment } from 'database/comment';
-import { DatabaseInterface } from 'database/database-interface';
-import { DbPost, PostWrapper } from 'database/post';
 import { FilterQuery, ObjectId, UpdateQuery } from 'mongodb';
+import { DbComment }           from 'database/comment';
+import { DatabaseInterface }   from 'database/database-interface';
+import { DbPost, PostWrapper } from 'database/post';
+
+export async function deletePost(
+    _id: ObjectId,
+    postInterface: DatabaseInterface<DbPost>,
+    commentInterface: DatabaseInterface<DbComment>
+): Promise<void> {
+    await postInterface.delete({ _id });
+    await commentInterface.deleteMany({ parent: { _id, contentType: 'post' } });
+}
 
 export class PostAPI {
     constructor(private postDbi: DatabaseInterface<DbPost>, private commentDbi: DatabaseInterface<DbComment>) {}
@@ -30,10 +39,7 @@ export class PostAPI {
         return this.postDbi.updateOne({ _id: new ObjectId(id) }, updates);
     }
 
-    async delete(id: ObjectId | string): Promise<void> {
-        const objectId = typeof id === 'string' ? new ObjectId(id) : id;
-        await this.postDbi.delete({ _id: objectId });
-        await this.commentDbi.deleteMany({ parent: { _id: objectId, contentType: 'post' } });
+    delete(id: ObjectId): Promise<void> {
+        return deletePost(id, this.postDbi, this.commentDbi);
     }
-
 }
