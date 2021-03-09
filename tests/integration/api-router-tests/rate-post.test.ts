@@ -1,7 +1,7 @@
 import { PostWrapper }            from 'database/post';
 import { UserWrapper }            from 'database/user';
 import { IRatePost }              from 'interface/responses/api-responses';
-import { ratePost }               from 'router/api-router';
+import { ratePost }               from 'router/rate-post';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 import { encodeBasicAuth }        from 'tools/auth';
 import {

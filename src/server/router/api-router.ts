@@ -13,7 +13,6 @@ import {
     GetRatedPosts,
     GetUsers,
     PostComment,
-    RatePost
 } from 'interface-bindings/api-responses';
 import {
     ICreatePost,
@@ -22,7 +21,6 @@ import {
     IGetRatedPosts,
     IGetUsers,
     IPostComment,
-    IRatePost
 } from 'interface/responses/api-responses';
 import {
     AuthHeaderIdParamError,
@@ -136,40 +134,6 @@ export const createPost: RouteHandler<ICreatePost.Tx> = async function createPos
     return new CreatePost.Success(post.toInterface());
 };
 
-export const ratePost: RouteHandler<IRatePost.Tx> = async function ratePost(request, actions): Promise<RoutePayload<IRatePost.Tx>> {
-    if (!request.headers.authorization) return new UnauthenticatedError();
-    if (request.body.rating === undefined || request.body.rating === null)
-        return new MissingDataError('body', Object.keys(request.body), ['rating']);
-    const decodeAttempt = decodeBasicAuth(request.headers.authorization);
-    if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
-    const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
-    if (!user) return new UnauthorizedError();
-    let postId: ObjectId;
-    try {
-        postId = new ObjectId(request.params.id);
-    } catch (error) {
-        if (error.message === objectIdParseErrorMessage) return new ObjectIdParseError(request.params.id);
-        else throw error;
-    }
-    const rating = Math.sign(request.body.rating);
-    const post = await actions.post.get(postId);
-    if (!post) return new NoPostFoundError(postId.toHexString());
-    let result = false;
-    const rate = await actions.user.getUserRateApi(user._id);
-    switch (rating) {
-        case -1:
-            result = await rate.dislikePost(post._id);
-            break;
-        case 0:
-            result = await rate.unratePost(post._id);
-            break;
-        case 1:
-            result = await rate.likePost(post._id);
-            break;
-    }
-    return new RatePost.Success(post, rating, result);
-};
-
 export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function getRatedPosts(request, actions): Promise<RoutePayload<IGetRatedPosts.Tx>> {
     if (!request.headers.authorization) return new UnauthenticatedError();
     const decodeAttempt = decodeBasicAuth(request.headers.authorization);
@@ -256,7 +220,6 @@ export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function del
 export const routes: RouteInfo[] = [
     { method: 'GET',    path: '/posts',                    handler: getPosts      },
     { method: 'POST',   path: '/post',                     handler: createPost    },
-    { method: 'POST',   path: '/rate/post/:id',            handler: ratePost      },
     { method: 'GET',    path: '/rated/:ownerId',           handler: getRatedPosts },
     { method: 'GET',    path: '/users',                    handler: getUsers      },
     { method: 'POST',   path: '/comment/:contentType/:id', handler: postComment   },
