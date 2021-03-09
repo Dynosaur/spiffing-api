@@ -1,7 +1,7 @@
-import { DbPost } from 'database/post';
-import { DatabaseInterface } from 'database/database-interface';
-import { ObjectId, UpdateQuery } from 'mongodb';
+import { FilterQuery, ObjectId, UpdateQuery } from 'mongodb';
 import { CommentWrapper, DbComment } from 'database/comment';
+import { DatabaseInterface }         from 'database/database-interface';
+import { DbPost }                    from 'database/post';
 
 export async function createComment(
     author: ObjectId,
@@ -54,6 +54,10 @@ export class CommentAPI {
     async get(id: string): Promise<CommentWrapper | null> {
         const comment = await this.comments.get({ _id: new ObjectId(id) });
         return comment === null ? null : new CommentWrapper(comment);
+    }
+
+    async getManyByFilter(filter: FilterQuery<DbComment>): Promise<CommentWrapper[]> {
+        return (await this.comments.getMany(filter)).map(dbComment => new CommentWrapper(dbComment));
     }
 
     update(id: string, updates: UpdateQuery<DbComment>): Promise<void> {
