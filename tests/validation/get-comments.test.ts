@@ -31,7 +31,7 @@ describe('get-comments route handler validation', () => {
         for (let i = 0; i < 2; i++)
             post1Comments.push(await server.commentApi.create(users[0]._id, 'Content', 'post', posts[0]._id));
         subcomment = await server.commentApi.create(users[0]._id, 'Content', 'comment', post1Comments[0]._id);
-        post1Comments[0] = (await server.commentApi.get(post1Comments[0].id))!;
+        post1Comments[0] = (await server.commentApi.get(post1Comments[0]._id))!;
         for (let i = 0; i < 2; i++)
             post2Comments.push(await server.commentApi.create(users[1]._id, 'Content', 'post', posts[1]._id));
         done();

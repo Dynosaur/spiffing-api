@@ -3,7 +3,7 @@ import { CommentWrapper, DbComment } from 'database/comment';
 import { PostWrapper }               from 'database/post';
 import { UserWrapper }               from 'database/user';
 import { IGetComments }              from 'interface/responses/api-responses';
-import { IMissingDataError }         from 'interface/responses/error-responses';
+import { IMissingDataError, IObjectIdParseError }         from 'interface/responses/error-responses';
 import { getComments }               from 'router/get-comments';
 import { IntegrationEnvironment }    from 'tests/mock/integration-environment';
 
@@ -23,7 +23,7 @@ describe('get-comments route handler', () => {
         secondPost = await env.generatePost(users[1]._id);
         comments = await env.generateComments(3, users[0]._id, 'post', post._id);
         subcomment = await env.generateComment(users[2]._id, 'comment', comments[0]._id);
-        comments[0] = (await env.api.comment.get(comments[0].id))!;
+        comments[0] = (await env.api.comment.get(comments[0]._id))!;
         secondComments = await env.generateComments(2, users[1]._id, 'post', secondPost._id);
         done();
     });
@@ -85,12 +85,9 @@ describe('get-comments route handler', () => {
         env.request.query.parentType = 'post';
         env.request.query.parentId = 'random';
         const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IGetComments.IInvalidInputError>({
+        expect(response.payload).toStrictEqual<IObjectIdParseError>({
             ok: false,
-            error: 'Invalid Input',
-            allowed: 'ObjectId',
-            context: 'params',
-            key: 'parentId',
+            error: 'Object Id Parse',
             provided: 'random'
         });
         done();
@@ -149,12 +146,9 @@ describe('get-comments route handler', () => {
     it('should require author param to be an ObjectId', async done => {
         env.request.query.author = 'random';
         const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IGetComments.IInvalidInputError>({
+        expect(response.payload).toStrictEqual<IObjectIdParseError>({
             ok: false,
-            error: 'Invalid Input',
-            allowed: 'ObjectId',
-            context: 'params',
-            key: 'author',
+            error: 'Object Id Parse',
             provided: 'random'
         });
         done();

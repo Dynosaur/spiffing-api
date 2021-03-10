@@ -1,11 +1,27 @@
-import supertest from 'supertest';
-import { Server } from 'server/server';
-import { Express } from 'express';
-import { IGetPosts } from 'interface/responses/api-responses';
 import { randomBytes } from 'crypto';
-import { PostWrapper } from 'database/post';
-import { UserWrapper } from 'database/user';
-import { IObjectIdParseError } from 'interface/responses/error-responses';
+import { Express }     from 'express';
+import { ObjectId }    from 'mongodb';
+import supertest       from 'supertest';
+import { PostAPI, PostWrapper } from 'database/post';
+import { UserAPI, UserWrapper }          from 'database/user';
+import { IGetPosts }            from 'interface/responses/api-responses';
+import { IObjectIdParseError }  from 'interface/responses/error-responses';
+import { Server }               from 'server/server';
+import { CommonActions } from 'database/common-actions';
+
+async function generatePosts(amount: number, authorId: ObjectId, postApi: PostAPI): Promise<PostWrapper[]> {
+    const posts: PostWrapper[] = [];
+    for (let i = 0; i < amount; i++)
+        posts.push(await postApi.create(authorId, randomBytes(8).toString('hex'), 'Content'));
+    return posts;
+}
+
+function generateUser(userApi: UserAPI, commonApi: CommonActions): Promise<UserWrapper> {
+    return userApi.create(
+        `user-${Math.round(Math.random() * 1000)}`,
+        commonApi.securePassword('password')
+    );
+}
 
 describe('createPost route handler validation', () => {
     let app: Express;
@@ -13,26 +29,15 @@ describe('createPost route handler validation', () => {
     let user: UserWrapper;
     let secondUser: UserWrapper;
     let posts: PostWrapper[];
-    const password = 'password';
     beforeEach(async done => {
-        server = new Server(false);
+        server = new Server();
         await server.initialize();
         app = server.app;
-        user = await server.userApi.create(
-            `user-${Math.round(Math.random() * 100000)}`,
-            server.commonApi.securePassword(password)
+        user = await generateUser(server.userApi, server.commonApi);
+        secondUser = await generateUser(server.userApi, server.commonApi);
+        posts = (await generatePosts(3, user._id, server.postApi)).concat(
+            await generatePosts(2, secondUser._id, server.postApi)
         );
-        secondUser = await server.userApi.create(
-            `user-${Math.round(Math.random() * 100000)}`,
-            server.commonApi.securePassword(password)
-        );
-        posts = [
-            await server.postApi.create(user._id, randomBytes(64).toString('hex'), 'Content'),
-            await server.postApi.create(user._id, randomBytes(64).toString('hex'), 'Content'),
-            await server.postApi.create(user._id, randomBytes(64).toString('hex'), 'Content'),
-            await server.postApi.create(secondUser._id, randomBytes(64).toString('hex'), 'Content'),
-            await server.postApi.create(secondUser._id, randomBytes(64).toString('hex'), 'Content')
-        ];
         done();
     });
     afterEach(async done => {
