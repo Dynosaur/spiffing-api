@@ -32,7 +32,6 @@ import {
     MissingDataError,
     NoCommentFoundError,
     NoPostFoundError,
-    ObjectIdParseError,
     UnauthenticatedError,
     UnauthorizedError
 } from 'interface-bindings/error-responses';
