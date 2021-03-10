@@ -1,17 +1,21 @@
 import { ObjectId } from 'mongodb';
+import { DbComment }         from 'database/comment';
 import { DatabaseInterface } from 'database/database-interface';
 import { DbPost }            from 'database/post';
 import { DbRates }           from 'database/rate';
-import { RatedPosts }        from 'interface/data-types';
+import { Rates }        from 'interface/data-types';
 
 export class RateAPI {
     private userRates!: DbRates;
     private ratedCommentMap = new Map<string, 1 | -1>();
     private ratedPostMap = new Map<string, 1 | -1>();
 
-    constructor(private userId: ObjectId, private rateDbi: DatabaseInterface<DbRates>, private postDbi: DatabaseInterface<DbPost>) {}
+    constructor(private userId: ObjectId,
+                private rateDbi: DatabaseInterface<DbRates>,
+                private postDbi: DatabaseInterface<DbPost>,
+                private commentDbi: DatabaseInterface<DbComment>) {}
 
-    async refreshUserRatedPosts(): Promise<void> {
+    async refreshUserRates(): Promise<void> {
         const rates = await this.rateDbi.get({ owner: this.userId });
         if (rates === null) this.userRates = await this.rateDbi.create({
             owner: this.userId,
@@ -43,7 +47,7 @@ export class RateAPI {
         }
     }
 
-    getRatedPosts(): DbRates {
+    getRates(): DbRates {
         return {
             _id: new ObjectId(this.userRates._id),
             owner: new ObjectId(this.userRates.owner),
@@ -58,7 +62,7 @@ export class RateAPI {
         };
     }
 
-    getInterfaceRatedPosts(): RatedPosts {
+    getInterfaceRates(): Rates {
         return {
             _id: this.userRates._id.toHexString(),
             owner: this.userRates.owner.toHexString(),
@@ -74,7 +78,7 @@ export class RateAPI {
     }
 
     initialize(): Promise<void> {
-        return this.refreshUserRatedPosts();
+        return this.refreshUserRates();
     }
 
     async likePost(postId: ObjectId): Promise<boolean> {
@@ -155,6 +159,90 @@ export class RateAPI {
             );
         }
         return true;
+    }
+
+    async likeComment(_id: ObjectId): Promise<boolean> {
+        const stringId = _id.toHexString();
+        if (!this.ratedCommentMap.has(stringId)) {
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                { $push: { 'comments.liked': _id } }
+            );
+            await this.commentDbi.updateOne(
+                { _id },
+                { $inc: { likes: 1 } }
+            );
+            return true;
+        }
+        if (this.ratedCommentMap.get(stringId) === -1) {
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                {
+                    $pull: { 'comments.disliked': _id },
+                    $push: { 'comments.liked': _id }
+                }
+            );
+            await this.commentDbi.updateOne(
+                { _id },
+                { $inc: { likes: 1, dislikes: -1 } }
+            );
+            return true;
+        } else return false;
+    }
+
+    async dislikeComment(_id: ObjectId): Promise<boolean> {
+        const stringId = _id.toHexString();
+        if (!this.ratedCommentMap.has(stringId)) {
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                { $push: { 'comments.disliked': _id } }
+            );
+            await this.commentDbi.updateOne(
+                { _id },
+                { $inc: { dislikes: 1 } }
+            );
+            return true;
+        }
+        if (this.ratedCommentMap.get(stringId) === 1) {
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                {
+                    $pull: { 'comments.liked': _id },
+                    $push: { 'comments.disliked': _id }
+                }
+            );
+            await this.commentDbi.updateOne(
+                { _id },
+                { $inc: { likes: -1, dislikes: 1 } }
+            );
+            return true;
+        } else return false;
+    }
+
+    async unrateComment(_id: ObjectId): Promise<boolean> {
+        const stringId = _id.toHexString();
+        if (!this.ratedCommentMap.has(stringId)) return false;
+        if (this.ratedCommentMap.get(stringId) === 1) {
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                { $pull: { 'comments.liked': _id } }
+            );
+            await this.commentDbi.updateOne(
+                { _id },
+                { $inc: { likes: -1 } }
+            );
+            return true;
+        } else {
+            await this.rateDbi.updateOne(
+                { owner: this.userId },
+                { $pull: { 'comments.disliked': _id } }
+            );
+            await this.commentDbi.updateOne(
+                { _id },
+                { $inc: { dislikes: -1 } }
+            );
+            return true;
+        }
     }
 
 }

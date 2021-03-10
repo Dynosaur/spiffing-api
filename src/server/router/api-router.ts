@@ -137,7 +137,7 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
     if (!user) return new UnauthorizedError();
     if (user.id !== request.params.ownerId) return new AuthHeaderIdParamError(user.id, request.params.ownerId);
     const rate = await actions.user.getUserRateApi(user._id);
-    return new GetRatedPosts.Success(user, rate.getInterfaceRatedPosts());
+    return new GetRatedPosts.Success(user, rate.getInterfaceRates());
 };
 
 export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {

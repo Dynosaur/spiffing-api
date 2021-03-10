@@ -29,7 +29,7 @@ export interface Comment {
     }
 }
 
-export interface RatedPosts {
+export interface Rates {
     _id: string;
     owner: string;
     comments: {
