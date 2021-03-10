@@ -45,17 +45,16 @@ export class Server {
 
     requestFingerprintSize = 3;
 
-    constructor(private verbose = true) {}
+    constructor(private verbose = false) {}
 
     async initialize(): Promise<void> {
-        if (this.verbose) chalk.cyan('Starting server');
-
         let dbUri: string;
         let dbName: string;
         switch (process.env.environment) {
             case 'DEV':
                 dbUri = 'mongodb://localhost:27017';
                 dbName = 'spiffing';
+                this.verbose = true;
                 break;
             case 'TEST':
                 dbUri = 'mongodb://localhost:27017';
