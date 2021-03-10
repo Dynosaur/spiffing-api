@@ -1,38 +1,48 @@
 import { ObjectId } from 'mongodb';
-import { CommentAPI }                   from 'database/comment';
+import { CommentAPI, CommentWrapper }   from 'database/comment';
 import { CommonActions }                from 'database/common-actions';
-import { DatabaseInterface }            from 'database/database-interface';
-import { DbPost, PostAPI, PostWrapper } from 'database/post';
+import { PostAPI, PostWrapper }         from 'database/post';
 import { DbRates }                      from 'database/rate';
 import { DbUser, UserAPI, UserWrapper } from 'database/user';
 import { DatabaseEnvironment }          from 'tests/mock/database-environment';
-
-async function generatePosts(
-    amount: number,
-    int: DatabaseInterface<DbPost>,
-    author: ObjectId = new ObjectId()
-): Promise<PostWrapper[]> {
-    const posts: PostWrapper[] = [];
-    for (let i = 0; i < amount; i++)
-        posts.push(
-            new PostWrapper(
-                await int.create({
-                    author,
-                    comments: [],
-                    content: 'Content',
-                    dislikes: 0,
-                    likes: 0,
-                    title: 'Title'
-                })
-            )
-        );
-    return posts;
-}
 
 describe('user-api', () => {
     let env: DatabaseEnvironment;
     let api: UserAPI;
     let common: CommonActions;
+    async function generatePosts(amount: number, author: ObjectId): Promise<PostWrapper[]> {
+        const posts: PostWrapper[] = [];
+        for (let i = 0; i < amount; i++)
+            posts.push(
+                new PostWrapper(
+                    await env.interface.posts.create({
+                        author,
+                        comments: [],
+                        content: 'Content',
+                        dislikes: 0,
+                        likes: 0,
+                        title: 'Title'
+                    })
+                )
+            );
+        return posts;
+    }
+    async function generateComments(amount: number, author: ObjectId, parentId: ObjectId): Promise<CommentWrapper[]> {
+        const comments: CommentWrapper[] = [];
+        for (let i = 0; i < amount; i++)
+            comments.push(
+                new CommentWrapper(
+                    await env.interface.comments.create({
+                        author, content: 'Content', dislikes: 0, likes: 0, replies: [],
+                        parent: {
+                            _id: parentId,
+                            contentType: 'post'
+                        }
+                    })
+                )
+            );
+        return comments;
+    }
     beforeEach(async done => {
         env = new DatabaseEnvironment('user-api');
         await env.initialize();
@@ -101,7 +111,7 @@ describe('user-api', () => {
         });
         it('should unrate rated posts', async done => {
             const postAuthor = await api.create('author', common.securePassword('password'));
-            const posts = await generatePosts(4, env.interface.posts, postAuthor._id);
+            const posts = await generatePosts(4, postAuthor._id);
             const rateApi = await api.getUserRateApi(user._id);
             await rateApi.likePost(posts[0]._id);
             await rateApi.likePost(posts[1]._id);
@@ -126,6 +136,23 @@ describe('user-api', () => {
             });
             done();
         });
+        it('should unrate rated comments', async done => {
+            const otherUser = await api.create('author', common.securePassword('password'));
+            const post = (await generatePosts(1, otherUser._id))[0];
+            const comments = await generateComments(4, otherUser._id, post._id);
+            const rateApi = await api.getUserRateApi(user._id);
+            await rateApi.likeComment(comments[0]._id);
+            await rateApi.likeComment(comments[1]._id);
+            await rateApi.dislikeComment(comments[2]._id);
+            await rateApi.dislikeComment(comments[3]._id);
+            await api.delete(user._id);
+            for (const comment of comments)
+                expect(await env.collection.comments.findOne({ _id: comment._id })).toMatchObject({
+                    likes: 0,
+                    dislikes: 0
+                });
+            done();
+        });
         it('should remove an entry from the users collection', async done => {
             await api.delete(user._id);
             expect(await env.collection.users.findOne({ _id: user._id })).toBeNull();
@@ -137,7 +164,7 @@ describe('user-api', () => {
             done();
         });
         it('should remove the user\'s posts', async done => {
-            await generatePosts(2, env.interface.posts, user._id);
+            await generatePosts(2, user._id);
             await api.delete(user._id);
             expect((await env.interface.posts.getMany({ author: user._id })).length).toBe(0);
             done();

@@ -38,7 +38,7 @@ export class UserAPI {
 
     async getUserRateApi(id: ObjectId | string): Promise<RateAPI> {
         const userObjectId = typeof id === 'string' ? new ObjectId(id) : id;
-        const api = new RateAPI(userObjectId, this.rates, this.posts);
+        const api = new RateAPI(userObjectId, this.rates, this.posts, this.comments);
         await api.initialize();
         return api;
     }
@@ -59,15 +59,25 @@ export class UserAPI {
 
     async delete(id: ObjectId): Promise<void> {
         const rateApi = await this.getUserRateApi(id);
-        const ratedPosts = rateApi.getRatedPosts().posts;
-        if (ratedPosts.liked.length)
+        const rated = rateApi.getRates();
+        if (rated.posts.liked.length)
             await this.posts.updateMany(
-                { _id: { $in: ratedPosts.liked } },
+                { _id: { $in: rated.posts.liked } },
                 { $inc: { likes: -1 } }
             );
-        if (ratedPosts.disliked.length)
+        if (rated.posts.disliked.length)
             await this.posts.updateMany(
-                { _id: { $in: ratedPosts.disliked } },
+                { _id: { $in: rated.posts.disliked } },
+                { $inc: { dislikes: -1 }}
+            );
+        if (rated.comments.liked.length)
+            await this.comments.updateMany(
+                { _id: { $in: rated.comments.liked } },
+                { $inc: { likes: -1 } }
+            );
+        if (rated.comments.disliked.length)
+            await this.comments.updateMany(
+                { _id: { $in: rated.comments.disliked } },
                 { $inc: { dislikes: -1 }}
             );
         await this.user.delete({ _id: id });
@@ -77,5 +87,4 @@ export class UserAPI {
         for (const dbComment of comments)
             await deleteComment(dbComment._id, this.comments, this.posts);
     }
-
 }
