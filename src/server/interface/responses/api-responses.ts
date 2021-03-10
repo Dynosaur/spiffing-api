@@ -1,5 +1,5 @@
-import { Post, RatedPosts, User, Comment } from '../data-types';
-import { IErrorResponse, IOkResponse }     from '../response';
+import { Post, Rates, User, Comment }  from '../data-types';
+import { IErrorResponse, IOkResponse } from '../response';
 import {
     AuthorizedRequestError,
     IAuthHeaderIdParamMismatchError,
@@ -46,7 +46,7 @@ export namespace IGetRatedPosts {
     export type ErrorTx = AuthorizedRequestError | INoUserFoundError | IAuthHeaderIdParamMismatchError;
 
     export interface Success extends IOkResponse {
-        ratedPosts: RatedPosts;
+        ratedPosts: Rates;
     }
 
     export type Tx = ErrorTx | Success;
@@ -66,7 +66,7 @@ export namespace IGetUsers {
 
 export namespace IPostComment {
     export type ErrorTx = AuthorizedRequestError | INoPostFoundError | IMissingDataError |
-    INoCommentFoundError | IIllegalValueError;
+    INoCommentFoundError | IIllegalValueError | IObjectIdParseError;
 
     export interface Success extends IOkResponse {
         comment: Comment;
@@ -76,7 +76,7 @@ export namespace IPostComment {
 }
 
 export namespace IDeleteComment {
-    export type ErrorTx = AuthorizedRequestError | INoCommentFoundError;
+    export type ErrorTx = AuthorizedRequestError | INoCommentFoundError | IObjectIdParseError;
 
     export interface Success extends IOkResponse {
         fullyDeleted: boolean;
@@ -93,13 +93,27 @@ export namespace IGetComments {
         provided: string;
     }
 
-    export type ErrorTx = IInvalidInputError | IMissingDataError;
+    export type ErrorTx = IInvalidInputError | IMissingDataError | IObjectIdParseError;
 
     export interface Success extends IOkResponse {
         comments: Comment[];
         acceptedParams?: string[];
         ignoredParams?: string[];
         includeSuccessful?: boolean;
+    }
+
+    export type Tx = ErrorTx | Success;
+}
+
+export namespace IRateComment {
+    export type ErrorTx =
+        | AuthorizedRequestError
+        | IMissingDataError
+        | INoCommentFoundError
+        | IObjectIdParseError;
+
+    export interface Success extends IOkResponse {
+        change: boolean;
     }
 
     export type Tx = ErrorTx | Success;

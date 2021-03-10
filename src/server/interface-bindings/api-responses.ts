@@ -1,17 +1,18 @@
-import { CommentWrapper }                  from 'database/comment';
-import { PostWrapper }                     from 'database/post';
-import { UserWrapper }                     from 'database/user';
-import { Comment, Post, RatedPosts, User } from 'interface/data-types';
-import { ErrorResponse, OkResponse }       from './response';
+import { CommentWrapper }             from 'database/comment';
+import { PostWrapper }                from 'database/post';
+import { UserWrapper }                from 'database/user';
+import { Comment, Post, Rates, User } from 'interface/data-types';
+import { ErrorResponse, OkResponse }  from './response';
 import {
-    IGetPosts,
-    IGetUsers,
-    IRatePost,
     ICreatePost,
-    IGetComments,
-    IPostComment,
     IDeleteComment,
-    IGetRatedPosts
+    IGetComments,
+    IGetPosts,
+    IGetRatedPosts,
+    IGetUsers,
+    IPostComment,
+    IRateComment,
+    IRatePost
 } from 'interface/responses/api-responses';
 
 export namespace GetPosts {
@@ -52,7 +53,7 @@ export namespace RatePost {
 
 export namespace GetRatedPosts {
     export class Success extends OkResponse<IGetRatedPosts.Success> {
-        constructor(user: UserWrapper, ratedPosts: RatedPosts) {
+        constructor(user: UserWrapper, ratedPosts: Rates) {
             super(`Successfully found posts rated by user ${user.username} (${user.id}).`);
             this.payload.ratedPosts = ratedPosts;
         }
@@ -105,6 +106,19 @@ export namespace GetComments {
             this.payload.context = context;
             this.payload.key = key;
             this.payload.provided = provided;
+        }
+    }
+}
+
+export namespace RateComment {
+    export class Success extends OkResponse<IRateComment.Success> {
+        constructor(comment: CommentWrapper, rating: number, changed: boolean) {
+            super(changed
+                ? `Successfully rated comment ${comment.id} with rating ${rating}.`
+                : `No change from rating ${rating}.`
+                , 201
+            );
+            this.payload.change = changed;
         }
     }
 }
