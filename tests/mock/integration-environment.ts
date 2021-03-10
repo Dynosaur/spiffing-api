@@ -74,25 +74,23 @@ export class IntegrationEnvironment {
         return users;
     }
 
-    generatePost(author: ObjectId = new ObjectId()): Promise<PostWrapper> {
+    generatePost(author: ObjectId): Promise<PostWrapper> {
         return this.api.post.create(author, 'Title', 'Content');
     }
 
-    async generatePosts(amount: number, author = new ObjectId()): Promise<PostWrapper[]> {
+    async generatePosts(amount: number, author: ObjectId): Promise<PostWrapper[]> {
         const posts: PostWrapper[] = [];
         for (let i = 0; i < amount; i++)
             posts.push(await this.generatePost(author));
         return posts;
     }
 
-    generateComment(author: ObjectId, parentType: 'comment' | 'post', parentId: ObjectId): Promise<CommentWrapper> {
+    generateComment(author: ObjectId, parentType: 'comment' | 'post', parentId: ObjectId
+    ): Promise<CommentWrapper> {
         return this.api.comment.create(author, 'Content', parentType, parentId);
     }
 
-    async generateComments(
-        amount: number,
-        author: ObjectId,
-        parentType: 'comment' | 'post',
+    async generateComments(amount: number, author: ObjectId, parentType: 'comment' | 'post',
         parentId: ObjectId
     ): Promise<CommentWrapper[]> {
         const comments: CommentWrapper[] = [];
@@ -101,7 +99,8 @@ export class IntegrationEnvironment {
         return comments;
     }
 
-    async executeRouteHandler<T extends IBaseResponse = IBaseResponse>(handler: RouteHandler<T>): Promise<RoutePayload<T>> {
+    async executeRouteHandler<T extends IBaseResponse = IBaseResponse>(handler: RouteHandler<T>
+    ): Promise<RoutePayload<T>> {
         return await handler(this.request as Request, this.actions);
     }
 }
