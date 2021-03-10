@@ -42,11 +42,11 @@ export namespace IRatePost {
     export type Tx = ErrorTx | Success;
 }
 
-export namespace IGetRatedPosts {
+export namespace IGetRates {
     export type ErrorTx = AuthorizedRequestError | INoUserFoundError | IAuthHeaderIdParamMismatchError;
 
     export interface Success extends IOkResponse {
-        ratedPosts: Rates;
+        rates: Rates;
     }
 
     export type Tx = ErrorTx | Success;

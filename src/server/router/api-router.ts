@@ -14,7 +14,7 @@ import {
     CreatePost,
     DeleteComment,
     GetPosts,
-    GetRatedPosts,
+    GetRates,
     GetUsers,
     PostComment,
 } from 'interface-bindings/api-responses';
@@ -22,7 +22,7 @@ import {
     ICreatePost,
     IDeleteComment,
     IGetPosts,
-    IGetRatedPosts,
+    IGetRates,
     IGetUsers,
     IPostComment,
 } from 'interface/responses/api-responses';
@@ -129,7 +129,7 @@ export const createPost: RouteHandler<ICreatePost.Tx> = async function createPos
     return new CreatePost.Success(post.toInterface());
 };
 
-export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function getRatedPosts(request, actions): Promise<RoutePayload<IGetRatedPosts.Tx>> {
+export const getRates: RouteHandler<IGetRates.Tx> = async function getRates(request, actions): Promise<RoutePayload<IGetRates.Tx>> {
     if (!request.headers.authorization) return new UnauthenticatedError();
     const decodeAttempt = decodeBasicAuth(request.headers.authorization);
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
@@ -137,7 +137,7 @@ export const getRatedPosts: RouteHandler<IGetRatedPosts.Tx> = async function get
     if (!user) return new UnauthorizedError();
     if (user.id !== request.params.ownerId) return new AuthHeaderIdParamError(user.id, request.params.ownerId);
     const rate = await actions.user.getUserRateApi(user._id);
-    return new GetRatedPosts.Success(user, rate.getInterfaceRates());
+    return new GetRates.Success(user, rate.getInterfaceRates());
 };
 
 export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(request, actions): Promise<RoutePayload<IGetUsers.Tx>> {
@@ -226,7 +226,7 @@ export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function del
 export const routes: RouteInfo[] = [
     { method: 'GET',    path: '/posts',                    handler: getPosts      },
     { method: 'POST',   path: '/post',                     handler: createPost    },
-    { method: 'GET',    path: '/rated/:ownerId',           handler: getRatedPosts },
+    { method: 'GET',    path: '/rated/:ownerId',           handler: getRates },
     { method: 'GET',    path: '/users',                    handler: getUsers      },
     { method: 'POST',   path: '/comment/:contentType/:id', handler: postComment   },
     { method: 'DELETE', path: '/comment/:id',              handler: deleteComment }

@@ -8,7 +8,7 @@ import {
     IDeleteComment,
     IGetComments,
     IGetPosts,
-    IGetRatedPosts,
+    IGetRates,
     IGetUsers,
     IPostComment,
     IRateComment,
@@ -51,11 +51,11 @@ export namespace RatePost {
     }
 }
 
-export namespace GetRatedPosts {
-    export class Success extends OkResponse<IGetRatedPosts.Success> {
-        constructor(user: UserWrapper, ratedPosts: Rates) {
+export namespace GetRates {
+    export class Success extends OkResponse<IGetRates.Success> {
+        constructor(user: UserWrapper, rates: Rates) {
             super(`Successfully found posts rated by user ${user.username} (${user.id}).`);
-            this.payload.ratedPosts = ratedPosts;
+            this.payload.rates = rates;
         }
     }
 }
