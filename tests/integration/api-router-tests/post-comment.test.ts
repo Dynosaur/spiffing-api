@@ -89,6 +89,7 @@ describe('post-comment route handler', () => {
                 _id: expect.stringMatching(/^[a-f\d]{24}$/),
                 author: user.id,
                 content: expect.any(String),
+                created: expect.any(Number),
                 dislikes: 0,
                 likes: 0,
                 parent: {
@@ -113,6 +114,7 @@ describe('post-comment route handler', () => {
                 _id: expect.stringMatching(/^[a-f\d]{24}$/),
                 author: user.id,
                 content: expect.any(String),
+                created: expect.any(Number),
                 dislikes: 0,
                 likes: 0,
                 parent: {

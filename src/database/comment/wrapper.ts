@@ -28,6 +28,7 @@ export class CommentWrapper implements DbComment {
             _id: this.id,
             author: author,
             content: this.content,
+            created: this._id.generationTime,
             dislikes: this.dislikes,
             likes: this.likes,
             parent: {
