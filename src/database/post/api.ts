@@ -25,7 +25,7 @@ export class PostAPI {
         return new PostWrapper(post);
     }
 
-    async get(id: ObjectId | string): Promise<PostWrapper | null> {
+    async get(id: ObjectId): Promise<PostWrapper | null> {
         const post = await this.postDbi.get({ _id: typeof id === 'string' ? new ObjectId(id) : id });
         return post === null ? null : new PostWrapper(post);
     }

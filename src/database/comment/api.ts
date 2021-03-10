@@ -51,8 +51,8 @@ export class CommentAPI {
         return createComment(author, content, parentType, parentId, this.comments, this.posts);
     }
 
-    async get(id: string): Promise<CommentWrapper | null> {
-        const comment = await this.comments.get({ _id: new ObjectId(id) });
+    async get(_id: ObjectId): Promise<CommentWrapper | null> {
+        const comment = await this.comments.get({ _id });
         return comment === null ? null : new CommentWrapper(comment);
     }
 
