@@ -4,18 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "get-coverage": "npm run test -- --collectCoverage && .\\coverage.\\lcov-report.\\index.html",
     "lint": "eslint ./**",
     "start": "ts-node -r tsconfig-paths/register ./src/main.ts",
     "start:dev": "ts-node-dev -r tsconfig-paths/register ./src/main.ts",
     "test": "jest --selectProjects all",
     "test:int": "jest --selectProjects integration-tests",
     "test:unit": "jest --selectProjects unit-tests",
-    "test:unit:mock": "jest --selectProjects unit-tests/mock",
-    "test:unit:router": "jest --selectProjects unit-tests/router",
-    "test:unit:router:api": "jest --selectProjects unit-tests/router/api",
-    "test:unit:database": "jest --selectProjects unit-tests/database",
-    "test:valid": "jest --selectProjects validation-tests --runInBand",
-    "get-coverage": "npm run test -- --collectCoverage && .\\coverage.\\lcov-report.\\index.html"
+    "test:valid": "jest --selectProjects validation-tests"
   },
   "keywords": [],
   "author": "",

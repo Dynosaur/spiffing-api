@@ -18,13 +18,9 @@ function createProject(name, path, serial = false, other) {
 
 module.exports = {
     projects: [
+        createProject('all', '', true),
         createProject('integration-tests', 'integration', true),
         createProject('unit-tests', 'unit'),
-        createProject('unit-tests/mock', 'unit/mock-tests'),
-        createProject('unit-tests/router', 'unit/router-tests'),
-        createProject('unit-tests/router/api', 'unit/router-tests/api-router-tests', true),
-        createProject('unit-tests/database', 'unit/database-tests'),
         createProject('validation-tests', 'validation', true),
-        createProject('all', '', true)
     ]
 };
