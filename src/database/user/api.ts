@@ -82,9 +82,9 @@ export class UserAPI {
             );
         await this.user.delete({ _id: id });
         await this.rates.delete({ owner: id });
-        await this.posts.deleteMany({ author: id }, false);
         const comments = await this.comments.getMany({ author: id });
         for (const dbComment of comments)
             await deleteComment(dbComment._id, this.comments, this.posts);
+        await this.posts.deleteMany({ author: id }, false);
     }
 }
