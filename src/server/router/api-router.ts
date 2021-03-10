@@ -1,11 +1,15 @@
-import { DbPost } from 'database/post';
-import { DbUser } from 'database/user';
-import { Post, User } from 'interface/data-types';
-import { decodeBasicAuth } from 'tools/auth';
-import { scopeMustHaveProps } from 'route-handling/route-handler';
 import { FilterQuery, ObjectId } from 'mongodb';
-import { objectIdParseErrorMessage } from '../../error-messages';
-import { RouteInfo, RouteHandler, RoutePayload } from 'route-handling/route-infra';
+import { DbPost }             from 'database/post';
+import { DbUser }             from 'database/user';
+import { Post, User }         from 'interface/data-types';
+import { scopeMustHaveProps } from 'route-handling/route-handler';
+import { decodeBasicAuth }    from 'tools/auth';
+import { parseObjectId }      from 'tools/object-id';
+import {
+    RouteInfo,
+    RouteHandler,
+    RoutePayload
+} from 'route-handling/route-infra';
 import {
     CreatePost,
     DeleteComment,
@@ -59,24 +63,18 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
             if (allowedKeys.includes(query)) {
                 allowed.push(query);
                 switch (query) {
-                    case 'author':
-                        try {
-                            dbQuery.author = new ObjectId(queryValue);
-                        } catch (error) {
-                            if (error.message === objectIdParseErrorMessage)
-                                return new ObjectIdParseError(queryValue);
-                            else throw error;
-                        }
+                    case 'author': {
+                        const parseId = parseObjectId(queryValue);
+                        if (parseId.ok === false) return parseId.error;
+                        dbQuery.author = parseId.id;
                         break;
-                    case 'id':
-                        try {
-                            dbQuery._id = new ObjectId(queryValue);
-                        } catch (error) {
-                            if (error.message === objectIdParseErrorMessage)
-                                return new ObjectIdParseError(queryValue);
-                            else throw error;
-                        }
+                    }
+                    case 'id': {
+                        const parseId = parseObjectId(queryValue);
+                        if (parseId.ok === false) return parseId.error;
+                        dbQuery._id = parseId.id;
                         break;
+                    }
                     case 'ids': {
                         const ids = queryValue.match(/[a-f\d]{24}/g);
                         if (ids === null) {
@@ -85,13 +83,11 @@ export const getPosts: RouteHandler<IGetPosts.Tx> = async function getPosts(requ
                         }
                         const failedIds: string[] = [];
                         const objectIds: ObjectId[] = [];
-                        for (const match of ids)
-                            try {
-                                objectIds.push(new ObjectId(match));
-                            } catch (e) {
-                                if (e.message === objectIdParseErrorMessage) failedIds.push(match);
-                                else throw e;
-                            }
+                        for (const match of ids) {
+                            const parseId = parseObjectId(match);
+                            if (parseId.ok === false) return parseId.error;
+                            objectIds.push(parseId.id);
+                        }
                         if (failedIds.length) failed.ids = failedIds;
                         if (objectIds.length) dbQuery._id = { $in: objectIds };
                         break;
@@ -152,14 +148,9 @@ export const getUsers: RouteHandler<IGetUsers.Tx> = async function getUsers(requ
         switch (key) {
             case 'id': {
                 request.query.id = request.query.id as string;
-                let id: ObjectId;
-                try {
-                    id = new ObjectId(request.query.id);
-                } catch (error) {
-                    if (error.message === objectIdParseErrorMessage) return new ObjectIdParseError(request.query.id);
-                    else throw error;
-                }
-                databaseQuery._id = id;
+                const parseId = parseObjectId(request.query.id);
+                if (parseId.ok === false) return parseId.error;
+                databaseQuery._id = parseId.id;
                 break;
             }
             case 'ids': {
@@ -187,18 +178,25 @@ export const postComment: RouteHandler<IPostComment.Tx> = async function postCom
     if (!request.headers.authorization) return new UnauthenticatedError();
     if (!request.body.hasOwnProperty('content'))
         return new MissingDataError('body', Object.keys(request.body), ['content']);
+
     const decodeAttempt = decodeBasicAuth(request.headers.authorization);
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
+
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
+
+    const parseId = parseObjectId(request.params.id);
+    if (parseId.ok === false) return parseId.error;
+    const id = parseId.id;
+
     if (request.params.contentType === 'post') {
-        const post = await actions.post.get(request.params.id);
-        if (post === null) return new NoPostFoundError(request.params.id);
+        const post = await actions.post.get(id);
+        if (post === null) return new NoPostFoundError(id.toHexString());
         const comment = await actions.comment.create(user._id, request.body.content, 'post', post._id);
         return new PostComment.Success(comment);
     } else if (request.params.contentType === 'comment') {
-        const comment = await actions.comment.get(request.params.id);
-        if (comment === null) return new NoCommentFoundError(request.params.id);
+        const comment = await actions.comment.get(id);
+        if (comment === null) return new NoCommentFoundError(id.toHexString());
         const subcomment = await actions.comment.create(user._id, request.body.content, 'comment', comment._id);
         return new PostComment.Success(subcomment);
     } else return new IllegalValueError(request.params.contentType, ['post', 'comment'], 'params');
@@ -206,13 +204,22 @@ export const postComment: RouteHandler<IPostComment.Tx> = async function postCom
 
 export const deleteComment: RouteHandler<IDeleteComment.Tx> = async function deleteComment(request, actions): Promise<RoutePayload<IDeleteComment.Tx>> {
     if (!request.headers.authorization) return new UnauthenticatedError();
+
     const decodeAttempt = decodeBasicAuth(request.headers.authorization);
     if (decodeAttempt instanceof RoutePayload) return decodeAttempt;
+
     const user = await actions.common.authorize(decodeAttempt.username, decodeAttempt.password);
     if (!user) return new UnauthorizedError();
-    const comment = await actions.comment.get(request.params.commentId);
-    if (comment === null) return new NoCommentFoundError(request.params.commentId);
+
+    const parseId = parseObjectId(request.params.id);
+    if (parseId.ok === false) return parseId.error;
+    const commentId = parseId.id;
+
+    const comment = await actions.comment.get(commentId);
+    if (comment === null) return new NoCommentFoundError(commentId.toHexString());
+
     if (user.id !== comment.authorString) return new UnauthorizedError();
+
     const deleteResult = await actions.comment.delete(comment.id);
     return new DeleteComment.Success(comment, deleteResult);
 };
@@ -223,5 +230,5 @@ export const routes: RouteInfo[] = [
     { method: 'GET',    path: '/rated/:ownerId',           handler: getRatedPosts },
     { method: 'GET',    path: '/users',                    handler: getUsers      },
     { method: 'POST',   path: '/comment/:contentType/:id', handler: postComment   },
-    { method: 'DELETE', path: '/comment/:commentId',       handler: deleteComment }
+    { method: 'DELETE', path: '/comment/:id',              handler: deleteComment }
 ];
