@@ -121,9 +121,10 @@ export class Server {
 
         apiRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         authRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
-        devInfo.forEach(info => this.routeRegister.register(info.path, info.method, info));
         miscRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         routes.forEach(info => this.routeRegister.register(info.path, info.method, info));
+        if (process.env.environment === 'DEV')
+            devInfo.forEach(info => this.routeRegister.register(info.path, info.method, info));
     }
 
     async start(port: number): Promise<void> {
