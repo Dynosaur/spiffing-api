@@ -16,22 +16,23 @@ export class RateAPI {
                 private commentDbi: DatabaseInterface<DbComment>) {}
 
     async refreshUserRates(): Promise<void> {
+        this.ratedCommentMap.clear();
+        this.ratedPostMap.clear();
         const rates = await this.rateDbi.get({ owner: this.userId });
-        if (rates === null) this.userRates = await this.rateDbi.create({
-            owner: this.userId,
-            comments: {
-                liked: [],
-                disliked: []
-            },
-            posts: {
-                liked: [],
-                disliked: []
-            }
-        });
+        if (rates === null)
+            this.userRates = await this.rateDbi.create({
+                owner: this.userId,
+                comments: {
+                    liked: [],
+                    disliked: []
+                },
+                posts: {
+                    liked: [],
+                    disliked: []
+                }
+            });
         else {
             this.userRates = rates;
-            this.ratedCommentMap.clear();
-            this.ratedPostMap.clear();
             this.userRates.comments.liked.forEach(id =>
                 this.ratedCommentMap.set(id.toHexString(), 1)
             );
