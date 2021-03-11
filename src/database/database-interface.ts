@@ -55,7 +55,8 @@ export class DatabaseInterface<T> {
         const upOp = await this.collection.updateOne(query, updates, options);
         if (upOp.matchedCount !== 1)
             throw new Error(`(${this.name}) updateOne failed:\n\t` +
-            `matchedCount: ${upOp.matchedCount}`);
+            `matchedCount: ${upOp.matchedCount}\n` +
+            'filter: ' + JSON.stringify(query, null, 2));
         if (upOp.modifiedCount !== 1)
             throw new Error(`(${this.name}) updateOne failed:\n\t` +
             `modifiedCount: ${upOp.modifiedCount}`);
