@@ -99,6 +99,7 @@ export class Server {
         this.app.use(cors({ origin: '*' }));
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(express.static('spiffing'));
+        this.app.use('/assets', express.static('spiffing/assets'));
 
         const apiRouter = express.Router();
         apiRouter.use((request, response) => {
