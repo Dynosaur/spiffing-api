@@ -53,22 +53,23 @@ export class DatabaseInterface<T> {
 
     async updateOne(query: FilterQuery<T>, updates: UpdateQuery<T>, options?: UpdateOneOptions): Promise<void> {
         const upOp = await this.collection.updateOne(query, updates, options);
-        if (upOp.matchedCount !== 1)
-            throw new Error(`(${this.name}) updateOne failed:\n\t` +
+        if (upOp.matchedCount !== 1 || upOp.modifiedCount !== 1)
+            throw new Error(`(${this.name}) updateOne failed:\n` +
             `matchedCount: ${upOp.matchedCount}\n` +
-            'filter: ' + JSON.stringify(query, null, 2));
-        if (upOp.modifiedCount !== 1)
-            throw new Error(`(${this.name}) updateOne failed:\n\t` +
-            `modifiedCount: ${upOp.modifiedCount}`);
+            `modifiedCount: ${upOp.modifiedCount}\n` +
+            'filter: ' + JSON.stringify(query, null, 4) + '\n' +
+            'updates: ' + JSON.stringify(updates, null, 4));
     }
 
-    async updateMany(query: FilterQuery<T>, updates: UpdateQuery<T>, options?: UpdateManyOptions): Promise<void> {
+    async updateMany(query: FilterQuery<T>, updates: UpdateQuery<T>, options?: UpdateManyOptions, atLeast1 = true): Promise<void> {
         const upOp = await this.collection.updateMany(query, updates, options);
-        if (upOp.matchedCount === 0)
-            throw new Error(`(${this.name}) updateOne failed:\n\t` +
-            `matchedCount: ${upOp.matchedCount}`);
-        if (upOp.modifiedCount === 0)
-            throw new Error(`(${this.name}) updateOne failed:\n\t` +
-            `modifiedCount: ${upOp.modifiedCount}`);
+        if (atLeast1) {
+            if (upOp.matchedCount === 0 || upOp.modifiedCount === 0)
+                throw new Error(`(${this.name}) updateOne failed:\n` +
+                `matchedCount: ${upOp.matchedCount}\n` +
+                `modifiedCount: ${upOp.modifiedCount}\n` +
+                'filter: ' + JSON.stringify(query, null, 4) + '\n' +
+                'updates: ' + JSON.stringify(updates, null, 4));
+        }
     }
 }
