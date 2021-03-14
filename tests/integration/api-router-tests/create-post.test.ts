@@ -1,15 +1,12 @@
 import { ObjectId } from 'mongodb';
-import { DbPost }                 from 'database/post';
-import { UserWrapper }            from 'database/user';
-import { ICreatePost }            from 'interface/responses/api-responses';
-import { createPost }             from 'router/api-router';
-import { IntegrationEnvironment } from 'tests/mock/integration-environment';
-import { encodeBasicAuth }        from 'tools/auth';
-import {
-    IMissingDataError,
-    IUnauthenticatedError,
-    IUnauthorizedError
-} from 'interface/responses/error-responses';
+import { DbPost }                  from 'database/post';
+import { UserWrapper }             from 'database/user';
+import { IUnauthenticated }        from 'interface/error/unauthenticated';
+import { IUnauthorized }           from 'interface/error/unauthorized';
+import { IMissingBody }            from 'interface/error/missing-body';
+import { createPost, ICreatePost } from 'router/post/create-post';
+import { IntegrationEnvironment }  from 'tests/mock/integration-environment';
+import { encodeBasicAuth }         from 'tools/auth';
 
 describe('create-post route handler', () => {
     let env: IntegrationEnvironment;
@@ -27,7 +24,7 @@ describe('create-post route handler', () => {
     describe('authorization', () => {
         it('should require authentication', async done => {
             const response = await env.executeRouteHandler(createPost);
-            expect(response.payload).toStrictEqual<IUnauthenticatedError>({
+            expect(response.payload).toStrictEqual<IUnauthenticated>({
                 error: 'Unauthenticated',
                 ok: false
             });
@@ -38,7 +35,7 @@ describe('create-post route handler', () => {
             env.request.body.content = 'Friday I\'m In Love';
             env.request.body.title = 'Garden Song';
             const response = await env.executeRouteHandler(createPost);
-            expect(response.payload).toStrictEqual<IUnauthorizedError>({
+            expect(response.payload).toStrictEqual<IUnauthorized>({
                 error: 'Unauthorized',
                 ok: false
             });
@@ -46,16 +43,12 @@ describe('create-post route handler', () => {
         });
     });
     describe('request body', () => {
-        it('should require content and title', async done => {
+        it('should require content', async done => {
             env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
             const response = await env.executeRouteHandler(createPost);
-            expect(response.payload).toStrictEqual<IMissingDataError>({
-                error: 'Missing Data',
-                missing: {
-                    received: [],
-                    required: ['content', 'title'],
-                    'scope-name': 'body'
-                },
+            expect(response.payload).toStrictEqual<IMissingBody>({
+                error: 'Missing Body Item',
+                name: 'content',
                 ok: false
             });
             done();
@@ -64,13 +57,9 @@ describe('create-post route handler', () => {
             env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
             env.request.body.title = 'Halloween';
             const response = await env.executeRouteHandler(createPost);
-            expect(response.payload).toStrictEqual<IMissingDataError>({
-                error: 'Missing Data',
-                missing: {
-                    received: ['title'],
-                    required: ['content'],
-                    'scope-name': 'body'
-                },
+            expect(response.payload).toStrictEqual<IMissingBody>({
+                error: 'Missing Body Item',
+                name: 'content',
                 ok: false
             });
             done();
@@ -79,13 +68,9 @@ describe('create-post route handler', () => {
             env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
             env.request.body.content = 'Halloween';
             const response = await env.executeRouteHandler(createPost);
-            expect(response.payload).toStrictEqual<IMissingDataError>({
-                error: 'Missing Data',
-                missing: {
-                    received: ['content'],
-                    required: ['title'],
-                    'scope-name': 'body'
-                },
+            expect(response.payload).toStrictEqual<IMissingBody>({
+                error: 'Missing Body Item',
+                name: 'title',
                 ok: false
             });
             done();
