@@ -1,0 +1,31 @@
+import supertest                      from 'supertest';
+import { PostWrapper }                from 'database/post';
+import { UserWrapper }                from 'database/user';
+import { IOk }                        from 'interface/ok';
+import { Server }                     from 'server/server';
+import { generatePost, generateUser } from 'tests/validation/tools/generate';
+
+describe('delete-post route handler validation', () => {
+    let server: Server;
+    let author: UserWrapper;
+    let post: PostWrapper;
+    beforeEach(async done => {
+        server = new Server();
+        await server.initialize();
+        author = await generateUser(server.userApi, server.commonApi);
+        post = await generatePost(server.postApi, author._id);
+        done();
+    });
+    afterEach(async done => {
+        await server.mongo.close();
+        done();
+    });
+    it('should delete a post', async done => {
+        const response = await supertest(server.app)
+            .delete(`/api/post/${post.id}`)
+            .auth(author.username, 'password');
+        expect(response.body).toStrictEqual<IOk>({ ok: true });
+        expect(server.postDbi.get({ _id: post._id })).toBeNull();
+        done();
+    });
+});
