@@ -13,9 +13,12 @@
         "eol-last": "warn",
         "jest/no-disabled-tests": "warn",
         "jest/no-focused-tests": "warn",
+        "no-case-declarations": "warn",
         "no-console": "warn",
+        "no-fallthrough": "warn",
         "no-namespace": "off",
         "no-prototype-builtins": "off",
+        "prefer-const": "warn",
         "quotes": [
             1, "single"
         ],
