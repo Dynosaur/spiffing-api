@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { CommentAPI, CommentWrapper }   from 'database/comment';
 import { CommonActions }                from 'database/common-actions';
-import { PostAPI, PostWrapper }         from 'database/post';
+import { DbPost, PostAPI, PostWrapper } from 'database/post';
 import { DbRates }                      from 'database/rate';
 import { DbUser, UserAPI, UserWrapper } from 'database/user';
 import { DatabaseEnvironment }          from 'tests/mock/database-environment';
@@ -9,38 +9,17 @@ import { DatabaseEnvironment }          from 'tests/mock/database-environment';
 describe('user-api', () => {
     let env: DatabaseEnvironment;
     let api: UserAPI;
+    let postApi: PostAPI;
+    let commentApi: CommentAPI;
     let common: CommonActions;
     async function generatePosts(amount: number, author: ObjectId): Promise<PostWrapper[]> {
         const posts: PostWrapper[] = [];
-        for (let i = 0; i < amount; i++)
-            posts.push(
-                new PostWrapper(
-                    await env.interface.posts.create({
-                        author,
-                        comments: [],
-                        content: 'Content',
-                        dislikes: 0,
-                        likes: 0,
-                        title: 'Title'
-                    })
-                )
-            );
+        for (let i = 0; i < amount; i++) posts.push(await postApi.create(author, 'Title', 'Content'));
         return posts;
     }
     async function generateComments(amount: number, author: ObjectId, parentId: ObjectId): Promise<CommentWrapper[]> {
         const comments: CommentWrapper[] = [];
-        for (let i = 0; i < amount; i++)
-            comments.push(
-                new CommentWrapper(
-                    await env.interface.comments.create({
-                        author, content: 'Content', dislikes: 0, likes: 0, replies: [],
-                        parent: {
-                            _id: parentId,
-                            contentType: 'post'
-                        }
-                    })
-                )
-            );
+        for (let i = 0; i < amount; i++) comments.push(await commentApi.create(author, 'Content', 'post', parentId));
         return comments;
     }
     beforeEach(async done => {
@@ -52,6 +31,8 @@ describe('user-api', () => {
             env.interface.rates,
             env.interface.comments
         );
+        postApi = new PostAPI(env.interface.posts, env.interface.comments, env.interface.rates);
+        commentApi = new CommentAPI(env.interface.comments, env.interface.posts);
         common = new CommonActions(api);
         done();
     });
@@ -171,12 +152,35 @@ describe('user-api', () => {
         });
         it('should remove the user\'s comments', async done => {
             const postAuthor = await api.create('author', common.securePassword('password'));
-            const postApi = new PostAPI(env.interface.posts, env.interface.comments);
-            const commentApi = new CommentAPI(env.interface.comments, env.interface.posts);
+            const postApi = new PostAPI(env.interface.posts, env.interface.comments, env.interface.rates);
             const post = await postApi.create(postAuthor._id, 'Title', 'Content');
             const comment = await commentApi.create(user._id, 'Content', 'post', post._id);
             await api.delete(user._id);
             expect(await env.collection.comments.findOne({ _id: comment._id })).toBeNull();
+            done();
+        });
+        it('should fully delete user\'s posts if the only comments are authored by them', async done => {
+            const post = (await generatePosts(1, user._id))[0];
+            await generateComments(3, user._id, post._id);
+            await api.delete(user._id);
+            expect((await env.interface.comments.getMany({ author: user._id })).length).toBe(0);
+            expect((await env.interface.posts.get({ author: user._id }))).toBeNull();
+            done();
+        });
+        it('should not fully delete user\'s posts if there are comments from other users', async done => {
+            const post = await postApi.create(user._id, 'Title', 'Content');
+            const other = await api.create('andereUfer', common.securePassword('password'));
+            const comments = await generateComments(3, other._id, post._id);
+            await api.delete(user._id);
+            expect((await env.interface.posts.get({ _id: post._id }))).toStrictEqual<DbPost>({
+                _id: post._id,
+                author: null!,
+                comments: comments.map(comment => comment._id),
+                content: null!,
+                dislikes: 0,
+                likes: 0,
+                title: null!
+            });
             done();
         });
     });
