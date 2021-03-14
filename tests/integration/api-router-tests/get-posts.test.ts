@@ -1,7 +1,6 @@
 import { PostWrapper }            from 'database/post';
 import { UserWrapper }            from 'database/user';
-import { IGetPosts }              from 'interface/responses/api-responses';
-import { getPosts }               from 'router/api-router';
+import { getPosts, IGetPosts }    from 'router/post/get-posts';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 
 describe('get-posts route handler', () => {
