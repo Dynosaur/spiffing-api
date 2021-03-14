@@ -1,7 +1,7 @@
 import { FilterQuery, ObjectId } from 'mongodb';
 import { DbComment, deleteComment }      from 'database/comment';
 import { DatabaseInterface }             from 'database/database-interface';
-import { DbPost }                        from 'database/post';
+import { DbPost, deletePost }            from 'database/post';
 import { DbRates, RateAPI }              from 'database/rate';
 import { DbUser, Password, UserWrapper } from 'database/user';
 
@@ -85,6 +85,8 @@ export class UserAPI {
         const comments = await this.comments.getMany({ author: id });
         for (const dbComment of comments)
             await deleteComment(dbComment._id, this.comments, this.posts);
-        await this.posts.deleteMany({ author: id }, false);
+        const posts = await this.posts.getMany({ author: id });
+        for (const post of posts)
+            await deletePost(post._id, this.posts, this.comments, this.rates);
     }
 }
