@@ -82,7 +82,7 @@ export class Server {
         this.commentDbi = new DatabaseInterface(this.mongo.getCollection('comments'));
 
         this.commentApi = new CommentAPI(this.commentDbi, this.postDbi);
-        this.postApi = new PostAPI(this.postDbi, this.commentDbi);
+        this.postApi = new PostAPI(this.postDbi, this.commentDbi, this.rateDbi);
         this.userApi = new UserAPI(this.userDbi, this.postDbi, this.rateDbi, this.commentDbi);
         this.commonApi = new CommonActions(this.userApi);
         this.actions = {

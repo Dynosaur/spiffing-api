@@ -43,7 +43,7 @@ export class IntegrationEnvironment {
 
         this.api = {
             comment: new CommentAPI(this.db.interface.comments, this.db.interface.posts),
-            post: new PostAPI(this.db.interface.posts, this.db.interface.comments),
+            post: new PostAPI(this.db.interface.posts, this.db.interface.comments, this.db.interface.rates),
             user: new UserAPI(this.db.interface.users, this.db.interface.posts, this.db.interface.rates, this.db.interface.comments)
         };
 
