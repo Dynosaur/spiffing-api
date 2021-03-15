@@ -1,14 +1,12 @@
-import supertest from 'supertest';
-import { Server } from 'server/server';
 import { Express } from 'express';
+import { IAuthorizationParse } from 'interface/error/authorization-parse';
+import { ICreatePost } from 'router/post/create';
+import { IMissing } from 'interface/error/missing';
+import { IUnauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized } from 'interface/error/unauthorized';
+import { Server } from 'server/server';
 import { UserWrapper } from 'database/user';
-import { ICreatePost } from 'interface/responses/api-responses';
-import {
-    IMissingDataError,
-    IUnauthorizedError,
-    IUnauthenticatedError,
-    IAuthorizationParseError
-} from 'interface/responses/error-responses';
+import supertest from 'supertest';
 
 describe('createPost route handler validation', () => {
     let app: Express;
@@ -33,7 +31,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .post('/api/post')
         .then(response => {
-            expect(response.body).toStrictEqual<IUnauthenticatedError>({
+            expect(response.body).toStrictEqual<IUnauthenticated>({
                 error: 'Unauthenticated',
                 ok: false
             });
@@ -45,13 +43,10 @@ describe('createPost route handler validation', () => {
         .post('/api/post')
         .auth(user.username, password)
         .then(response => {
-            expect(response.body).toStrictEqual<IMissingDataError>({
-                error: 'Missing Data',
-                missing: {
-                    'scope-name': 'body',
-                    received: [],
-                    required: expect.arrayContaining(['content', 'title'])
-                },
+            expect(response.body).toStrictEqual<IMissing>({
+                error: 'Missing Item',
+                field: 'body',
+                name: 'content',
                 ok: false
             });
         });
@@ -60,13 +55,10 @@ describe('createPost route handler validation', () => {
         .auth(user.username, password)
         .send({ content: 'Content' })
         .then(response => {
-            expect(response.body).toStrictEqual<IMissingDataError>({
-                error: 'Missing Data',
-                missing: {
-                    'scope-name': 'body',
-                    received: ['content'],
-                    required: expect.arrayContaining(['title'])
-                },
+            expect(response.body).toStrictEqual<IMissing>({
+                error: 'Missing Item',
+                field: 'body',
+                name: 'title',
                 ok: false
             });
         });
@@ -75,13 +67,10 @@ describe('createPost route handler validation', () => {
         .auth(user.username, password)
         .send({ title: 'Title' })
         .then(response => {
-            expect(response.body).toStrictEqual<IMissingDataError>({
-                error: 'Missing Data',
-                missing: {
-                    'scope-name': 'body',
-                    received: ['title'],
-                    required: expect.arrayContaining(['content'])
-                },
+            expect(response.body).toStrictEqual<IMissing>({
+                error: 'Missing Item',
+                field: 'body',
+                name: 'content',
                 ok: false
             });
         });
@@ -93,8 +82,8 @@ describe('createPost route handler validation', () => {
         .auth('', { type: 'bearer' })
         .send({ content: 'Content', title: 'Title' })
         .then(response => {
-            expect(response.body).toStrictEqual<IAuthorizationParseError>({
-                error: 'Authorization Parsing Error',
+            expect(response.body).toStrictEqual<IAuthorizationParse>({
+                error: 'Authorization Header Parse',
                 ok: false,
                 part: 'Authorization Type'
             });
@@ -107,7 +96,7 @@ describe('createPost route handler validation', () => {
         .auth(user.username, '!password')
         .send({ content: 'Content', title: 'Title' })
         .then(response => {
-            expect(response.body).toStrictEqual<IUnauthorizedError>({
+            expect(response.body).toStrictEqual<IUnauthorized>({
                 error: 'Unauthorized',
                 ok: false
             });
