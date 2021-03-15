@@ -1,27 +1,11 @@
-import { randomBytes } from 'crypto';
-import { Express }     from 'express';
-import { ObjectId }    from 'mongodb';
-import supertest       from 'supertest';
-import { PostAPI, PostWrapper } from 'database/post';
-import { UserAPI, UserWrapper }          from 'database/user';
-import { IGetPosts }            from 'interface/responses/api-responses';
-import { IObjectIdParseError }  from 'interface/responses/error-responses';
-import { Server }               from 'server/server';
-import { CommonActions } from 'database/common-actions';
-
-async function generatePosts(amount: number, authorId: ObjectId, postApi: PostAPI): Promise<PostWrapper[]> {
-    const posts: PostWrapper[] = [];
-    for (let i = 0; i < amount; i++)
-        posts.push(await postApi.create(authorId, randomBytes(8).toString('hex'), 'Content'));
-    return posts;
-}
-
-function generateUser(userApi: UserAPI, commonApi: CommonActions): Promise<UserWrapper> {
-    return userApi.create(
-        `user-${Math.round(Math.random() * 1000)}`,
-        commonApi.securePassword('password')
-    );
-}
+import { generatePosts, generateUser } from '../tools/generate';
+import { Express } from 'express';
+import { IGetPosts } from 'router/post/get';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { PostWrapper } from 'database/post';
+import { Server } from 'server/server';
+import { UserWrapper } from 'database/user';
+import supertest from 'supertest';
 
 describe('createPost route handler validation', () => {
     let app: Express;
@@ -35,8 +19,8 @@ describe('createPost route handler validation', () => {
         app = server.app;
         user = await generateUser(server.userApi, server.commonApi);
         secondUser = await generateUser(server.userApi, server.commonApi);
-        posts = (await generatePosts(3, user._id, server.postApi)).concat(
-            await generatePosts(2, secondUser._id, server.postApi)
+        posts = (await generatePosts(server.postApi, user._id, 3)).concat(
+            await generatePosts(server.postApi, secondUser._id, 2)
         );
         done();
     });
@@ -46,7 +30,7 @@ describe('createPost route handler validation', () => {
     });
     it('should get all posts', async done => {
         await supertest(app)
-        .get('/api/posts')
+        .get('/api/post')
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
                 ok: true,
@@ -57,9 +41,10 @@ describe('createPost route handler validation', () => {
     });
     it('should require author query param to be an ObjectId', async done => {
         await supertest(app)
-        .get('/api/posts?author=objectId')
+        .get('/api/post?author=objectId')
         .then(response => {
-            expect(response.body).toStrictEqual<IObjectIdParseError>({
+            expect(response.body).toStrictEqual<IObjectIdParse>({
+                context: 'query.author',
                 error: 'Object Id Parse',
                 ok: false,
                 provided: 'objectId'
@@ -69,9 +54,10 @@ describe('createPost route handler validation', () => {
     });
     it('should require id query param to be an ObjectId', async done => {
         await supertest(app)
-        .get('/api/posts?id=objectId')
+        .get('/api/post?id=objectId')
         .then(response => {
-            expect(response.body).toStrictEqual<IObjectIdParseError>({
+            expect(response.body).toStrictEqual<IObjectIdParse>({
+                context: 'query.id',
                 error: 'Object Id Parse',
                 ok: false,
                 provided: 'objectId'
@@ -81,89 +67,88 @@ describe('createPost route handler validation', () => {
     });
     it('should notify when no ObjectIds can be parsed from ids query param', async done => {
         await supertest(app)
-        .get('/api/posts?ids=objectId,lol,something')
+        .get('/api/post?ids=objectId,lol,something')
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
-                ok: true,
-                posts: posts.map(post => post.toInterface()),
-                'query-allowed': ['ids'],
                 failed: {
                     ids: {
                         error: expect.any(String),
                         value: expect.any(String)
                     }
-                }
+                },
+                ok: true,
+                posts: posts.map(post => post.toInterface()),
+                'query-allowed': ['ids']
             });
         });
         done();
     });
     it('should notify when only some ObjectIds can be parsed from ids query param', async done => {
         await supertest(app)
-        .get(`/api/posts?ids=${posts[0].id},lol,something`)
+        .get(`/api/post?ids=${posts[0].id},lol,something`)
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
                 ok: true,
-                'query-allowed': ['ids'],
-                posts: [posts[0].toInterface()]
+                posts: [posts[0].toInterface()],
+                'query-allowed': ['ids']
             });
         });
         done();
     });
     it('should get by title', async done => {
         await supertest(app)
-        .get(`/api/posts?title=${posts[1].title}`)
+        .get(`/api/post?title=${posts[1].title}`)
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
                 ok: true,
-                'query-allowed': ['title'],
-                posts: [posts[1].toInterface()]
+                posts: [posts[1].toInterface()],
+                'query-allowed': ['title']
             });
         });
         done();
     });
     it('should get by author', async done => {
         await supertest(app)
-        .get(`/api/posts?author=${user.id}`)
+        .get(`/api/post?author=${user.id}`)
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
                 ok: true,
-                'query-allowed': ['author'],
-                posts: posts.slice(0, 3).map(post => post.toInterface())
+                posts: posts.slice(0, 3).map(post => post.toInterface()),
+                'query-allowed': ['author']
             });
         });
         done();
     });
     it('should get by id', async done => {
         await supertest(app)
-        .get(`/api/posts?id=${posts[2].id}`)
+        .get(`/api/post?id=${posts[2].id}`)
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
                 ok: true,
-                'query-allowed': ['id'],
-                posts: [posts[2].toInterface()]
+                posts: [posts[2].toInterface()],
+                'query-allowed': ['id']
             });
         });
         done();
     });
     it('should get by ids', async done => {
         await supertest(app)
-        .get(`/api/posts?ids=${posts[2].id},${posts[0].id},${posts[3].id}`)
+        .get(`/api/post?ids=${posts[2].id},${posts[0].id},${posts[3].id}`)
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
                 ok: true,
-                'query-allowed': ['ids'],
-                posts: [posts[0], posts[2], posts[3]].map(post => post.toInterface())
+                posts: [posts[0], posts[2], posts[3]].map(post => post.toInterface()),
+                'query-allowed': ['ids']
             });
         });
         done();
     });
     it('should include authorUser', async done => {
         await supertest(app)
-        .get('/api/posts?include=authorUser')
+        .get('/api/post?include=authorUser')
         .then(response => {
             expect(response.body).toStrictEqual<IGetPosts.Success>({
                 ok: true,
-                'query-allowed': ['include'],
                 posts: posts.map(post => {
                     const interfacePost = post.toInterface();
                     interfacePost.author =
@@ -171,7 +156,8 @@ describe('createPost route handler validation', () => {
                         ? user.toInterface()
                         : secondUser.toInterface();
                     return interfacePost;
-                })
+                }),
+                'query-allowed': ['include']
             });
         });
         done();
