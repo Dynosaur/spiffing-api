@@ -1,7 +1,7 @@
 import supertest from 'supertest';
 import { PostWrapper }                from 'database/post';
 import { UserWrapper }                from 'database/user';
-import { ICreateComment }             from 'router/comment/create-comment';
+import { ICreateComment }             from 'router/comment/create';
 import { Server }                     from 'server/server';
 import { generatePost, generateUser } from 'tests/validation/tools/generate';
 
