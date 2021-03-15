@@ -1,12 +1,23 @@
-import { deleteUser }  from 'router/delete-user';
-import { getComments } from 'router/get-comments';
-import { rateComment } from 'router/rate-comment';
-import { ratePost }    from 'router/rate-post';
-import { RouteInfo }   from 'route-handling/route-infra';
+import { RouteInfo } from '../route-handling/route-infra';
+import { route as authorize } from './authorize';
+import { route as createComment } from './comment/create';
+import { route as createPost } from './post/create';
+import { route as createUser } from './user/create';
+import { route as deleteComment } from './comment/delete';
+import { route as deletePost } from './post/delete';
+import { route as deleteUser } from './user/delete';
+import { route as getComments } from './comment/get';
+import { route as getPost } from './post/get';
+import { route as getRate } from './rate/get';
+import { route as getUser } from './user/get';
+import { route as rateComment } from './rate/comment';
+import { route as ratePost } from './rate/post';
+import { route as updateUser } from './user/update';
 
 export const routes: RouteInfo[] = [
-    { method: 'GET',    path: '/comments',         handler: getComments },
-    { method: 'DELETE', path: '/user',             handler: deleteUser  },
-    { method: 'POST',   path: '/rate/post/:id',    handler: ratePost    },
-    { method: 'POST',   path: '/rate/comment/:id', handler: rateComment }
+    createComment, deleteComment, getComments,
+    createPost, deletePost, getPost,
+    getRate, rateComment, ratePost,
+    createUser, deleteUser, getUser, updateUser,
+    authorize
 ];
