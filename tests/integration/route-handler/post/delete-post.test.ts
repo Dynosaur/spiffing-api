@@ -1,15 +1,15 @@
-import { ObjectId }               from 'mongodb';
-import { PostWrapper }            from 'database/post';
-import { UserWrapper }            from 'database/user';
-import { IMissingParam }          from 'interface/error/missing-param';
-import { IObjectIdParse }         from 'interface/error/object-id-parse';
-import { IPostNotFound }          from 'interface/error/post-not-found';
-import { IUnauthenticated }       from 'interface/error/unauthenticated';
-import { IUnauthorized }          from 'interface/error/unauthorized';
-import { IOk }                    from 'interface/ok';
-import { deletePost }             from 'router/post/delete-post';
+import { IContentNotFound } from 'interface/error/content-not-found';
+import { IMissing } from 'interface/error/missing';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { IOk }  from 'interface/ok';
+import { IUnauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized } from 'interface/error/unauthorized';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
-import { encodeBasicAuth }        from 'tools/auth';
+import { ObjectId } from 'mongodb';
+import { PostWrapper } from 'database/post';
+import { UserWrapper } from 'database/user';
+import { deletePost } from 'router/post/delete';
+import { encodeBasicAuth } from 'tools/auth';
 
 describe('delete-post route handler integration', () => {
     let env: IntegrationEnvironment;
@@ -37,9 +37,10 @@ describe('delete-post route handler integration', () => {
     it('should require id param', async done => {
         env.request.headers.authorization = 'fake-authorization';
         const response = await env.executeRouteHandler(deletePost);
-        expect(response.payload).toStrictEqual<IMissingParam>({
-            error: 'Missing Request Parameter',
-            missing: 'id',
+        expect(response.payload).toStrictEqual<IMissing>({
+            error: 'Missing Item',
+            field: 'param',
+            name: 'id',
             ok: false
         });
         done();
@@ -71,8 +72,9 @@ describe('delete-post route handler integration', () => {
         const stringId = new ObjectId().toHexString();
         env.request.params.id = stringId;
         const response = await env.executeRouteHandler(deletePost);
-        expect(response.payload).toStrictEqual<IPostNotFound>({
-            error: 'Post Not Found',
+        expect(response.payload).toStrictEqual<IContentNotFound>({
+            content: 'Post',
+            error: 'Content Not Found',
             id: stringId,
             ok: false
         });
