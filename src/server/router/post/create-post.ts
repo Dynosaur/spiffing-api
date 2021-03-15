@@ -1,16 +1,16 @@
-import { Request }                           from 'express';
-import { IMissingBody, MissingBody }         from 'interface/error/missing-body';
-import { Post }                              from 'interface/data-types';
+import { DatabaseActions, HandlerRoute, RoutePayload } from 'route-handling/route-infra';
+import { IMissing, Missing } from 'interface/error/missing';
 import { IUnauthenticated, Unauthenticated } from 'interface/error/unauthenticated';
-import { IUnauthorized, Unauthorized }       from 'interface/error/unauthorized';
-import { IAuthorizationParse }               from 'interface/error/authorization-parse';
-import { DatabaseActions, RoutePayload }     from 'route-handling/route-infra';
-import { decodeBasicAuth }                   from 'tools/auth';
+import { IUnauthorized, Unauthorized } from 'interface/error/unauthorized';
+import { IAuthorizationParse } from 'interface/error/authorization-parse';
+import { Post } from 'interface/data-types';
+import { Request } from 'express';
+import { decodeBasicAuth } from 'tools/auth';
 
 export namespace ICreatePost {
     export type ErrorTx =
         | IAuthorizationParse
-        | IMissingBody
+        | IMissing
         | IUnauthenticated
         | IUnauthorized;
 
@@ -26,8 +26,8 @@ type ReturnType = Promise<RoutePayload<ICreatePost.Tx>>;
 
 export async function createPost(request: Request, actions: DatabaseActions): ReturnType {
     if (request.headers.authorization === undefined) return new Unauthenticated();
-    if (request.body.content === undefined) return new MissingBody('content');
-    if (request.body.title === undefined) return new MissingBody('title');
+    if (request.body.content === undefined) return new Missing('body', 'content');
+    if (request.body.title === undefined) return new Missing('body', 'title');
 
     const decode = decodeBasicAuth(request.headers.authorization);
     if (decode.ok === false) return decode.error;
@@ -45,3 +45,7 @@ export async function createPost(request: Request, actions: DatabaseActions): Re
         }
     };
 }
+
+export const route: HandlerRoute = {
+    handler: createPost, method: 'POST', path: '/post'
+};
