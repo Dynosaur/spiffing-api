@@ -1,9 +1,9 @@
-import supertest                      from 'supertest';
-import { PostWrapper }                from 'database/post';
-import { UserWrapper }                from 'database/user';
-import { IOk }                        from 'interface/ok';
-import { Server }                     from 'server/server';
 import { generatePost, generateUser } from 'tests/validation/tools/generate';
+import { IOk } from 'interface/ok';
+import { PostWrapper } from 'database/post';
+import { Server } from 'server/server';
+import { UserWrapper } from 'database/user';
+import supertest from 'supertest';
 
 describe('delete-post route handler validation', () => {
     let server: Server;
