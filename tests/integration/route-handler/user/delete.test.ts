@@ -1,13 +1,10 @@
-import { ObjectId } from 'mongodb';
-import { UserWrapper }            from 'database/user';
-import { IDeleteUser }            from 'interface/responses/auth-endpoints';
-import { deleteUser }             from 'router/delete-user';
+import { IDeleteUser, deleteUser } from 'router/user/delete';
+import { IUnauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized } from 'interface/error/unauthorized';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
-import { encodeBasicAuth }        from 'tools/auth';
-import {
-    IUnauthenticatedError,
-    IUnauthorizedError
-} from 'interface/responses/error-responses';
+import { ObjectId } from 'mongodb';
+import { UserWrapper } from 'database/user';
+import { encodeBasicAuth } from 'tools/auth';
 
 describe('delete-user route handler integration', () => {
     let env: IntegrationEnvironment;
@@ -24,18 +21,18 @@ describe('delete-user route handler integration', () => {
     });
     it('should require authentication', async done => {
         const response = await env.executeRouteHandler(deleteUser);
-        expect(response.payload).toStrictEqual<IUnauthenticatedError>({
-            ok: false,
-            error: 'Unauthenticated'
+        expect(response.payload).toStrictEqual<IUnauthenticated>({
+            error: 'Unauthenticated',
+            ok: false
         });
         done();
     });
     it('should require authorization', async done => {
         env.request.headers.authorization = encodeBasicAuth(user.username, '!password');
         const response = await env.executeRouteHandler(deleteUser);
-        expect(response.payload).toStrictEqual<IUnauthorizedError>({
-            ok: false,
-            error: 'Unauthorized'
+        expect(response.payload).toStrictEqual<IUnauthorized>({
+            error: 'Unauthorized',
+            ok: false
         });
         done();
     });
@@ -55,12 +52,12 @@ describe('delete-user route handler integration', () => {
         await env.executeRouteHandler(deleteUser);
         expect(await env.db.collection.rates.findOne({ owner: user._id })).toBeNull();
         expect(await env.db.collection.posts.findOne({ _id: posts[0]._id })).toMatchObject({
-            likes: 0,
-            dislikes: 0
+            dislikes: 0,
+            likes: 0
         });
         expect(await env.db.collection.posts.findOne({ _id: posts[1]._id })).toMatchObject({
-            likes: 0,
-            dislikes: 0
+            dislikes: 0,
+            likes: 0
         });
         done();
     });
@@ -73,12 +70,12 @@ describe('delete-user route handler integration', () => {
         await env.executeRouteHandler(deleteUser);
         expect(await env.db.collection.rates.findOne({ owner: user._id })).toBeNull();
         expect(await env.db.collection.posts.findOne({ _id: posts[0]._id })).toMatchObject({
-            likes: 0,
-            dislikes: 0
+            dislikes: 0,
+            likes: 0
         });
         expect(await env.db.collection.posts.findOne({ _id: posts[1]._id })).toMatchObject({
-            likes: 0,
-            dislikes: 0
+            dislikes: 0,
+            likes: 0
         });
         done();
     });
