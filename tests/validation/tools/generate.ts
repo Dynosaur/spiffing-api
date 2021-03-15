@@ -1,17 +1,17 @@
-import { randomBytes } from 'crypto';
-import { ObjectId }    from 'bson';
 import { CommentAPI, CommentWrapper } from 'database/comment';
-import { CommonActions }              from 'database/common-actions';
-import { PostAPI, PostWrapper }       from 'database/post';
-import { UserAPI, UserWrapper }       from 'database/user';
+import { PostAPI, PostWrapper } from 'database/post';
+import { UserAPI, UserWrapper } from 'database/user';
+import { CommonActions } from 'database/common-actions';
+import { ObjectId } from 'mongodb';
+import { randomBytes } from 'crypto';
 
-export async function generateComments(commentApi: CommentAPI, amount: number, author: ObjectId,
+export function generateComments(commentApi: CommentAPI, amount: number, author: ObjectId,
     parentType: 'comment' | 'post', parentId: ObjectId
 ): Promise<CommentWrapper[]> {
-    const comments: CommentWrapper[] = [];
+    const comments: Promise<CommentWrapper>[] = [];
     for (let i = 0; i < amount; i++)
-        comments.push(await commentApi.create(author, 'Content', parentType, parentId));
-    return comments;
+        comments.push(commentApi.create(author, 'Content', parentType, parentId));
+    return Promise.all(comments);
 }
 
 export function generateComment(api: CommentAPI, author: ObjectId, parentType: 'comment' | 'post',
@@ -22,6 +22,13 @@ export function generateComment(api: CommentAPI, author: ObjectId, parentType: '
 
 export function generatePost(postApi: PostAPI, author: ObjectId): Promise<PostWrapper> {
     return postApi.create(author, randomBytes(4).toString('hex'), randomBytes(4).toString('hex'));
+}
+
+export function generatePosts(postApi: PostAPI, author: ObjectId, amount: number): Promise<PostWrapper[]> {
+    const comments: Promise<PostWrapper>[] = [];
+    for (let i = 0; i < amount; i++)
+        comments.push(generatePost(postApi, author));
+    return Promise.all(comments);
 }
 
 export function generateUser(userApi: UserAPI, common: CommonActions): Promise<UserWrapper> {
