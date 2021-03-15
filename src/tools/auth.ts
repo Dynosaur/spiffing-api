@@ -1,7 +1,5 @@
-import { AuthorizationParseError }  from 'interface-bindings/error-responses';
-import { IAuthorizationParseError } from 'interface/responses/error-responses';
-import { RoutePayload }             from 'route-handling/route-infra';
-import { UndefinedError }           from 'tools/undefined-error';
+import { AuthorizationParse } from 'interface/error/authorization-parse';
+import { UndefinedError } from 'tools/undefined-error';
 
 const encodeMap = new Map();
 encodeMap.set(' ', '%20');
@@ -23,27 +21,36 @@ export function encodeHttp(s: string): string {
     return s;
 }
 
-export function decodeBasicAuth(authorizationHeader: string): RoutePayload<IAuthorizationParseError> | { username: string; password: string; } {
+export type ReturnType = { ok: true; username: string; password: string; } |
+                         { ok: false; error: AuthorizationParse };
+export function decodeBasicAuth(authorizationHeader: string): ReturnType {
     if (authorizationHeader === undefined || authorizationHeader === null)
         throw new UndefinedError('authorizationHeader', authorizationHeader);
 
     const ensureAuthorizationIsBasic = authorizationHeader.match(/^Basic /);
-    if (!ensureAuthorizationIsBasic) return new AuthorizationParseError('Authorization Type');
+    if (!ensureAuthorizationIsBasic) return {
+        error: new AuthorizationParse('Authorization Type'),
+        ok: false
+    };
 
     const base64 = authorizationHeader.substring(6);
     const httpEncoded = Buffer.from(base64, 'base64').toString('ascii');
 
     const usernameRegex = httpEncoded.match(/^(.+):/);
-    if (!usernameRegex)
-        return new AuthorizationParseError('Username');
+    if (!usernameRegex) return {
+        error: new AuthorizationParse('Username'),
+        ok: false
+    };
     const username = decodeHttp(usernameRegex[1]);
 
     const passwordRegex = httpEncoded.match(/:(.+)$/);
-    if (!passwordRegex)
-        return new AuthorizationParseError('Password');
+    if (!passwordRegex) return {
+        error: new AuthorizationParse('Password'),
+        ok: false
+    };
     const password = decodeHttp(passwordRegex[1]);
 
-    return { username, password };
+    return { ok: true, password, username };
 }
 
 export function encodeBasicAuth(username: string, password: string): string {
