@@ -13,6 +13,7 @@
         "eol-last": "warn",
         "jest/no-disabled-tests": "warn",
         "jest/no-focused-tests": "warn",
+        "no-await-in-loop": "warn",
         "no-case-declarations": "warn",
         "no-console": "warn",
         "no-fallthrough": "warn",
@@ -23,6 +24,8 @@
             1, "single"
         ],
         "semi": "warn",
+        "sort-imports": "warn",
+        "sort-keys": "warn",
         "@typescript-eslint/no-empty-interface": "off",
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-namespace": "off",
