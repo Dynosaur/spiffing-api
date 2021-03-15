@@ -10,6 +10,7 @@
         "jest"
     ],
     "rules": {
+        "comma-dangle": "warn",
         "eol-last": "warn",
         "jest/no-disabled-tests": "warn",
         "jest/no-focused-tests": "warn",
