@@ -1,10 +1,11 @@
-import { FilterQuery }               from 'mongodb';
+import { FilterQuery } from 'mongodb';
 import { CommentWrapper, DbComment } from 'database/comment';
 import { PostWrapper }               from 'database/post';
 import { UserWrapper }               from 'database/user';
-import { IGetComments }              from 'interface/responses/api-responses';
-import { IMissingDataError, IObjectIdParseError }         from 'interface/responses/error-responses';
-import { getComments }               from 'router/get-comments';
+import { IIllegalValue }             from 'interface/error/illegal-value';
+import { IMissing }                  from 'interface/error/missing';
+import { IObjectIdParse }            from 'interface/error/object-id-parse';
+import { IGetComment, getComment }   from 'router/comment/get';
 import { IntegrationEnvironment }    from 'tests/mock/integration-environment';
 
 describe('get-comments route handler', () => {
@@ -33,9 +34,9 @@ describe('get-comments route handler', () => {
     });
     it('should get all comments', async done => {
         const spy = jest.spyOn(env.actions.comment, 'getManyByFilter');
-        const response = await env.executeRouteHandler(getComments);
+        const response = await env.executeRouteHandler(getComment);
         expect(spy).toHaveBeenCalledWith({});
-        expect(response.payload).toStrictEqual<IGetComments.Success>({
+        expect(response.payload).toStrictEqual<IGetComment.Success>({
             ok: true,
             comments: comments.concat(subcomment).concat(secondComments).map(comment => comment.toInterface())
         });
@@ -43,51 +44,45 @@ describe('get-comments route handler', () => {
     });
     it('should require parentType AND parentId', async done => {
         env.request.query.parentType = 'post';
-        let response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IMissingDataError>({
-            ok: false,
-            error: 'Missing Data',
-            missing: {
-                'scope-name': 'params',
-                received: ['parentType'],
-                required: ['parentId']
-            }
+        let response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IMissing>({
+            error: 'Missing Item',
+            field: 'query',
+            name: 'parentId',
+            ok: false
         });
         delete env.request.query.parentType;
         env.request.query.parentId = post.id;
-        response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IMissingDataError>({
-            ok: false,
-            error: 'Missing Data',
-            missing: {
-                'scope-name': 'params',
-                received: ['parentId'],
-                required: ['parentType']
-            }
+        response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IMissing>({
+            error: 'Missing Item',
+            field: 'query',
+            name: 'parentType',
+            ok: false
         });
         done();
     });
     it('should require parentType should be \'comment\' or \'post\'', async done => {
         env.request.query.parentType = 'random';
         env.request.query.parentId = post.id;
-        const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IGetComments.IInvalidInputError>({
-            ok: false,
-            error: 'Invalid Input',
+        const response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IIllegalValue>({
             allowed: ['comment', 'post'],
             context: 'params',
-            key: 'parentType',
-            provided: 'random'
+            error: 'Illegal Value',
+            ok: false,
+            value: 'random'
         });
         done();
     });
     it('should require parentId to be an ObjectId', async done => {
         env.request.query.parentType = 'post';
         env.request.query.parentId = 'random';
-        const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IObjectIdParseError>({
-            ok: false,
+        const response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IObjectIdParse>({
+            context: 'query.parentId',
             error: 'Object Id Parse',
+            ok: false,
             provided: 'random'
         });
         done();
@@ -96,14 +91,14 @@ describe('get-comments route handler', () => {
         env.request.query.parentType = 'post';
         env.request.query.parentId = post.id;
         const spy = jest.spyOn(env.db.collection.comments, 'find');
-        let response = await env.executeRouteHandler(getComments);
+        let response = await env.executeRouteHandler(getComment);
         expect(spy).toHaveBeenCalledWith<[FilterQuery<DbComment>]>({
             parent: {
                 _id: post._id,
                 contentType: 'post'
             }
         });
-        expect(response.payload).toStrictEqual<IGetComments.Success>({
+        expect(response.payload).toStrictEqual<IGetComment.Success>({
             ok: true,
             comments: comments.map(comment => comment.toInterface()),
             acceptedParams: ['parentId', 'parentType']
@@ -111,14 +106,14 @@ describe('get-comments route handler', () => {
         spy.mockClear();
         env.request.query.parentId = secondPost.id;
         env.request.query.parentType = 'post';
-        response = await env.executeRouteHandler(getComments);
+        response = await env.executeRouteHandler(getComment);
         expect(spy).toHaveBeenCalledWith<[FilterQuery<DbComment>]>({
             parent: {
                 _id: secondPost._id,
                 contentType: 'post'
             }
         });
-        expect(response.payload).toStrictEqual<IGetComments.Success>({
+        expect(response.payload).toStrictEqual<IGetComment.Success>({
             ok: true,
             comments: secondComments.map(comment => comment.toInterface()),
             acceptedParams: ['parentId', 'parentType']
@@ -129,14 +124,14 @@ describe('get-comments route handler', () => {
         env.request.query.parentType = 'comment';
         env.request.query.parentId = comments[0].id;
         const spy = jest.spyOn(env.db.collection.comments, 'find');
-        const response = await env.executeRouteHandler(getComments);
+        const response = await env.executeRouteHandler(getComment);
         expect(spy).toHaveBeenCalledWith<[FilterQuery<DbComment>]>({
             parent: {
                 _id: comments[0]._id,
                 contentType: 'comment'
             }
         });
-        expect(response.payload).toStrictEqual<IGetComments.Success>({
+        expect(response.payload).toStrictEqual<IGetComment.Success>({
             ok: true,
             comments: [subcomment.toInterface()],
             acceptedParams: ['parentId', 'parentType']
@@ -145,18 +140,19 @@ describe('get-comments route handler', () => {
     });
     it('should require author param to be an ObjectId', async done => {
         env.request.query.author = 'random';
-        const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IObjectIdParseError>({
-            ok: false,
+        const response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IObjectIdParse>({
+            context: 'query.author',
             error: 'Object Id Parse',
+            ok: false,
             provided: 'random'
         });
         done();
     });
     it('should get comments made by a user', async done => {
         env.request.query.author = users[1].id;
-        const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IGetComments.Success>({
+        const response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IGetComment.Success>({
             ok: true,
             comments: secondComments.map(comment => comment.toInterface()),
             acceptedParams: ['author']
@@ -166,8 +162,8 @@ describe('get-comments route handler', () => {
     it('should ignore unrecognized include values', async done => {
         env.request.query.include = 'random';
         env.request.query.author = users[0].id;
-        const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IGetComments.Success>({
+        const response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IGetComment.Success>({
             ok: true,
             comments: comments.map(comment => comment.toInterface()),
             acceptedParams: ['author'],
@@ -178,8 +174,8 @@ describe('get-comments route handler', () => {
     it('should include author\'s user object', async done => {
         env.request.query.include = 'authorUser';
         env.request.query.author = users[0].id;
-        const response = await env.executeRouteHandler(getComments);
-        expect(response.payload).toStrictEqual<IGetComments.Success>({
+        const response = await env.executeRouteHandler(getComment);
+        expect(response.payload).toStrictEqual<IGetComment.Success>({
             ok: true,
             comments: comments.map(comment => comment.toInterface(users[0].toInterface())),
             acceptedParams: ['author', 'include'],
