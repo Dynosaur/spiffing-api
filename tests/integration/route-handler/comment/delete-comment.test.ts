@@ -1,25 +1,20 @@
-import { PostWrapper }            from 'database/post';
-import { UserWrapper }            from 'database/user';
-import { IDeleteComment }         from 'interface/responses/api-responses';
-import { deleteComment }          from 'router/api-router';
-import { IntegrationEnvironment } from 'tests/mock/integration-environment';
-import { encodeBasicAuth }        from 'tools/auth';
-import {
-    INoCommentFoundError,
-    IUnauthenticatedError,
-    IUnauthorizedError
-} from 'interface/responses/error-responses';
-import { ObjectId } from 'bson';
+import { ObjectId } from 'mongodb';
+import { PostWrapper }                   from 'database/post';
+import { UserWrapper }                   from 'database/user';
+import { deleteComment, IDeleteComment } from 'router/comment/delete-comment';
+import { IntegrationEnvironment }        from 'tests/mock/integration-environment';
+import { encodeBasicAuth }               from 'tools/auth';
+import { IContentNotFound }              from 'interface/error/content-not-found';
+import { IUnauthenticated }              from 'interface/error/unauthenticated';
+import { IUnauthorized }                 from 'interface/error/unauthorized';
 
 describe('delete-comment route handler', () => {
     let env: IntegrationEnvironment;
     let user: UserWrapper;
-    let post: PostWrapper;
     beforeEach(async done => {
         env = new IntegrationEnvironment('delete-comment');
         await env.initialize();
         user = await env.generateUser();
-        post = await env.generatePost(user._id);
         done();
     });
     afterEach(async done => {
@@ -28,7 +23,7 @@ describe('delete-comment route handler', () => {
     });
     it('should require authentication', async done => {
         const response = await env.executeRouteHandler(deleteComment);
-        expect(response.payload).toStrictEqual<IUnauthenticatedError>({
+        expect(response.payload).toStrictEqual<IUnauthenticated>({
             ok: false,
             error: 'Unauthenticated'
         });
@@ -37,34 +32,38 @@ describe('delete-comment route handler', () => {
     it('should require authorization', async done => {
         env.request.headers.authorization = encodeBasicAuth(user.username, '!password');
         const response = await env.executeRouteHandler(deleteComment);
-        expect(response.payload).toStrictEqual<IUnauthorizedError>({
+        expect(response.payload).toStrictEqual<IUnauthorized>({
             ok: false,
             error: 'Unauthorized'
         });
         done();
     });
-    it('should require authorization from author of comment', async done => {
-        const comment = await env.api.comment.create(user._id, 'Content', 'post', post._id);
-        const otherUser = await env.generateUser();
-        env.request.params.id = comment.id;
-        env.request.headers.authorization = encodeBasicAuth(otherUser.username, env.defaultPassword);
-        const response = await env.executeRouteHandler(deleteComment);
-        expect(response.payload).toStrictEqual<IUnauthorizedError>({
-            ok: false,
-            error: 'Unauthorized'
-        });
-        done();
-    });
-    describe('authorized requests', () => {
-        beforeEach(() => {
+    describe('requires post', () => {
+        let post: PostWrapper;
+        beforeEach(async done => {
             env.request.headers.authorization = encodeBasicAuth(user.username, 'password');
+            post = await env.generatePost(user._id);
+            done();
+        });
+        it('should require authorization from author of comment', async done => {
+            const comment = await env.api.comment.create(user._id, 'Content', 'post', post._id);
+            const otherUser = await env.generateUser();
+            env.request.params.id = comment.id;
+            env.request.headers.authorization = encodeBasicAuth(otherUser.username, env.defaultPassword);
+            const response = await env.executeRouteHandler(deleteComment);
+            expect(response.payload).toStrictEqual<IUnauthorized>({
+                ok: false,
+                error: 'Unauthorized'
+            });
+            done();
         });
         it('should check that the comment exists', async done => {
             const id = new ObjectId().toHexString();
             env.request.params.id = id;
             const response = await env.executeRouteHandler(deleteComment);
-            expect(response.payload).toStrictEqual<INoCommentFoundError>({
-                error: 'No Comment Found',
+            expect(response.payload).toStrictEqual<IContentNotFound>({
+                content: 'Comment',
+                error: 'Content Not Found',
                 ok: false,
                 id
             });
@@ -92,4 +91,5 @@ describe('delete-comment route handler', () => {
             done();
         });
     });
+
 });
