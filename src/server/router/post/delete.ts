@@ -46,6 +46,6 @@ export async function deletePost(request: Request, actions: DatabaseActions): Re
     return new Ok();
 }
 
-export const routeInfo: HandlerRoute = {
+export const route: HandlerRoute = {
     handler: deletePost, method: 'DELETE', path: '/post/:id'
 };
