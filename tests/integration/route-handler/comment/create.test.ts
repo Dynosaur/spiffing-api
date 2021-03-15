@@ -5,7 +5,7 @@ import { IUnauthorized }                 from 'interface/error/unauthorized';
 import { IUnauthenticated }              from 'interface/error/unauthenticated';
 import { IMissing }                      from 'interface/error/missing';
 import { IContentNotFound }              from 'interface/error/content-not-found';
-import { ICreateComment, createComment } from 'router/comment/create-comment';
+import { ICreateComment, createComment } from 'router/comment/create';
 import { IntegrationEnvironment }        from 'tests/mock/integration-environment';
 import { encodeBasicAuth }               from 'tools/auth';
 

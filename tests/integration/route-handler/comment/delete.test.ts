@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { PostWrapper }                   from 'database/post';
 import { UserWrapper }                   from 'database/user';
-import { deleteComment, IDeleteComment } from 'router/comment/delete-comment';
+import { deleteComment, IDeleteComment } from 'router/comment/delete';
 import { IntegrationEnvironment }        from 'tests/mock/integration-environment';
 import { encodeBasicAuth }               from 'tools/auth';
 import { IContentNotFound }              from 'interface/error/content-not-found';
