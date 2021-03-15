@@ -1,25 +1,40 @@
+import { ContentNotFound, IContentNotFound } from 'interface/error/content-not-found';
+import { DatabaseActions, HandlerRoute, RoutePayload } from 'route-handling/route-infra';
+import { IMissing, Missing } from 'interface/error/missing';
+import { IUnauthenticated, Unauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized, Unauthorized } from 'interface/error/unauthorized';
+import { IAuthorizationParse } from 'interface/error/authorization-parse';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
 import { Request } from 'express';
-import { IRateComment }                  from 'interface/responses/api-responses';
-import { RateComment }                   from 'interface-bindings/api-responses';
-import { DatabaseActions, RoutePayload } from 'route-handling/route-infra';
-import { decodeBasicAuth }               from 'tools/auth';
-import { parseObjectId }                 from 'tools/object-id';
-import {
-    MissingDataError,
-    NoCommentFoundError,
-    UnauthenticatedError,
-    UnauthorizedError
-} from 'interface-bindings/error-responses';
+import { decodeBasicAuth } from 'tools/auth';
+import { parseObjectId } from 'tools/object-id';
+
+export namespace IRateComment {
+    export type ErrorTx =
+        | IAuthorizationParse
+        | IContentNotFound
+        | IMissing
+        | IObjectIdParse
+        | IUnauthenticated
+        | IUnauthorized;
+
+    export interface Success {
+        change: boolean;
+        ok: true;
+    }
+
+    export type Tx = ErrorTx | Success;
+}
 
 export async function rateComment(request: Request, actions: DatabaseActions): Promise<RoutePayload<IRateComment.Tx>> {
-    if (!request.headers.authorization) return new UnauthenticatedError();
+    if (!request.headers.authorization) return new Unauthenticated();
     if (!request.body.hasOwnProperty('rating'))
-        return new MissingDataError('body', Object.keys(request.body), ['rating']);
+        return new Missing('body', 'rating');
 
-    const decodeAuth = decodeBasicAuth(request.headers.authorization);
-    if (decodeAuth instanceof RoutePayload) return decodeAuth;
-    const user = await actions.common.authorize(decodeAuth.username, decodeAuth.password);
-    if (!user) return new UnauthorizedError();
+    const decode = decodeBasicAuth(request.headers.authorization);
+    if (decode.ok === false) return decode.error;
+    const user = await actions.common.authorize(decode.username, decode.password);
+    if (!user) return new Unauthorized();
 
     const parseId = parseObjectId(request.params.id);
     if (parseId.ok === false) return parseId.error;
@@ -27,7 +42,7 @@ export async function rateComment(request: Request, actions: DatabaseActions): P
 
     const rating = Math.sign(request.body.rating);
     const comment = await actions.comment.get(commentId);
-    if (comment === null) return new NoCommentFoundError(request.params.id);
+    if (comment === null) return new ContentNotFound(request.params.id, 'Comment');
 
     let result = false;
     const rate = await actions.user.getUserRateApi(user._id);
@@ -42,5 +57,16 @@ export async function rateComment(request: Request, actions: DatabaseActions): P
             result = await rate.likeComment(comment._id);
             break;
     }
-    return new RateComment.Success(comment, rating, result);
+    return {
+        code: 200,
+        message: `Rated comment ${comment.id} with ${rating}.`,
+        payload: {
+            change: result,
+            ok: true
+        }
+    };
 }
+
+export const route: HandlerRoute = {
+    handler: rateComment, method: 'POST', path: '/rate/comment/:id'
+};
