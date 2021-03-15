@@ -2,7 +2,6 @@ import { ContentNotFound, IContentNotFound } from 'interface/error/content-not-f
 import { DatabaseActions, HandlerRoute, RoutePayload } from 'route-handling/route-infra';
 import { IMissing, Missing } from 'interface/error/missing';
 import { IObjectIdParse, ObjectIdParse } from 'interface/error/object-id-parse';
-import { IOk, Ok } from 'interface/ok';
 import { IUnauthenticated, Unauthenticated } from 'interface/error/unauthenticated';
 import { IUnauthorized, Unauthorized } from 'interface/error/unauthorized';
 import { IAuthorizationParse } from 'interface/error/authorization-parse';
@@ -19,7 +18,11 @@ export namespace IDeletePost {
         | IUnauthenticated
         | IUnauthorized;
 
-    export type Tx = ErrorTx | IOk;
+    export interface Success {
+        ok: true;
+    }
+
+    export type Tx = ErrorTx | Success;
 }
 
 type ReturnType = Promise<RoutePayload<IDeletePost.Tx>>;
@@ -43,7 +46,11 @@ export async function deletePost(request: Request, actions: DatabaseActions): Re
 
     await actions.post.delete(postId);
 
-    return new Ok();
+    return {
+        code: 200,
+        message: `Deleted post ${post.id}.`,
+        payload: { ok: true }
+    };
 }
 
 export const route: HandlerRoute = {

@@ -1,14 +1,13 @@
+import { IDeletePost, deletePost } from 'router/post/delete';
 import { IContentNotFound } from 'interface/error/content-not-found';
 import { IMissing } from 'interface/error/missing';
 import { IObjectIdParse } from 'interface/error/object-id-parse';
-import { IOk }  from 'interface/ok';
 import { IUnauthenticated } from 'interface/error/unauthenticated';
 import { IUnauthorized } from 'interface/error/unauthorized';
 import { IntegrationEnvironment } from 'tests/mock/integration-environment';
 import { ObjectId } from 'mongodb';
 import { PostWrapper } from 'database/post';
 import { UserWrapper } from 'database/user';
-import { deletePost } from 'router/post/delete';
 import { encodeBasicAuth } from 'tools/auth';
 
 describe('delete-post route handler integration', () => {
@@ -95,7 +94,7 @@ describe('delete-post route handler integration', () => {
         env.request.headers.authorization = encodeBasicAuth(author.username, env.defaultPassword);
         env.request.params.id = post.id;
         const response = await env.executeRouteHandler(deletePost);
-        expect(response.payload).toStrictEqual<IOk>({ ok: true });
+        expect(response.payload).toStrictEqual<IDeletePost.Success>({ ok: true });
         done();
     });
 });

@@ -1,5 +1,5 @@
 import { generatePost, generateUser } from 'tests/validation/tools/generate';
-import { IOk } from 'interface/ok';
+import { IDeletePost } from 'server/router/post/delete';
 import { PostWrapper } from 'database/post';
 import { Server } from 'server/server';
 import { UserWrapper } from 'database/user';
@@ -24,7 +24,7 @@ describe('delete-post route handler validation', () => {
         const response = await supertest(server.app)
             .delete(`/api/post/${post.id}`)
             .auth(author.username, 'password');
-        expect(response.body).toStrictEqual<IOk>({ ok: true });
+        expect(response.body).toStrictEqual<IDeletePost.Success>({ ok: true });
         expect(server.postDbi.get({ _id: post._id })).toBeNull();
         done();
     });
