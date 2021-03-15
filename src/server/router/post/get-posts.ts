@@ -1,14 +1,13 @@
-import { Request }               from 'express';
+import { DatabaseActions, HandlerRoute, RoutePayload } from 'route-handling/route-infra';
 import { FilterQuery, ObjectId } from 'mongodb';
-import { DbPost }                        from 'database/post';
-import { Post, User }                    from 'interface/data-types';
-import { IObjectIdParse }                from 'interface/error/object-id-parse';
-import { IPostNotFound }                 from 'interface/error/post-not-found';
-import { DatabaseActions, RoutePayload } from 'route-handling/route-infra';
-import { parseObjectId }                 from 'tools/object-id';
+import { Post, User } from 'interface/data-types';
+import { DbPost } from 'database/post';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { Request } from 'express';
+import { parseObjectId } from 'tools/object-id';
 
 export namespace IGetPosts {
-    export type ErrorTx = IPostNotFound | IObjectIdParse;
+    export type ErrorTx = IObjectIdParse;
 
     export interface Success {
         failed?: Record<string, any>;
@@ -107,3 +106,7 @@ export async function getPosts(request: Request, actions: DatabaseActions): Retu
         }
     };
 }
+
+export const route: HandlerRoute = {
+    handler: getPosts, method: 'GET', path: '/post'
+};
