@@ -1,18 +1,15 @@
-import { ObjectId } from 'mongodb';
-import { UserWrapper }            from 'database/user';
-import { rateComment }            from 'router/rate-comment';
-import { IntegrationEnvironment } from 'tests/mock/integration-environment';
-import { encodeBasicAuth }        from 'tools/auth';
-import {
-    IMissingDataError,
-    INoCommentFoundError,
-    IObjectIdParseError,
-    IUnauthenticatedError,
-    IUnauthorizedError
-} from 'interface/responses/error-responses';
+import { IRateComment, rateComment } from 'router/rate/comment';
 import { CommentWrapper } from 'database/comment';
-import { IRateComment } from 'interface/responses/api-responses';
+import { IContentNotFound } from 'interface/error/content-not-found';
+import { IMissing } from 'interface/error/missing';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { IUnauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized } from 'interface/error/unauthorized';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
+import { ObjectId } from 'mongodb';
 import { PostWrapper } from 'database/post';
+import { UserWrapper } from 'database/user';
+import { encodeBasicAuth } from 'tools/auth';
 
 describe('rate-comment route handler integration', () => {
     let env: IntegrationEnvironment;
@@ -29,23 +26,20 @@ describe('rate-comment route handler integration', () => {
     });
     it('should require authentication', async done => {
         const response = await env.executeRouteHandler(rateComment);
-        expect(response.payload).toStrictEqual<IUnauthenticatedError>({
-            ok: false,
-            error: 'Unauthenticated'
+        expect(response.payload).toStrictEqual<IUnauthenticated>({
+            error: 'Unauthenticated',
+            ok: false
         });
         done();
     });
     it('should require request body field \'rating\'', async done => {
         env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
         const response = await env.executeRouteHandler(rateComment);
-        expect(response.payload).toStrictEqual<IMissingDataError>({
-            ok: false,
-            error: 'Missing Data',
-            missing: {
-                'scope-name': 'body',
-                received: [],
-                required: ['rating']
-            }
+        expect(response.payload).toStrictEqual<IMissing>({
+            error: 'Missing Item',
+            field: 'body',
+            name: 'rating',
+            ok: false
         });
         done();
     });
@@ -53,9 +47,9 @@ describe('rate-comment route handler integration', () => {
         env.request.body.rating = 1;
         env.request.headers.authorization = encodeBasicAuth(user.username, '!password');
         const response = await env.executeRouteHandler(rateComment);
-        expect(response.payload).toStrictEqual<IUnauthorizedError>({
-            ok: false,
-            error: 'Unauthorized'
+        expect(response.payload).toStrictEqual<IUnauthorized>({
+            error: 'Unauthorized',
+            ok: false
         });
         done();
     });
@@ -64,9 +58,10 @@ describe('rate-comment route handler integration', () => {
         env.request.headers.authorization = encodeBasicAuth(user.username, env.defaultPassword);
         env.request.params.id = 'random';
         const response = await env.executeRouteHandler(rateComment);
-        expect(response.payload).toStrictEqual<IObjectIdParseError>({
-            ok: false,
+        expect(response.payload).toStrictEqual<IObjectIdParse>({
+            context: 'params.id',
             error: 'Object Id Parse',
+            ok: false,
             provided: 'random'
         });
         done();
@@ -77,10 +72,11 @@ describe('rate-comment route handler integration', () => {
         const commentId = new ObjectId().toHexString();
         env.request.params.id = commentId;
         const response = await env.executeRouteHandler(rateComment);
-        expect(response.payload).toStrictEqual<INoCommentFoundError>({
-            ok: false,
-            error: 'No Comment Found',
-            id: commentId
+        expect(response.payload).toStrictEqual<IContentNotFound>({
+            content: 'Comment',
+            error: 'Content Not Found',
+            id: commentId,
+            ok: false
         });
         done();
     });
@@ -98,8 +94,8 @@ describe('rate-comment route handler integration', () => {
             env.request.body.rating = 1;
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: true
+                change: true,
+                ok: true
             });
             done();
         });
@@ -108,8 +104,8 @@ describe('rate-comment route handler integration', () => {
             await env.executeRouteHandler(rateComment);
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: false
+                change: false,
+                ok: true
             });
             done();
         });
@@ -119,8 +115,8 @@ describe('rate-comment route handler integration', () => {
             env.request.body.rating = 1;
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: true
+                change: true,
+                ok: true
             });
             done();
         });
@@ -128,8 +124,8 @@ describe('rate-comment route handler integration', () => {
             env.request.body.rating = -1;
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: true
+                change: true,
+                ok: true
             });
             done();
         });
@@ -138,8 +134,8 @@ describe('rate-comment route handler integration', () => {
             await env.executeRouteHandler(rateComment);
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: false
+                change: false,
+                ok: true
             });
             done();
         });
@@ -149,8 +145,8 @@ describe('rate-comment route handler integration', () => {
             env.request.body.rating = -1;
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: true
+                change: true,
+                ok: true
             });
             done();
         });
@@ -158,8 +154,8 @@ describe('rate-comment route handler integration', () => {
             env.request.body.rating = 0;
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: false
+                change: false,
+                ok: true
             });
             done();
         });
@@ -169,8 +165,8 @@ describe('rate-comment route handler integration', () => {
             env.request.body.rating = 0;
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: true
+                change: true,
+                ok: true
             });
             done();
         });
@@ -180,8 +176,8 @@ describe('rate-comment route handler integration', () => {
             env.request.body.rating = 0;
             const response = await env.executeRouteHandler(rateComment);
             expect(response.payload).toStrictEqual<IRateComment.Success>({
-                ok: true,
-                change: true
+                change: true,
+                ok: true
             });
             done();
         });
