@@ -1,12 +1,12 @@
-import { FilterQuery } from 'mongodb';
 import { CommentWrapper, DbComment } from 'database/comment';
-import { PostWrapper }               from 'database/post';
-import { UserWrapper }               from 'database/user';
-import { IIllegalValue }             from 'interface/error/illegal-value';
-import { IMissing }                  from 'interface/error/missing';
-import { IObjectIdParse }            from 'interface/error/object-id-parse';
-import { IGetComment, getComment }   from 'router/comment/get';
-import { IntegrationEnvironment }    from 'tests/mock/integration-environment';
+import { IGetComment, getComment } from 'router/comment/get';
+import { FilterQuery } from 'mongodb';
+import { IIllegalValue } from 'interface/error/illegal-value';
+import { IMissing } from 'interface/error/missing';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { IntegrationEnvironment } from 'tests/mock/integration-environment';
+import { PostWrapper } from 'database/post';
+import { UserWrapper } from 'database/user';
 
 describe('get-comments route handler', () => {
     let env: IntegrationEnvironment;
@@ -37,8 +37,8 @@ describe('get-comments route handler', () => {
         const response = await env.executeRouteHandler(getComment);
         expect(spy).toHaveBeenCalledWith({});
         expect(response.payload).toStrictEqual<IGetComment.Success>({
-            ok: true,
-            comments: comments.concat(subcomment).concat(secondComments).map(comment => comment.toInterface())
+            comments: comments.concat(subcomment).concat(secondComments).map(comment => comment.toInterface()),
+            ok: true
         });
         done();
     });
@@ -55,6 +55,7 @@ describe('get-comments route handler', () => {
         env.request.query.parentId = post.id;
         response = await env.executeRouteHandler(getComment);
         expect(response.payload).toStrictEqual<IMissing>({
+            allowedValues: ['comment', 'post'],
             error: 'Missing Item',
             field: 'query',
             name: 'parentType',
@@ -68,7 +69,7 @@ describe('get-comments route handler', () => {
         const response = await env.executeRouteHandler(getComment);
         expect(response.payload).toStrictEqual<IIllegalValue>({
             allowed: ['comment', 'post'],
-            context: 'params',
+            context: 'query.parentType',
             error: 'Illegal Value',
             ok: false,
             value: 'random'
@@ -99,9 +100,9 @@ describe('get-comments route handler', () => {
             }
         });
         expect(response.payload).toStrictEqual<IGetComment.Success>({
-            ok: true,
+            acceptedParams: ['parentId', 'parentType'],
             comments: comments.map(comment => comment.toInterface()),
-            acceptedParams: ['parentId', 'parentType']
+            ok: true
         });
         spy.mockClear();
         env.request.query.parentId = secondPost.id;
@@ -114,9 +115,9 @@ describe('get-comments route handler', () => {
             }
         });
         expect(response.payload).toStrictEqual<IGetComment.Success>({
-            ok: true,
+            acceptedParams: ['parentId', 'parentType'],
             comments: secondComments.map(comment => comment.toInterface()),
-            acceptedParams: ['parentId', 'parentType']
+            ok: true
         });
         done();
     });
@@ -132,9 +133,9 @@ describe('get-comments route handler', () => {
             }
         });
         expect(response.payload).toStrictEqual<IGetComment.Success>({
-            ok: true,
+            acceptedParams: ['parentId', 'parentType'],
             comments: [subcomment.toInterface()],
-            acceptedParams: ['parentId', 'parentType']
+            ok: true
         });
         done();
     });
@@ -153,21 +154,22 @@ describe('get-comments route handler', () => {
         env.request.query.author = users[1].id;
         const response = await env.executeRouteHandler(getComment);
         expect(response.payload).toStrictEqual<IGetComment.Success>({
-            ok: true,
+            acceptedParams: ['author'],
             comments: secondComments.map(comment => comment.toInterface()),
-            acceptedParams: ['author']
+            ok: true
         });
         done();
     });
-    it('should ignore unrecognized include values', async done => {
+    it('should not ignore unrecognized include values', async done => {
         env.request.query.include = 'random';
         env.request.query.author = users[0].id;
         const response = await env.executeRouteHandler(getComment);
-        expect(response.payload).toStrictEqual<IGetComment.Success>({
-            ok: true,
-            comments: comments.map(comment => comment.toInterface()),
-            acceptedParams: ['author'],
-            ignoredParams: ['include']
+        expect(response.payload).toStrictEqual<IIllegalValue>({
+            allowed: ['authorUser'],
+            context: 'query.include',
+            error: 'Illegal Value',
+            ok: false,
+            value: 'random'
         });
         done();
     });
@@ -176,10 +178,9 @@ describe('get-comments route handler', () => {
         env.request.query.author = users[0].id;
         const response = await env.executeRouteHandler(getComment);
         expect(response.payload).toStrictEqual<IGetComment.Success>({
-            ok: true,
-            comments: comments.map(comment => comment.toInterface(users[0].toInterface())),
             acceptedParams: ['author', 'include'],
-            includeSuccessful: true
+            comments: comments.map(comment => comment.toInterface(users[0].toInterface())),
+            ok: true
         });
         done();
     });
