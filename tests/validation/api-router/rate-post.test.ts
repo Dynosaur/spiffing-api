@@ -1,16 +1,14 @@
-import { randomBytes } from 'crypto';
-import { Express }     from 'express';
-import supertest       from 'supertest';
-import { UserWrapper } from 'database/user';
+import { Express } from 'express';
+import { IContentNotFound } from 'interface/error/content-not-found';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { IRatePost } from 'router/rate/post';
+import { IUnauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized } from 'interface/error/unauthorized';
 import { PostWrapper } from 'database/post';
-import { IRatePost }   from 'interface/responses/api-responses';
-import { Server }      from 'server/server';
-import {
-    INoPostFoundError,
-    IObjectIdParseError,
-    IUnauthenticatedError,
-    IUnauthorizedError
-} from 'interface/responses/error-responses';
+import { Server } from 'server/server';
+import { UserWrapper } from 'database/user';
+import { randomBytes } from 'crypto';
+import supertest from 'supertest';
 
 describe('createPost route handler validation', () => {
     let app: Express;
@@ -48,7 +46,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .post(`/api/rate/post/${posts[0].id}`)
         .then(response => {
-            expect(response.body).toStrictEqual<IUnauthenticatedError>({
+            expect(response.body).toStrictEqual<IUnauthenticated>({
                 error: 'Unauthenticated',
                 ok: false
             });
@@ -61,7 +59,7 @@ describe('createPost route handler validation', () => {
         .auth(user.username, '!password')
         .send({ rating: 1 })
         .then(response => {
-            expect(response.body).toStrictEqual<IUnauthorizedError>({
+            expect(response.body).toStrictEqual<IUnauthorized>({
                 error: 'Unauthorized',
                 ok: false
             });
@@ -74,7 +72,8 @@ describe('createPost route handler validation', () => {
         .auth(user.username, password)
         .send({ rating: 1 })
         .then(response => {
-            expect(response.body).toStrictEqual<IObjectIdParseError>({
+            expect(response.body).toStrictEqual<IObjectIdParse>({
+                context: 'params.id',
                 error: 'Object Id Parse',
                 ok: false,
                 provided: 'objectId'
@@ -88,10 +87,11 @@ describe('createPost route handler validation', () => {
         .auth(user.username, password)
         .send({ rating: 1 })
         .then(response => {
-            expect(response.body).toStrictEqual<INoPostFoundError>({
-                error: 'No Post Found',
-                ok: false,
-                id: expect.stringMatching(/^[a-f\d]{24}$/)
+            expect(response.body).toStrictEqual<IContentNotFound>({
+                content: 'Post',
+                error: 'Content Not Found',
+                id: expect.stringMatching(/^[a-f\d]{24}$/),
+                ok: false
             });
         });
         done();
@@ -102,7 +102,10 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             if (post.id === targetPost.id) expect(post.likes).toBe(1);
@@ -111,13 +114,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [targetPost._id],
-            disliked: []
+            disliked: [],
+            liked: [targetPost._id]
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -127,12 +130,18 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         response = await supertest(app)
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: false,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             if (post.id === targetPost.id) expect(post.likes).toBe(1);
@@ -141,13 +150,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [targetPost._id],
-            disliked: []
+            disliked: [],
+            liked: [targetPost._id]
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -157,12 +166,18 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: -1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         response = await supertest(app)
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             if (post.id === targetPost.id) expect(post.likes).toBe(1);
@@ -171,13 +186,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [targetPost._id],
-            disliked: []
+            disliked: [],
+            liked: [targetPost._id]
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -187,7 +202,10 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: -1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             if (post.id === targetPost.id) expect(post.dislikes).toBe(1);
@@ -196,13 +214,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [],
-            disliked: [targetPost._id]
+            disliked: [targetPost._id],
+            liked: []
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -212,12 +230,18 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: -1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         response = await supertest(app)
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: -1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: false,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             if (post.id === targetPost.id) expect(post.dislikes).toBe(1);
@@ -226,13 +250,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [],
-            disliked: [targetPost._id]
+            disliked: [targetPost._id],
+            liked: []
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -242,12 +266,18 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         response = await supertest(app)
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: -1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             if (post.id === targetPost.id) expect(post.dislikes).toBe(1);
@@ -256,13 +286,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [],
-            disliked: [targetPost._id]
+            disliked: [targetPost._id],
+            liked: []
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -272,7 +302,10 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 0 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: false,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             expect(post.dislikes).toBe(0);
@@ -280,13 +313,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -296,12 +329,18 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         response = await supertest(app)
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 0 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             expect(post.dislikes).toBe(0);
@@ -309,13 +348,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });
@@ -325,12 +364,18 @@ describe('createPost route handler validation', () => {
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: -1 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         response = await supertest(app)
             .post(`/api/rate/post/${targetPost.id}`)
             .auth(user.username, password)
             .send({ rating: 0 });
-        expect(response.body).toStrictEqual<IRatePost.Success>({ ok: true });
+        expect(response.body).toStrictEqual<IRatePost.Success>({
+            changed: true,
+            ok: true
+        });
         const updatedPosts = await server.postApi.getManyByQuery({});
         for (const post of updatedPosts) {
             expect(post.dislikes).toBe(0);
@@ -338,13 +383,13 @@ describe('createPost route handler validation', () => {
         }
         const userRates = (await server.userApi.getUserRateApi(user._id)).getRates();
         expect(userRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         const secondUserRates = (await server.userApi.getUserRateApi(secondUser._id)).getRates();
         expect(secondUserRates.posts).toStrictEqual({
-            liked: [],
-            disliked: []
+            disliked: [],
+            liked: []
         });
         done();
     });

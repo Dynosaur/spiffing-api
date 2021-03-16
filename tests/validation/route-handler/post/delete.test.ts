@@ -25,7 +25,7 @@ describe('delete-post route handler validation', () => {
             .delete(`/api/post/${post.id}`)
             .auth(author.username, 'password');
         expect(response.body).toStrictEqual<IDeletePost.Success>({ ok: true });
-        expect(server.postDbi.get({ _id: post._id })).toBeNull();
+        expect(await server.postDbi.get({ _id: post._id })).toBeNull();
         done();
     });
 });

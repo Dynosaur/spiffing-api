@@ -1,9 +1,9 @@
-import supertest from 'supertest';
-import { PostWrapper }                                 from 'database/post';
-import { UserWrapper }                                 from 'database/user';
-import { IDeleteComment }                              from 'router/comment/delete-comment';
-import { Server }                                      from 'server/server';
 import { generateComment, generatePost, generateUser } from 'tests/validation/tools/generate';
+import { IDeleteComment } from 'router/comment/delete';
+import { PostWrapper } from 'database/post';
+import { Server } from 'server/server';
+import { UserWrapper } from 'database/user';
+import supertest from 'supertest';
 
 describe('delete-comment route handler validation', () => {
     let server: Server;
@@ -23,10 +23,11 @@ describe('delete-comment route handler validation', () => {
     it('should delete a comment', async done => {
         const comment = await generateComment(server.commentApi, user._id, 'post', post._id);
         const response = await supertest(server.app)
-            .delete(`/api/comment/${comment.id}`);
+            .delete(`/api/comment/${comment.id}`)
+            .auth(user.username, 'password');
         expect(response.body).toStrictEqual<IDeleteComment.Success>({
-            ok: true,
-            fullyDeleted: true
+            fullyDeleted: true,
+            ok: true
         });
         done();
     });
@@ -34,10 +35,11 @@ describe('delete-comment route handler validation', () => {
         const parentComment = await generateComment(server.commentApi, user._id, 'post', post._id);
         await generateComment(server.commentApi, user._id, 'comment', parentComment._id);
         const response = await supertest(server.app)
-            .delete(`/api/comment/${parentComment.id}`);
+            .delete(`/api/comment/${parentComment.id}`)
+            .auth(user.username, 'password');
         expect(response.body).toStrictEqual<IDeleteComment.Success>({
-            ok: true,
-            fullyDeleted: false
+            fullyDeleted: false,
+            ok: true
         });
         done();
     });
