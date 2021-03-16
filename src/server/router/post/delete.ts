@@ -36,7 +36,7 @@ export async function deletePost(request: Request, actions: DatabaseActions): Re
     const user = await actions.common.authorize(decode.username, decode.password);
     if (user === null) return new Unauthorized();
 
-    const objectId = parseObjectId(request.params.id);
+    const objectId = parseObjectId('params.id', request.params.id);
     if (objectId.ok === false) return new ObjectIdParse('params.id', request.params.id);
     const postId = objectId.id;
 
