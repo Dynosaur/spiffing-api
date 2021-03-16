@@ -10,7 +10,6 @@
             "tests/*": ["tests/*"],
             "server/*": ["src/server/*"],
             "tools/*": ["src/tools/*"],
-            "interface-bindings/*": ["src/server/interface-bindings/*"],
             "route-handling/*": ["src/server/route-handling/*"],
             "router/*": ["src/server/router/*"],
             "dev/*": ["src/dev/*"]
