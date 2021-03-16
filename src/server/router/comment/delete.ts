@@ -56,5 +56,5 @@ export async function deleteComment(request: Request, actions: DatabaseActions):
 }
 
 export const route: HandlerRoute = {
-    handler: deleteComment, method: 'DELETE', path: '/comment'
+    handler: deleteComment, method: 'DELETE', path: '/comment/:id'
 };

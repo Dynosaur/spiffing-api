@@ -1,10 +1,11 @@
-import supertest   from 'supertest';
-import { Express } from 'express';
+import { generateComments, generateUsers } from './tools/generate';
 import { CommentWrapper } from 'database/comment';
-import { PostWrapper }    from 'database/post';
-import { UserWrapper }    from 'database/user';
-import { IGetComments }   from 'interface/responses/api-responses';
-import { Server }         from 'server/server';
+import { Express } from 'express';
+import { IGetComment } from 'router/comment/get';
+import { PostWrapper } from 'database/post';
+import { Server } from 'server/server';
+import { UserWrapper } from 'database/user';
+import supertest   from 'supertest';
 
 describe('get-comments route handler validation', () => {
     let app: Express;
@@ -18,22 +19,15 @@ describe('get-comments route handler validation', () => {
         server = new Server(false);
         await server.initialize();
         app = server.app;
-        users = [];
-        for (let i = 0; i < 3; i++) users.push(await server.userApi.create(
-            `user-${Math.round(Math.random() * 1000)}`, server.actions.common.securePassword('password')
-        ));
+        users = await generateUsers(server.userApi, server.commonApi, 3);
         posts = [
             await server.postApi.create(users[0]._id, 'Title', 'Content'),
             await server.postApi.create(users[1]._id, 'Title', 'Content')
         ];
-        post1Comments = [];
-        post2Comments = [];
-        for (let i = 0; i < 2; i++)
-            post1Comments.push(await server.commentApi.create(users[0]._id, 'Content', 'post', posts[0]._id));
+        post1Comments = await generateComments(server.commentApi, 2, users[0]._id, 'post', posts[0]._id);
         subcomment = await server.commentApi.create(users[0]._id, 'Content', 'comment', post1Comments[0]._id);
         post1Comments[0] = (await server.commentApi.get(post1Comments[0]._id))!;
-        for (let i = 0; i < 2; i++)
-            post2Comments.push(await server.commentApi.create(users[1]._id, 'Content', 'post', posts[1]._id));
+        post2Comments = await generateComments(server.commentApi, 2, users[1]._id, 'post', posts[1]._id);
         done();
     });
     afterEach(async done => {
@@ -41,56 +35,55 @@ describe('get-comments route handler validation', () => {
         done();
     });
     it('should get all comments', async done => {
-        const response = await supertest(app).get('/api/comments');
-        expect(response.body).toStrictEqual<IGetComments.Success>({
-            ok: true,
-            comments: post1Comments.concat(subcomment).concat(post2Comments).map(comment => comment.toInterface())
+        const response = await supertest(app).get('/api/comment');
+        expect(response.body).toStrictEqual<IGetComment.Success>({
+            comments: post1Comments.concat(subcomment).concat(post2Comments).map(comment => comment.toInterface()),
+            ok: true
         });
         done();
     });
     it('should get all comments under a post', async done => {
-        let response = await supertest(app).get(`/api/comments/?parentType=post&parentId=${posts[0].id}`);
-        expect(response.body).toStrictEqual<IGetComments.Success>({
-            ok: true,
+        let response = await supertest(app).get(`/api/comment/?parentType=post&parentId=${posts[0].id}`);
+        expect(response.body).toStrictEqual<IGetComment.Success>({
+            acceptedParams: ['parentId', 'parentType'],
             comments: post1Comments.map(comment => comment.toInterface()),
-            acceptedParams: ['parentId', 'parentType']
+            ok: true
         });
-        response = await supertest(app).get(`/api/comments/?parentType=post&parentId=${posts[1].id}`);
-        expect(response.body).toStrictEqual<IGetComments.Success>({
-            ok: true,
+        response = await supertest(app).get(`/api/comment/?parentType=post&parentId=${posts[1].id}`);
+        expect(response.body).toStrictEqual<IGetComment.Success>({
+            acceptedParams: ['parentId', 'parentType'],
             comments: post2Comments.map(comment => comment.toInterface()),
-            acceptedParams: ['parentId', 'parentType']
+            ok: true
         });
         done();
     });
     it('should get all comments under a comment', async done => {
         const response = await supertest(app)
-            .get(`/api/comments/?parentType=comment&parentId=${post1Comments[0]._id}`);
-        expect(response.body).toStrictEqual<IGetComments.Success>({
-            ok: true,
+            .get(`/api/comment/?parentType=comment&parentId=${post1Comments[0]._id}`);
+        expect(response.body).toStrictEqual<IGetComment.Success>({
+            acceptedParams: ['parentId', 'parentType'],
             comments: [subcomment.toInterface()],
-            acceptedParams: ['parentId', 'parentType']
+            ok: true
         });
         done();
     });
     it('should get all comments made by a user', async done => {
         const response = await supertest(app)
-            .get(`/api/comments/?author=${users[1].id}`);
-        expect(response.body).toStrictEqual<IGetComments.Success>({
-            ok: true,
+            .get(`/api/comment/?author=${users[1].id}`);
+        expect(response.body).toStrictEqual<IGetComment.Success>({
+            acceptedParams: ['author'],
             comments: post2Comments.map(comments => comments.toInterface()),
-            acceptedParams: ['author']
+            ok: true
         });
         done();
     });
     it('should include author\'s user object', async done => {
         const response = await supertest(app)
-            .get(`/api/comments/?author=${users[0].id}&include=authorUser`);
-        expect(response.body).toStrictEqual<IGetComments.Success>({
-            ok: true,
-            comments: post1Comments.concat(subcomment).map(comment => comment.toInterface(users[0].toInterface())),
+            .get(`/api/comment/?author=${users[0].id}&include=authorUser`);
+        expect(response.body).toStrictEqual<IGetComment.Success>({
             acceptedParams: ['author', 'include'],
-            includeSuccessful: true
+            comments: post1Comments.concat(subcomment).map(comment => comment.toInterface(users[0].toInterface())),
+            ok: true
         });
         done();
     });

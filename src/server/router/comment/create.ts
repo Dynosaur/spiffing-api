@@ -69,5 +69,5 @@ export async function createComment(request: Request, actions: DatabaseActions):
 }
 
 export const route: HandlerRoute = {
-    handler: createComment, method: 'POST', path: '/comment'
+    handler: createComment, method: 'POST', path: '/comment/:contentType/:id'
 };
