@@ -37,3 +37,7 @@ export function generateUser(userApi: UserAPI, common: CommonActions): Promise<U
         common.securePassword('password')
     );
 }
+
+export function generateUsers(userApi: UserAPI, common: CommonActions, amount: number): Promise<UserWrapper[]> {
+    return Promise.all(new Array(amount).fill(null).map(() => generateUser(userApi, common)));
+}
