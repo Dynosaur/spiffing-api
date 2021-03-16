@@ -1,14 +1,10 @@
-import supertest   from 'supertest';
+import { generateComment, generatePost, generateUser } from 'tests/validation/tools/generate';
 import { CommentWrapper } from 'database/comment';
-import { PostWrapper }    from 'database/post';
-import { UserWrapper }    from 'database/user';
-import { IRateComment }   from 'interface/responses/api-responses';
-import { Server }         from 'server/server';
-import {
-    generateComment,
-    generatePost,
-    generateUser
-} from 'tests/validation/tools/generate';
+import { IRateComment } from 'server/router/rate/comment';
+import { PostWrapper } from 'database/post';
+import { Server } from 'server/server';
+import { UserWrapper } from 'database/user';
+import supertest from 'supertest';
 
 describe('rate-comment route handler validation', () => {
     let server: Server;
@@ -33,8 +29,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: 1 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: true
+            change: true,
+            ok: true
         });
         done();
     });
@@ -48,8 +44,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: 1 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: false
+            change: false,
+            ok: true
         });
         done();
     });
@@ -63,8 +59,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: 1 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: true
+            change: true,
+            ok: true
         });
         done();
     });
@@ -74,8 +70,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: -1 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: true
+            change: true,
+            ok: true
         });
         done();
     });
@@ -89,8 +85,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: -1 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: true
+            change: true,
+            ok: true
         });
         done();
     });
@@ -104,8 +100,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: -1 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: false
+            change: false,
+            ok: true
         });
         done();
     });
@@ -115,8 +111,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: 0 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: false
+            change: false,
+            ok: true
         });
         done();
     });
@@ -130,8 +126,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: 0 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: true
+            change: true,
+            ok: true
         });
         done();
     });
@@ -145,8 +141,8 @@ describe('rate-comment route handler validation', () => {
             .auth(user.username, 'password')
             .send({ rating: 0 });
         expect(response.body).toStrictEqual<IRateComment.Success>({
-            ok: true,
-            change: true
+            change: true,
+            ok: true
         });
         done();
     });

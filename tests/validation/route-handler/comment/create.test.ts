@@ -1,9 +1,9 @@
-import supertest from 'supertest';
-import { PostWrapper }                from 'database/post';
-import { UserWrapper }                from 'database/user';
-import { ICreateComment }             from 'router/comment/create';
-import { Server }                     from 'server/server';
 import { generatePost, generateUser } from 'tests/validation/tools/generate';
+import { ICreateComment } from 'router/comment/create';
+import { PostWrapper } from 'database/post';
+import { Server } from 'server/server';
+import { UserWrapper } from 'database/user';
+import supertest from 'supertest';
 
 describe('create-comment route handler validation', () => {
     let server: Server;
@@ -26,7 +26,6 @@ describe('create-comment route handler validation', () => {
             .auth(author.username, 'password')
             .send({ content: 'Content' });
         expect(response.body).toStrictEqual<ICreateComment.Success>({
-            ok: true,
             comment: {
                 _id: expect.stringMatching(/^[a-f\d]{24}$/),
                 author: author.id,
@@ -39,7 +38,8 @@ describe('create-comment route handler validation', () => {
                     contentType: 'post'
                 },
                 replies: []
-            }
+            },
+            ok: true
         });
         done();
     });
@@ -50,7 +50,6 @@ describe('create-comment route handler validation', () => {
             .auth(author.username, 'password')
             .send({ content: 'Content' });
         expect(response.body).toStrictEqual<ICreateComment.Success>({
-            ok: true,
             comment: {
                 _id: expect.stringMatching(/^[a-f\d]{24}$/),
                 author: author.id,
@@ -63,7 +62,8 @@ describe('create-comment route handler validation', () => {
                     contentType: 'comment'
                 },
                 replies: []
-            }
+            },
+            ok: true
         });
         done();
     });
