@@ -72,12 +72,12 @@ describe('rate-post route handler', () => {
         it('should not affect a previously liked post', async done => {
             let response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({
-                changed: false,
+                changed: true,
                 ok: true
             });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({
-                changed: true,
+                changed: false,
                 ok: true
             });
             done();
@@ -117,12 +117,12 @@ describe('rate-post route handler', () => {
         it('should not affect a previously disliked post', async done => {
             let response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({
-                changed: false,
+                changed: true,
                 ok: true
             });
             response = await env.executeRouteHandler(ratePost);
             expect(response.payload).toStrictEqual<IRatePost.Success>({
-                changed: true,
+                changed: false,
                 ok: true
             });
             done();
