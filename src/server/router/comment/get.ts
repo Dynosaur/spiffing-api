@@ -19,7 +19,6 @@ export namespace IGetComment {
         acceptedParams?: string[];
         comments: Comment[];
         ignoredParams?: string[];
-        includeSuccessful?: boolean;
         ok: true;
     }
 
