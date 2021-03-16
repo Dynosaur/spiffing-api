@@ -1,13 +1,13 @@
-import { Request }     from 'express';
-import { FilterQuery } from 'mongodb';
-import { DbComment }                                   from 'database/comment';
-import { UserWrapper }                                 from 'database/user';
-import { Comment }                                     from 'interface/data-types';
-import { IIllegalValue, IllegalValue }                 from 'interface/error/illegal-value';
-import { IMissing, Missing }                           from 'interface/error/missing';
-import { IObjectIdParse }                              from 'interface/error/object-id-parse';
 import { DatabaseActions, HandlerRoute, RoutePayload } from 'route-handling/route-infra';
-import { parseObjectId }                               from 'tools/object-id';
+import { IIllegalValue, IllegalValue } from 'interface/error/illegal-value';
+import { IMissing, Missing } from 'interface/error/missing';
+import { Comment } from 'interface/data-types';
+import { DbComment } from 'database/comment';
+import { FilterQuery } from 'mongodb';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { Request }     from 'express';
+import { UserWrapper } from 'database/user';
+import { parseObjectId } from 'tools/object-id';
 
 export namespace IGetComment {
     export type ErrorTx =
@@ -41,7 +41,7 @@ export async function getComment(request: Request, actions: DatabaseActions): Re
         if (request.query.parentType !== 'comment' && request.query.parentType !== 'post')
             return new IllegalValue('query.parentType', request.query.parentType, ['comment', 'post']);
 
-        const parseId = parseObjectId(request.query.parentId as string);
+        const parseId = parseObjectId('query.parentId', request.query.parentId as string);
         if (parseId.ok === false) return parseId.error;
         filter.parent = {
             _id: parseId.id,
@@ -54,7 +54,7 @@ export async function getComment(request: Request, actions: DatabaseActions): Re
     }
 
     if (request.query.hasOwnProperty('author')) {
-        const parseId = parseObjectId(request.query.author as string);
+        const parseId = parseObjectId('query.author', request.query.author as string);
         if (parseId.ok === false) return parseId.error;
         filter.author = parseId.id;
         delete request.query.author;
@@ -75,27 +75,23 @@ export async function getComment(request: Request, actions: DatabaseActions): Re
 
     const comments = await actions.comment.getManyByFilter(filter);
     let interfaceComments: Comment[] = [];
-    let includeSuccess: boolean = undefined!;
     if (includeAuthorUser) {
         const authorIds = comments.map(comment => comment.author);
         const users = await actions.user.getManyById(authorIds);
         const userMap = new Map<string, UserWrapper>();
         users.forEach(user => userMap.set(user.id, user));
-        includeSuccess = true;
         for (let i = 0; i < comments.length; i++)
             if (userMap.has(comments[i].authorString))
                 interfaceComments[i] = comments[i].toInterface(userMap.get(comments[i].authorString)!.toInterface());
-            else {
-                includeSuccess = false;
-                break;
-            }
+            else break;
     } else interfaceComments = comments.map(comment => comment.toInterface());
     return {
         code: 200,
         message: `Retreived ${interfaceComments.length} comments.`,
         payload: {
-            ok: true,
-            comments: interfaceComments
+            ... accepted.length && { acceptedParams: accepted },
+            comments: interfaceComments,
+            ok: true
         }
     };
 }
