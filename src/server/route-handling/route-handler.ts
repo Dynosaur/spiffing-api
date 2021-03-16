@@ -1,7 +1,6 @@
-import { chalk } from 'tools/chalk';
+import { DatabaseActions, RouteHandler, RoutePayload } from 'route-handling/route-infra';
 import { Request } from 'express';
-import { MissingDataError } from 'interface-bindings/error-responses';
-import { DatabaseActions, RoutePayload, RouteHandler } from 'route-handling/route-infra';
+import { chalk } from 'tools/chalk';
 
 export async function executeRouteHandler(
     request: Request,
@@ -30,7 +29,7 @@ export async function executeRouteHandler(
         routePayload = await handler(request, actions);
         if (!routePayload) {
             chalk.red(`${fingerprint} ERROR: route handler "${handler.name}" returned null. Responding with error.`);
-            request.res!.status(500).send({ status: 'ERROR', message: 'Route handler returned null.' });
+            request.res!.status(500).send({ message: 'Route handler returned null.', status: 'ERROR' });
         } else {
             sendPayload(request, routePayload, verbose);
         }
@@ -38,20 +37,10 @@ export async function executeRouteHandler(
         sendPayload(request, {
             code: 500,
             message: error.message,
-            payload: { ok: false, error: error.message }
+            payload: { error: error.message, ok: false }
         }, verbose);
     }
     if (verbose) {
         console.log(''); // eslint-disable-line no-console
     }
-}
-
-export function scopeMustHaveProps(scope: Record<string, string>, scopeName: string, props: string[]): MissingDataError | undefined {
-    const missing: string[] = [];
-    for (const prop of props)
-        if (!scope.hasOwnProperty(prop))
-            missing.push(prop);
-    if (missing.length)
-        return new MissingDataError(scopeName, Object.keys(scope), missing);
-    return undefined;
 }
