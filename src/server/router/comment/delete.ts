@@ -1,16 +1,18 @@
-import { Request } from 'express';
-import { IAuthorizationParse }                         from 'interface/error/authorization-parse';
-import { ContentNotFound, IContentNotFound }           from 'interface/error/content-not-found';
-import { IUnauthenticated, Unauthenticated }           from 'interface/error/unauthenticated';
-import { IUnauthorized, Unauthorized }                 from 'interface/error/unauthorized';
+import { ContentNotFound, IContentNotFound } from 'interface/error/content-not-found';
 import { DatabaseActions, HandlerRoute, RoutePayload } from 'route-handling/route-infra';
-import { decodeBasicAuth }                             from 'tools/auth';
-import { parseObjectId }                               from 'tools/object-id';
+import { IUnauthenticated, Unauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized, Unauthorized } from 'interface/error/unauthorized';
+import { IAuthorizationParse } from 'interface/error/authorization-parse';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { Request } from 'express';
+import { decodeBasicAuth } from 'tools/auth';
+import { parseObjectId } from 'tools/object-id';
 
 export namespace IDeleteComment {
     export type ErrorTx =
         | IAuthorizationParse
         | IContentNotFound
+        | IObjectIdParse
         | IUnauthenticated
         | IUnauthorized;
 
@@ -33,7 +35,7 @@ export async function deleteComment(request: Request, actions: DatabaseActions):
     const user = await actions.common.authorize(decode.username, decode.password);
     if (!user) return new Unauthorized();
 
-    const parseId = parseObjectId(request.params.id);
+    const parseId = parseObjectId('params.id', request.params.id);
     if (parseId.ok === false) return parseId.error;
     const commentId = parseId.id;
 
