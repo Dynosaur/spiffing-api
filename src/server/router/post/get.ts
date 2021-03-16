@@ -42,13 +42,13 @@ export async function getPosts(request: Request, actions: DatabaseActions): Retu
                 const queryValue = request.query[queryKey] as string;
                 switch (queryKey) {
                     case 'author': {
-                        const parseId = parseObjectId(queryValue);
+                        const parseId = parseObjectId('query.author', queryValue);
                         if (parseId.ok === false) return parseId.error;
                         dbQuery.author = parseId.id;
                         break;
                     }
                     case 'id': {
-                        const parseId = parseObjectId(queryValue);
+                        const parseId = parseObjectId('query.id', queryValue);
                         if (parseId.ok === false) return parseId.error;
                         dbQuery._id = parseId.id;
                         break;
