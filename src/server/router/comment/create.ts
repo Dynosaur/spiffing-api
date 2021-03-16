@@ -1,15 +1,16 @@
-import { Request } from 'express';
-import { CommentWrapper }                              from 'database/comment';
-import { Comment }                                     from 'interface/data-types';
-import { IAuthorizationParse }                         from 'interface/error/authorization-parse';
-import { ContentNotFound, IContentNotFound }           from 'interface/error/content-not-found';
-import { IIllegalValue, IllegalValue }                 from 'interface/error/illegal-value';
-import { IMissing, Missing }                           from 'interface/error/missing';
-import { IUnauthenticated, Unauthenticated }           from 'interface/error/unauthenticated';
-import { IUnauthorized, Unauthorized }                 from 'interface/error/unauthorized';
+import { ContentNotFound, IContentNotFound } from 'interface/error/content-not-found';
 import { DatabaseActions, HandlerRoute, RoutePayload } from 'route-handling/route-infra';
-import { decodeBasicAuth }                             from 'tools/auth';
-import { parseObjectId }                               from 'tools/object-id';
+import { IIllegalValue, IllegalValue } from 'interface/error/illegal-value';
+import { IMissing, Missing } from 'interface/error/missing';
+import { IUnauthenticated, Unauthenticated } from 'interface/error/unauthenticated';
+import { IUnauthorized, Unauthorized } from 'interface/error/unauthorized';
+import { Comment } from 'interface/data-types';
+import { CommentWrapper } from 'database/comment';
+import { IAuthorizationParse } from 'interface/error/authorization-parse';
+import { IObjectIdParse } from 'interface/error/object-id-parse';
+import { Request } from 'express';
+import { decodeBasicAuth } from 'tools/auth';
+import { parseObjectId } from 'tools/object-id';
 
 export namespace ICreateComment {
     export type ErrorTx =
@@ -17,6 +18,7 @@ export namespace ICreateComment {
         | IContentNotFound
         | IIllegalValue
         | IMissing
+        | IObjectIdParse
         | IUnauthenticated
         | IUnauthorized;
 
@@ -49,7 +51,7 @@ export async function createComment(request: Request, actions: DatabaseActions):
     const user = await actions.common.authorize(decode.username, decode.password);
     if (!user) return new Unauthorized();
 
-    const parseId = parseObjectId(request.params.id);
+    const parseId = parseObjectId('params.id', request.params.id);
     if (parseId.ok === false) return parseId.error;
     const id = parseId.id;
 
