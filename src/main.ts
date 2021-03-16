@@ -1,7 +1,7 @@
 import { Server } from './server/server';
-import * as dotenv from 'dotenv';
+import { config as loadEnvironmentVariables } from 'dotenv';
 
-dotenv.config();
+loadEnvironmentVariables();
 
 if (process.env.PORT === undefined)
     process.env.PORT = '47680';
@@ -15,5 +15,5 @@ if (process.env.KEY === undefined)
 const server = new Server();
 server.start(parseInt(process.env.PORT)).catch(error => {
     console.log(error); // eslint-disable-line no-console
-    process.exit(1);
+    server.stop();
 });
