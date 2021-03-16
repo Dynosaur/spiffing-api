@@ -1,6 +1,6 @@
-import { generatePosts, generateUser } from '../tools/generate';
+import { generatePosts, generateUser } from 'tests/validation/tools/generate';
 import { Express } from 'express';
-import { IGetPosts } from 'router/post/get';
+import { IGetPost } from 'router/post/get';
 import { IObjectIdParse } from 'interface/error/object-id-parse';
 import { PostWrapper } from 'database/post';
 import { Server } from 'server/server';
@@ -32,7 +32,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get('/api/post')
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 posts: posts.map(post => post.toInterface())
             });
@@ -69,7 +69,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get('/api/post?ids=objectId,lol,something')
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 failed: {
                     ids: {
                         error: expect.any(String),
@@ -87,7 +87,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get(`/api/post?ids=${posts[0].id},lol,something`)
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 posts: [posts[0].toInterface()],
                 'query-allowed': ['ids']
@@ -99,7 +99,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get(`/api/post?title=${posts[1].title}`)
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 posts: [posts[1].toInterface()],
                 'query-allowed': ['title']
@@ -111,7 +111,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get(`/api/post?author=${user.id}`)
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 posts: posts.slice(0, 3).map(post => post.toInterface()),
                 'query-allowed': ['author']
@@ -123,7 +123,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get(`/api/post?id=${posts[2].id}`)
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 posts: [posts[2].toInterface()],
                 'query-allowed': ['id']
@@ -135,7 +135,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get(`/api/post?ids=${posts[2].id},${posts[0].id},${posts[3].id}`)
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 posts: [posts[0], posts[2], posts[3]].map(post => post.toInterface()),
                 'query-allowed': ['ids']
@@ -147,7 +147,7 @@ describe('createPost route handler validation', () => {
         await supertest(app)
         .get('/api/post?include=authorUser')
         .then(response => {
-            expect(response.body).toStrictEqual<IGetPosts.Success>({
+            expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
                 posts: posts.map(post => {
                     const interfacePost = post.toInterface();

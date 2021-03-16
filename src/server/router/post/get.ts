@@ -6,7 +6,7 @@ import { IObjectIdParse } from 'interface/error/object-id-parse';
 import { Request } from 'express';
 import { parseObjectId } from 'tools/object-id';
 
-export namespace IGetPosts {
+export namespace IGetPost {
     export type ErrorTx = IObjectIdParse;
 
     export interface Success {
@@ -20,7 +20,7 @@ export namespace IGetPosts {
     export type Tx = ErrorTx | Success;
 }
 
-type ReturnType = Promise<RoutePayload<IGetPosts.Tx>>;
+type ReturnType = Promise<RoutePayload<IGetPost.Tx>>;
 
 const ALLOWED_QUERY_KEYS = new Set<string>(['author', 'id', 'ids', 'include', 'title']);
 const ALLOWED_INCLUDE_VALUES = new Set<string>(['authorUser']);
@@ -102,7 +102,8 @@ export async function getPosts(request: Request, actions: DatabaseActions): Retu
             ok: true,
             posts: posts,
             ... allowed.length && { 'query-allowed': allowed },
-            ... blocked.length && { 'query-blocked': blocked }
+            ... blocked.length && { 'query-blocked': blocked },
+            ... Object.keys(failed).length && { failed }
         }
     };
 }

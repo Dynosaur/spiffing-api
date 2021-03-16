@@ -6,7 +6,7 @@ import { Request } from 'express';
 import { User } from 'interface/data-types';
 import { parseObjectId } from 'tools/object-id';
 
-export namespace IGetUsers {
+export namespace IGetUser {
     export type ErrorTx = IObjectIdParse;
 
     export interface Success {
@@ -21,7 +21,7 @@ export namespace IGetUsers {
 
 const ACCEPTED_QUERIES = new Set(['id', 'ids', 'username', 'usernames']);
 
-type ReturnType = Promise<RoutePayload<IGetUsers.Tx>>;
+type ReturnType = Promise<RoutePayload<IGetUser.Tx>>;
 export async function getUser(request: Request, actions: DatabaseActions): ReturnType {
     const allowed: string[] = [];
     const blocked: string[] = [];
