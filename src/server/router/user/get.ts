@@ -35,7 +35,7 @@ export async function getUser(request: Request, actions: DatabaseActions): Retur
     allowed.forEach(query => {
         switch (query) {
             case 'id': {
-                const parseId = parseObjectId(request.query.id as string);
+                const parseId = parseObjectId('query.id', request.query.id as string);
                 if (parseId.ok === false) return parseId.error;
                 databaseQuery._id = parseId.id;
                 break;

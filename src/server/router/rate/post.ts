@@ -37,7 +37,7 @@ export async function ratePost(request: Request, actions: DatabaseActions): Prom
     const user = await actions.common.authorize(decode.username, decode.password);
     if (!user) return new Unauthorized();
 
-    const parseId = parseObjectId(request.params.id);
+    const parseId = parseObjectId('params.id', request.params.id);
     if (parseId.ok === false) return parseId.error;
     const postId = parseId.id;
 
