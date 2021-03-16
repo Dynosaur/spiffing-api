@@ -1,28 +1,23 @@
-import cors                     from 'cors';
-import { randomBytes }          from 'crypto';
-import express                  from 'express';
-import { Server as NodeServer } from 'http';
-import { resolve }              from 'path';
 import { CommentAPI, DbComment } from 'database/comment';
-import { CommonActions }         from 'database/common-actions';
-import { DatabaseInterface }     from 'database/database-interface';
-import { MongoClient }           from 'database/mongo-client';
-import { DbPost, PostAPI }       from 'database/post';
-import { DbRates }               from 'database/rate';
-import { DbUser, UserAPI }       from 'database/user';
-import { devInfo }               from 'dev/dev-actions';
-import { RouteRegister }         from 'server/routing';
-import { chalk }                 from 'tools/chalk';
-import { prettyTimestamp }       from 'tools/time';
-import { routes as apiRoutes }   from 'router/api-router';
-import { executeRouteHandler }   from 'route-handling/route-handler';
-import { routes as miscRoutes }  from 'router/misc-router';
-import { routes as authRoutes }  from 'router/auth-router';
-import { routes }                from 'router/route-map';
-import {
-    DatabaseActions,
-    isHandlerRoute
-} from 'route-handling/route-infra';
+import { DatabaseActions, isHandlerRoute } from 'route-handling/route-infra';
+import { DbPost, PostAPI } from 'database/post';
+import { DbUser, UserAPI } from 'database/user';
+import { CommonActions } from 'database/common-actions';
+import { DatabaseInterface } from 'database/database-interface';
+import { DbRates } from 'database/rate';
+import { MongoClient } from 'database/mongo-client';
+import { Server as NodeServer } from 'http';
+import { RouteRegister } from 'server/routing';
+import { chalk } from 'tools/chalk';
+import cors from 'cors';
+import { executeRouteHandler } from 'route-handling/route-handler';
+import express from 'express';
+import { route as interfaceRoute } from 'dev/seamstress/seamstress';
+import { routes as miscRoutes } from 'router/misc-router';
+import { prettyTimestamp } from 'tools/time';
+import { randomBytes } from 'crypto';
+import { resolve } from 'path';
+import { routes } from 'router/route-map';
 
 export type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
@@ -68,6 +63,8 @@ export class Server {
                 throw new Error(`process.env.environment key is ${process.env.environment},` +
                 'please use "DEV", "PROD", or "TEST".');
         }
+
+        if (this.verbose) console.log(`Process ID: ${process.pid}`); // eslint-disable-line no-console
 
         if (!process.env.KEY || !/[a-f\d]{32}/.test(process.env.KEY!))
             throw new Error('Expected process.env.KEY to be a string of 64 bits in hexadecimal.' +
@@ -120,16 +117,26 @@ export class Server {
         this.app.use('/api', apiRouter);
         this.app.use('', (req, res) => res.sendFile(resolve(__dirname, '../../spiffing/index.html')));
 
-        apiRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
-        authRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
-        miscRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         routes.forEach(info => this.routeRegister.register(info.path, info.method, info));
+        miscRoutes.forEach(info => this.routeRegister.register(info.path, info.method, info));
         if (process.env.environment === 'DEV')
-            devInfo.forEach(info => this.routeRegister.register(info.path, info.method, info));
+            this.routeRegister.register(interfaceRoute.path, interfaceRoute.method, interfaceRoute);
     }
 
     async start(port: number): Promise<void> {
         await this.initialize();
         this.server = this.app.listen(port, () => chalk.yellow(`Listening on port ${port}\n`));
+    }
+
+    stop(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.server.close(error => {
+                if (error) return reject(error);
+                this.mongo.close().then(() => {
+                    chalk.lime('bye');
+                    resolve();
+                });
+            });
+        });
     }
 }
