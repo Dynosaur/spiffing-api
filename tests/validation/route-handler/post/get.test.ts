@@ -34,7 +34,7 @@ describe('createPost route handler validation', () => {
         .then(response => {
             expect(response.body).toStrictEqual<IGetPost.Success>({
                 ok: true,
-                posts: posts.map(post => post.toInterface())
+                posts: expect.arrayContaining(posts.map(post => post.toInterface()))
             });
         });
         done();
