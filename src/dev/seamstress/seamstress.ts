@@ -3,7 +3,6 @@ import { getAbsPathsInDir, getFileContents, getRecursiveAbsFilesInDir } from './
 import { Request } from 'express';
 import { SeamstressError } from './error';
 import { StreamRoute } from 'server/route-handling/route-infra';
-import { createReadStream } from 'fs';
 import { chalk } from 'tools/chalk';
 
 const IGNORED_ROUTER_FILES = new Set(['misc-router.ts', 'route-map.ts']);
@@ -83,25 +82,26 @@ async function getInterfaceFileNames(): Promise<string[]> {
     return absolutePaths.filter(path => !isIgnored(path));
 }
 
-async function onRequest(request: Request): Promise<void> {
+async function onRequest(request: Request, verbose: boolean, fingerprint: string): Promise<void> {
     if (request.res === undefined) throw new Error('Response is undefined.');
-
-    const dataTypesPath = resolve(__dirname, '../../server/interface/data-types.ts');
-    const dataTypes = await getFileContents(dataTypesPath);
-    request.res.write('// data types\n\n');
-    request.res.write(dataTypes);
-
-    const paths = await getInterfaceFileNames();
     try {
+        let response = '';
+
+        const dataTypesPath = resolve(__dirname, '../../server/interface/data-types.ts');
+        const dataTypes = await getFileContents(dataTypesPath);
+        response += '// data types\n\n' + dataTypes;
+
+        const paths = await getInterfaceFileNames();
         const code = await Promise.all(paths.map(path => getInterfaceFromFile(path)));
-        request.res.write('\n// various interfaces\n\n');
-        request.res.write(code.map(code => code.code).join('\n\n'));
+        response += '\n// various interfaces\n\n' + code.map(code => code.code).join('\n\n');
+
+        request.res.write(response);
         request.res.end();
-        chalk.lime('Seamstress request successful.');
+        if (verbose) chalk.lime(fingerprint + ' Seamstress request successful.\n');
     } catch (error) {
-        console.log(error);
-        request.res.write('An error occurred while getting interfaces from files.');
-        request.res.end();
+        chalk.rust(fingerprint + ' Encountered the following error:');
+        console.log(error); // eslint-disable-line no-console
+        request.res.status(500).json({ error, ok: false }).end();
     }
 }
 
