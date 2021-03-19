@@ -2,7 +2,8 @@ export namespace SeamstressError {
     enum ECode {
         FILE_DOES_NOT_CONTAIN_INTERFACE = 1,
         COULD_NOT_FIND_INTERFACE_END = 2,
-        FILE_NOT_FOUND = 3
+        FILE_NOT_FOUND = 3,
+        FILE_QUERY_ERROR = 4
     }
 
     class BaseError extends Error {
@@ -32,6 +33,12 @@ export namespace SeamstressError {
         constructor(public path: string, public name: string) {
             super(ECode.COULD_NOT_FIND_INTERFACE_END);
             this.message += `\nPath: ${path}\nInterface name: ${name}`;
+        }
+    }
+
+    export class FileQueryNotFound extends BaseError {
+        constructor(public path: string, public name: string, public regex: string) {
+            super(ECode.FILE_QUERY_ERROR);
         }
     }
 }
