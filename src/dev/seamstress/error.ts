@@ -6,27 +6,30 @@ export namespace SeamstressError {
     }
 
     class BaseError extends Error {
+        error: string;
+
         constructor(public code: ECode) {
             super(ECode[code]);
+            this.error = ECode[code];
         }
     }
 
     export class FileNotFoundError extends BaseError {
-        constructor(path: string) {
+        constructor(public path: string) {
             super(ECode.FILE_NOT_FOUND);
             this.message += `\nPath: ${path}`;
         }
     }
 
     export class FileDoesNotContainInterface extends BaseError {
-        constructor(path: string) {
+        constructor(public path: string) {
             super(ECode.FILE_DOES_NOT_CONTAIN_INTERFACE);
             this.message += `\nPath: ${path}`;
         }
     }
 
     export class CouldNotFindInterfaceEnd extends BaseError {
-        constructor(path: string, name: string) {
+        constructor(public path: string, public name: string) {
             super(ECode.COULD_NOT_FIND_INTERFACE_END);
             this.message += `\nPath: ${path}\nInterface name: ${name}`;
         }
