@@ -1,15 +1,32 @@
-import { basename, dirname, resolve } from 'path';
+import { basename, dirname, join, resolve } from 'path';
 import { getAbsPathsInDir, getFileContents, getRecursiveAbsFilesInDir } from './fs';
 import { Request } from 'express';
 import { SeamstressError } from './error';
 import { StreamRoute } from 'server/route-handling/route-infra';
 import { chalk } from 'tools/chalk';
 
-const IGNORED_ROUTER_FILES = new Set(['misc-router.ts', 'route-map.ts']);
-function isIgnored(path: string): boolean {
-    for (const ignored of IGNORED_ROUTER_FILES)
-        if (path.endsWith(ignored)) return true;
-    return false;
+interface FileQuery {
+    name: string;
+    type: 'interface' | 'namespace' | 'type';
+}
+
+async function queryFile(path: string, query: FileQuery[]): Promise<string> {
+    const content = await getFileContents(path);
+
+    let response = `// ${join(basename(dirname(path)), basename(path))}\n\n`;
+    for (const tsItem of query) {
+        let regex: RegExp;
+        if (tsItem.type === 'type')
+            regex = new RegExp(`type ${tsItem.name} =.+?;`, 's');
+        else
+            regex = new RegExp(`${tsItem.type} ${tsItem.name} {(.+?^|\\s*)}`, 'ms');
+        const result = regex.exec(content);
+        if (result === null)
+            throw new SeamstressError.FileQueryNotFound(path, `${tsItem.type} ${tsItem.name}`, regex.source);
+        response += 'export ' + result[0] + '\n\n';
+    }
+
+    return response;
 }
 
 function capitalizeFirstLetter(s: string): string {
@@ -17,83 +34,76 @@ function capitalizeFirstLetter(s: string): string {
     return capitalFirstLetter + s.slice(1);
 }
 
-function pathToInterfaceName(path: string): string {
-    return 'I' + basename(path, '.ts').split('-').map(
-        kebabWord => capitalizeFirstLetter(kebabWord)
-    ).join('');
-}
-
-type InterfaceFromFileResult = Promise<{ code: string; name: string; }>;
-
-async function getInterfaceFromFile(path: string): InterfaceFromFileResult {
-    const fileLines = (await getFileContents(path)).replace('\r', '').split('\n');
-    let matchedName = 'default';
-    let startLine = -1;
-    let endLine = -1;
-    let depth = 0;
-    let searchingForName = true;
-    let searchingForClose = false;
-    for (let index = 0; index < fileLines.length; index++) {
-        const line = fileLines[index];
-        if (searchingForName) {
-            const regex = (interfaceName: string) => new RegExp(`(interface|namespace) ${interfaceName} {`);
-            matchedName = pathToInterfaceName(path);
-            if (!regex(matchedName).test(line)) {
-                matchedName = 'I' + matchedName.slice(1) + capitalizeFirstLetter(basename(dirname(path)));
-                if (!regex(matchedName).test(line)) {
-                    matchedName = 'I' + capitalizeFirstLetter(basename(dirname(path))) + pathToInterfaceName(path).slice(1);
-                    if (!regex(matchedName).test(line)) continue;
-                }
-            }
-            depth = 1;
-            startLine = index;
-            searchingForName = false;
-            searchingForClose = true;
-            continue;
-        }
-        if (searchingForClose && line.includes('{')) depth++;
-        if (searchingForClose && line.includes('}')) {
-            depth--;
-            if (depth === 0) {
-                endLine = index;
-                break;
-            }
+async function getInterfaceFromFile(path: string): Promise<string> {
+    const fileContents = await getFileContents(path);
+    const regex = (name: string) => new RegExp(`(interface|namespace) ${name} {.+?[^ \t]}`, 's');
+    const fileName = basename(path, '.ts').split('-').map(word => capitalizeFirstLetter(word)).join('');
+    let tsName = 'I' + fileName; // missing.ts => IMissing
+    let result = regex(tsName).exec(fileContents);
+    if (result === null) {
+        const dirName = capitalizeFirstLetter(basename(dirname(path)));
+        tsName = 'I' + fileName + dirName; // user/get.ts => IGetUser
+        result = regex(tsName).exec(fileContents);
+        if (result === null) {
+            tsName = 'I' + dirName + fileName; // rate/post.ts => IRatePost
+            result = regex(tsName).exec(fileContents);
+            if (result === null) throw new SeamstressError.FileDoesNotContainInterface(path);
         }
     }
-    if (startLine === -1) throw new SeamstressError.FileDoesNotContainInterface(path);
-    if (endLine === -1) throw new SeamstressError.CouldNotFindInterfaceEnd(path, matchedName);
-    return {
-        code: fileLines.slice(startLine, endLine).concat('}').join('\n'),
-        name: matchedName
-    };
+    return 'export ' + result[0];
 }
 
-async function getInterfaceFileNames(): Promise<string[]> {
-    const absolutePaths: string[] = [];
-
-    const interfaceErrorPath = resolve(__dirname, '../../server/interface/error');
-    const interfaceErrorPaths = await getAbsPathsInDir(interfaceErrorPath);
-    absolutePaths.push(...interfaceErrorPaths);
-
-    const routerPath = resolve(__dirname, '../../server/router');
-    const routerPaths = await getRecursiveAbsFilesInDir(routerPath);
-    absolutePaths.push(...routerPaths);
-
-    return absolutePaths.filter(path => !isIgnored(path));
+function pathToTsName(path: string): string {
+    const fileName = basename(path, '.ts');
+    return 'I' + fileName.split('-').map(word => capitalizeFirstLetter(word)).join('');
 }
+
+function serverFile(path: string): string {
+    return resolve(__dirname, '../../server', path);
+}
+
+const manualErrorFiles = new Set(['authorization-parse.ts', 'content-not-found.ts']);
+const authorizationParse = {
+    path: serverFile('interface/error/authorization-parse.ts'),
+    query: [
+        { name: 'FailedPart', type: 'type' as const },
+        { name: 'IAuthorizationParse', type: 'interface' as const }
+    ]
+};
+const contentNotFound = {
+    path: serverFile('interface/error/content-not-found.ts'),
+    query: [
+        { name: 'Content', type: 'type' as const },
+        { name: 'IContentNotFound', type: 'interface' as const }
+    ]
+};
+
+const routerFileBlacklist = new Set(['misc-router.ts', 'route-map.ts']);
 
 async function onRequest(request: Request, verbose: boolean, fingerprint: string): Promise<void> {
     if (request.res === undefined) throw new Error('Response is undefined.');
     try {
         let response = '';
 
-        const dataTypesPath = resolve(__dirname, '../../server/interface/data-types.ts');
-        const dataTypes = await getFileContents(dataTypesPath);
-        response += '// data types\n\n' + dataTypes;
+        const dataTypes = await getFileContents(serverFile('interface/data-types.ts'));
+        response += '// data types\n\n' + dataTypes + '\n';
 
-        const paths = await getInterfaceFileNames();
-        const code = await Promise.all(paths.map(path => getInterfaceFromFile(path)));
-        response += '\n// various interfaces\n\n' + code.map(code => code.code).join('\n\n');
+        response += await queryFile(authorizationParse.path, authorizationParse.query);
+        response += await queryFile(contentNotFound.path, contentNotFound.query);
+        const errorFileContent = await Promise.all(
+            await getAbsPathsInDir(serverFile('interface/error')).then(paths => paths
+                .filter(path => !manualErrorFiles.has(basename(path)))
+                .map(path => queryFile(path, [{ name: pathToTsName(path), type: 'interface' }]))
+            )
+        );
+        response += errorFileContent.join('');
+
+        const routerFileContent = await Promise.all(await getRecursiveAbsFilesInDir(serverFile('router'))
+        .then(paths => paths
+            .filter(path => !routerFileBlacklist.has(basename(path)))
+            .map(path => getInterfaceFromFile(path))
+        ));
+        response += routerFileContent.join('\n\n');
 
         request.res.write(response);
         request.res.end();
