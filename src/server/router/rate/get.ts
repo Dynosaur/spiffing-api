@@ -39,5 +39,5 @@ export async function getRate(request: Request, actions: DatabaseActions): Retur
 }
 
 export const route: HandlerRoute = {
-    handler: getRate, method: 'GET', path: '/rate/id'
+    handler: getRate, method: 'GET', path: '/rate/:id'
 };
