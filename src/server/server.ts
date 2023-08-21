@@ -47,12 +47,12 @@ export class Server {
         let dbName: string;
         switch (process.env.environment) {
             case 'DEV':
-                dbUri = 'mongodb://localhost:27017';
+                dbUri = 'mongodb://127.0.0.1:27017';
                 dbName = 'spiffing';
                 this.verbose = true;
                 break;
             case 'TEST':
-                dbUri = 'mongodb://localhost:27017';
+                dbUri = 'mongodb://127.0.0.1:27017';
                 dbName = 'spiffing_valid_testing';
                 break;
             case 'PROD':
