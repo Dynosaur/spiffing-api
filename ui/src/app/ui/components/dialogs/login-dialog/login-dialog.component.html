@@ -1,0 +1,28 @@
+<h1 mat-dialog-title>Log In</h1>
+<div mat-dialog-content>
+    <form class="login-form">
+        <mat-form-field>
+            <mat-label>Username</mat-label>
+            <input #templateUsernameForm matInput [formControl]="usernameForm" (keypress)="onUsernameKeyPress($event)">
+            <mat-error *ngIf="usernameForm.hasError('required')">
+                Please enter your username
+            </mat-error>
+        </mat-form-field>
+        <mat-form-field>
+            <mat-label>Password</mat-label>
+            <input #templatePasswordForm type="password" matInput [formControl]="passwordForm" (keypress)="onPasswordKeyPress($event)">
+            <mat-error *ngIf="passwordForm.hasError('required')">
+                Please enter your password
+            </mat-error>
+        </mat-form-field>
+    </form>
+    <mat-error *ngIf="errorMessage" class="error-message">{{ errorMessage }}</mat-error>
+    <spiff-button
+            (click)="submitSignIn()"
+            [disabled]="!(usernameForm.valid && passwordForm.valid)"
+            [loading]="loginInProgress"
+            class="sign-in-button">
+        Sign In
+    </spiff-button>
+    <button mat-stroked-button color="primary" class="create-account-button" (click)="createNewAccount()">Don't have an account? Create one here!</button>
+</div>

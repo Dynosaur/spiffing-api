@@ -1,0 +1,20 @@
+.spacer {
+    flex: 1 1 auto;
+}
+
+.title {
+    user-select: none;
+    outline: none;
+    cursor: pointer;
+}
+
+.username-spinner {
+    ::ng-deep {
+        svg {
+            height: 1em;
+            circle {
+                stroke: white;
+            }
+        }
+    }
+}

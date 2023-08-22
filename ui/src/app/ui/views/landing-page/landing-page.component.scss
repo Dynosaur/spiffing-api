@@ -1,0 +1,46 @@
+.landing-page-container {
+    width: 80%;
+    margin: auto;
+    padding: 10px 15px;
+    background-color: white;
+
+    p {
+        margin: 0;
+    }
+
+    .landing-page-spinner {
+        margin: auto;
+    }
+
+    .landing-page-post {
+        display: flex;
+        margin: 10px 0;
+
+        spiff-rate-counter {
+            margin-right: 1em;
+        }
+
+        .user-details {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+
+            .user-link {
+                cursor: pointer;
+                outline: none;
+            }
+        }
+
+        .comments-label {
+            font-size: 13px;
+        }
+
+        .post-title {
+            outline: none;
+            cursor: pointer;
+            font-weight: 500;
+            width: fit-content;
+            height: fit-content;
+        }
+    }
+}

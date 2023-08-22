@@ -1,0 +1,58 @@
+<div class="view-container">
+    <div class="post-container section-container">
+        <div *ngIf="state.postLoading; else loaded" class="loading-display">
+            <mat-spinner></mat-spinner>
+        </div>
+        <ng-template #loaded>
+            <div class="loaded-post-container" *ngIf="post; else cannotDisplay">
+                <div class="post">
+                    <spiff-rate-counter [item]="post" [liked]="state.liked" (like)="likePost()"
+                        [disliked]="state.disliked" (dislike)="dislikePost()">
+                    </spiff-rate-counter>
+                    <div class="post-contents">
+                        <p class="title">{{ post.title }}</p>
+                        <p class="submission-info">Submitted
+                            <span [title]="numToDate(post.date)"> {{ post.date | dateAgo }} ago by </span>
+                            <span class="profile-link" [routerLink]="linkToProfile(post.author.username)">
+                                {{ post.author.username }}</span>
+                        </p>
+                        <div class="post-content">{{ post.content }}</div>
+                    </div>
+                </div>
+                <p>{{ commentsAmount + ' comment' + (commentsAmount === 1 ? '' : 's')}}</p>
+                <textarea class="create-comment" [formControl]="commentControl"
+                    placeholder="Leave a comment :-)"></textarea>
+                <spiff-button (action)="postComment()" class="post-comment-button" [disabled]="!commentControl.value"
+                    [loading]="postingComment">Post</spiff-button>
+            </div>
+            <ng-template #cannotDisplay>
+                <div class="not-found">
+                    <h2>Sorry, we couldn't find what you were looking for.</h2>
+                    <img src="/assets/not-found.png" class="public-image">
+                    <p class="error-message">Error: {{ state.errorMessage }}</p>
+                </div>
+            </ng-template>
+        </ng-template>
+    </div>
+    <ng-container *ngIf="state.commentsLoading && state.canDisplay; else commentsLoaded">
+        <mat-spinner [diameter]="50"></mat-spinner>
+    </ng-container>
+    <ng-template #commentsLoaded>
+        <div class="comment section-container" *ngFor="let comment of comments">
+            <spiff-rate-counter [item]="comment" (like)="likeComment(comment)"
+                (dislike)="dislikeComment(comment)" [liked]="isCommentLiked(comment._id)"
+                [disliked]="isCommentDisliked(comment._id)"></spiff-rate-counter>
+            <div>
+                <div class="comment-header">
+                    <a class="comment-username" [routerLink]="'/user/' + comment.author.username">{{ comment.author.username }}</a>
+                    <p [title]="numToDate(comment.created)">{{ comment.created | dateAgo }} ago</p>
+                </div>
+                <p class="comment-content">{{ comment.content }}</p>
+                <div class="comment-footer">
+                    <p *ngIf="isAuthor(comment)">edit</p>
+                    <p>reply</p>
+                </div>
+            </div>
+        </div>
+    </ng-template>
+</div>

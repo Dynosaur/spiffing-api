@@ -1,0 +1,50 @@
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+    background-color: rgb(220, 220, 220);
+}
+
+a {
+    color: #3f51b5;
+
+    &:hover {
+        text-decoration: underline;
+        cursor: pointer;
+    }
+}
+
+.underline-hover {
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.mini-profile-pic {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border-radius: 100%;
+    margin-right: 8px;
+}
+
+.hover-underline {
+    &:hover { text-decoration: underline; }
+}
+
+.loading-display {
+    text-align: center;
+
+    mat-spinner {
+        margin: auto;
+    }
+}
+
+.public-image {
+    display: block;
+    max-width: 150px;
+    max-height: 150px;
+}

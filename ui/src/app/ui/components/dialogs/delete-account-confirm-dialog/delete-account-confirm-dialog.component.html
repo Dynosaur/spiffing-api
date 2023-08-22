@@ -1,0 +1,8 @@
+<h1 mat-dialog-title>Are you sure you want to delete your account?</h1>
+<div mat-dialog-content>
+    <p>This action is irreversable! Your posts will be removed.</p>
+</div>
+<div mat-dialog-actions>
+    <button mat-button color="primary">Cancel</button>
+    <spiff-button [theme]="'warn'" [loading]="accountDeletionInProgress" (click)="deleteAccount()">Delete</spiff-button>
+</div>

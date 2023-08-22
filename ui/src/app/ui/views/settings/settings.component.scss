@@ -1,0 +1,25 @@
+.settings {
+    padding: 0 10px;
+
+    .banter-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+
+        #change-username-inputs {
+            button {
+                margin-right: 10px;
+                opacity: 0%;
+                transition: opacity 0.5s;
+            }
+        }
+    }
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+.opaque {
+    opacity: 100% !important;
+}

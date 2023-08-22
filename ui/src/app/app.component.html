@@ -1,0 +1,23 @@
+<mat-toolbar color="primary">
+
+    <span routerLink="/" class="title">Spiffing</span>
+    <span class="spacer"></span>
+    <button mat-icon-button (click)="dialog.openCreatePostDialog()" *ngIf="signedIn">
+        <mat-icon >add</mat-icon>
+    </button>
+    <button *ngIf="!signedIn; else loggedInOptions" mat-button (click)="dialog.openLoginDialog()">
+        <mat-spinner class="username-spinner" [diameter]="30" *ngIf="loadingUsername; else signInTemplate"></mat-spinner>
+        <ng-template #signInTemplate>Sign In</ng-template>
+    </button>
+
+    <ng-template #loggedInOptions>
+        <button mat-button [mat-menu-trigger-for]="accountDropdown">{{ username }}</button>
+        <mat-menu #accountDropdown>
+            <button mat-menu-item [routerLink]="'/user/' + username">Profile</button>
+            <button mat-menu-item [routerLink]="'/settings'">Settings</button>
+            <button mat-menu-item (click)="account.logOut()">Sign Out</button>
+        </mat-menu>
+    </ng-template>
+
+</mat-toolbar>
+<router-outlet></router-outlet>

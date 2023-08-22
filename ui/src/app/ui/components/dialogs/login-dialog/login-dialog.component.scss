@@ -1,0 +1,23 @@
+.login-form {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+}
+
+.sign-in-button {
+    display: block;
+    width: fit-content;
+    margin: 0 auto 24px auto;
+}
+
+.create-account-button {
+    display: block;
+    margin: auto;
+    padding: 12px;
+    white-space: normal;
+    line-height: 1.5em;
+}
+
+.error-message {
+    margin-bottom: 1rem;
+}

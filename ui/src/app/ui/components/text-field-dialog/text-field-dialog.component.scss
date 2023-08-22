@@ -1,0 +1,10 @@
+.mat-dialog-content {
+    * { width: 100%; }
+
+    textarea { height: 25vh; }
+}
+
+.actions {
+    display: flex;
+    justify-content: space-between;
+}

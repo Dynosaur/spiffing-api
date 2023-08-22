@@ -1,0 +1,26 @@
+<h1 mat-dialog-title>{{ title }}</h1>
+<div mat-dialog-content>
+    <p *ngIf="description">{{ description }}</p>
+    <div *ngFor="let field of fields">
+        <ng-container [ngSwitch]="field.element">
+            <mat-form-field *ngSwitchCase="'input'">
+                <mat-label>{{ field.label }}</mat-label>
+                <input matInput [type]="asInput(field).type" [formControl]="field.formControl">
+                <mat-error *ngIf="field.formControl.errors">
+                    <span>{{ getError(field) }}</span>
+                </mat-error>
+            </mat-form-field>
+            <mat-form-field *ngSwitchCase="'text-area'">
+                <mat-label>{{ field.label }}</mat-label>
+                <textarea matInput [formControl]="field.formControl"></textarea>
+                <mat-error *ngIf="field.formControl.errors">
+                    <span>{{ getError(field) }}</span>
+                </mat-error>
+            </mat-form-field>
+        </ng-container>
+    </div>
+</div>
+<div mat-dialog-actions class="actions">
+    <button mat-button color="primary" [disabled]="loading" (click)="closeDialog()">{{ cancelButtonText }}</button>
+    <spiff-button [disabled]="!isValid()" [loading]="loading" (action)="submit.emit()">{{ submitButtonText }}</spiff-button>
+</div>

@@ -1,0 +1,22 @@
+<div class="container">
+    <mat-card class="profile">
+        <h1 class="screen-name">{{ screenname }}</h1>
+        <div class="user-area">
+            <img src="/assets/anon.png" class="profile-picture">
+            <h2 class="username">{{ username }}</h2>
+        </div>
+        <hr *ngIf="loadingPosts || posts.length > 0">
+        <mat-spinner *ngIf="loadingPosts; else ngPosts" class="post-spinner"></mat-spinner>
+        <ng-template #ngPosts>
+            <button mat-raised-button color="primary" class="make-post-button" *ngIf="!posts.length; else tingy" (click)="dialog.openCreatePostDialog()">Make a Post</button>
+            <ng-template #tingy>
+            </ng-template>
+            <div class="post-container">
+                <div class="post" *ngFor="let post of posts" [routerLink]="'/post/' + post._id">
+                    <h3 class="post-title">{{ post.title }}</h3>
+                    <p class="post-content">{{ post.content }}</p>
+                </div>
+            </div>
+        </ng-template>
+    </mat-card>
+</div>

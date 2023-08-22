@@ -1,0 +1,6 @@
+<button class="button" mat-raised-button [color]='theme' [disabled]="disabled || loading" (click)="onClick()">
+    <mat-spinner *ngIf="loading; else content" [diameter]="30"></mat-spinner>
+    <ng-template #content>
+        <ng-content #content></ng-content>
+    </ng-template>
+</button>

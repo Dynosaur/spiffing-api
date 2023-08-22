@@ -1,0 +1,29 @@
+.register-form {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+
+    mat-form-field {
+        margin-bottom: 10px;
+    }
+}
+
+.create-account-button {
+    
+}
+
+// .sign-in-button {
+//     display: block;
+//     width: fit-content;
+//     margin: 0 auto 24px auto;
+// }
+
+.create-account-button {
+    // display: block;
+    // width: fit-content;
+    // margin: auto;
+    // white-space: normal;
+    // line-height: 1.5em;
+    // display: block;
+    // margin: auto;
+}

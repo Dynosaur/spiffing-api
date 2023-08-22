@@ -1,0 +1,22 @@
+<spiff-view-card>
+    <h1>Settings</h1>
+    <hr>
+    <div class="settings">
+        <div class="banter-container">
+            <h3>Change Password</h3>
+            <spiff-button (click)="changePassword()">Change</spiff-button>
+        </div>
+        <div class="banter-container">
+            <h3>Change Screen Name</h3>
+            <spiff-button (click)="openChangeScreenname()">Change</spiff-button>
+        </div>
+        <div class="banter-container">
+            <h3>Change Username</h3>
+            <spiff-button (click)="changeUsername()">Change</spiff-button>
+        </div>
+        <div class="banter-container">
+            <h3>Delete Account</h3>
+            <button mat-raised-button color="warn" (click)="deleteAccount()">Delete</button>
+        </div>
+    </div>
+</spiff-view-card>

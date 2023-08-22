@@ -1,0 +1,45 @@
+<mat-card class="landing-page-container">
+    <ng-container *ngIf="!loadingPosts; else spinner">
+        <ng-container [ngSwitch]="postStatus">
+            <ng-container *ngSwitchCase="'Ok'">
+                <div *ngFor="let post of posts" class="landing-page-post">
+                    <spiff-rate-counter
+                        [item]="post"
+                        [liked]="isPostLiked(post._id)"
+                        (like)="likePost($event)"
+                        [disliked]="isPostDisliked(post._id)"
+                        (dislike)="dislikePost($event)">
+                    </spiff-rate-counter>
+                    <div>
+                        <p class="post-title hover-underline" [routerLink]="'/post/' + post._id">{{ post.title }}</p>
+                        <div class="user-details">
+                            <p>
+                                <span [title]="toTimestamp(post)">submitted {{ post.date | dateAgo }} ago</span> by
+                                <span
+                                    title="Click to go to profile"
+                                    [routerLink]="'/user/' + post.author.username" class="user-link hover-underline">
+                                        u/{{ post.author.username }}
+                                </span>
+                            </p>
+                        </div>
+                        <p class="comments-label">
+                            {{ post.comments.length + (post.comments.length === 1 ? ' comment' : ' comments') }}
+                        </p>
+                    </div>
+                </div>
+            </ng-container>
+            <ng-container *ngSwitchCase="'None'">
+                <p>No posts!
+                    <span (click)="dialog.openCreatePostDialog()" class="underline-hover">Why not make one?</span>
+                </p>
+            </ng-container>
+            <ng-container *ngSwitchCase="'Error'">
+                <p>Looks like we couldn't load any posts</p>
+                <a (click)="fetchPosts()">Retry</a>
+            </ng-container>
+        </ng-container>
+    </ng-container>
+    <ng-template #spinner>
+        <mat-spinner class="landing-page-spinner"></mat-spinner>
+    </ng-template>
+</mat-card>

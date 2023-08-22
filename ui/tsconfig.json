@@ -1,0 +1,25 @@
+{
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  },
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": ".",
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "lib": ["es2018", "dom"],
+    "module": "es2020",
+    "moduleResolution": "node",
+    "outDir": "./dist/out-tsc",
+    "sourceMap": true,
+    "target": "es2015",
+    "paths": {
+      "api/*": ["src/app/api/*"],
+      "interface/*": ["src/app/api/interface/*"],
+      "spiff/*": ["src/*"],
+      "services/*": ["src/app/services/*"],
+    }
+  }
+}

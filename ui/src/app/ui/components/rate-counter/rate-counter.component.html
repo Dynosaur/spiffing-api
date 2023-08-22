@@ -1,0 +1,8 @@
+<div class="row" [ngStyle]="{'color': liked ? 'rgb(255,150,0)' : 'inherit'}">
+    <mat-icon (click)="like.emit(this.item)" class="pointer icon">keyboard_arrow_up</mat-icon>
+    <p [title]="item.likes">{{ item.likes | prettyNumber }}</p>
+</div>
+<div class="row" [ngStyle]="{'color': disliked ? 'rgb(0,150,255)' : 'inherit'}">
+    <mat-icon (click)="dislike.emit(this.item)" class="pointer icon">keyboard_arrow_down</mat-icon>
+    <p [title]="item.dislikes">{{ item.dislikes | prettyNumber }}</p>
+</div>
