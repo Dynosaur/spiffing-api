@@ -1,8 +1,8 @@
 import { Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { ApiService } from 'spiff/app/api/services/api.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatLegacySnackBar as MatSnackBar } from '@angular/material/legacy-snack-bar';
+import { MatLegacyDialogRef as MatDialogRef } from '@angular/material/legacy-dialog';
 import { UserAccountService } from 'spiff/app/services/user-account.service';
 import { AbstractControl, UntypedFormControl, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 

@@ -1,6 +1,6 @@
 import { UserAccountService } from 'spiff/app/services/user-account.service';
 import { UntypedFormControl, Validators } from '@angular/forms';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatLegacyDialog as MatDialog, MatLegacyDialogRef as MatDialogRef } from '@angular/material/legacy-dialog';
 import { CreateAccountDialogComponent } from 'spiff/app/ui/components/dialogs/create-account-dialog';
 import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 

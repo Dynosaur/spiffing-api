@@ -1,5 +1,5 @@
 import { UntypedFormControl } from '@angular/forms';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatLegacyDialogRef as MatDialogRef } from '@angular/material/legacy-dialog';
 import { errorsToString } from 'spiff/app/forms/validator-error-string';
 import { Component, EventEmitter, OnInit } from '@angular/core';
 

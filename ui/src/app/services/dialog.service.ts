@@ -3,7 +3,7 @@ import { ComponentType } from '@angular/cdk/portal';
 import { UserAccountService } from 'spiff/app/services/user-account.service';
 import { ActivationEnd, Router } from '@angular/router';
 import { UntypedFormControl, Validators } from '@angular/forms';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatLegacyDialog as MatDialog, MatLegacyDialogRef as MatDialogRef } from '@angular/material/legacy-dialog';
 import { AcceptedElements, TextFieldDialogComponent } from 'spiff/app/ui/components/text-field-dialog/text-field-dialog.component';
 import { ChangeUsernameDialogComponent, CreateAccountDialogComponent, DeleteAccountConfirmDialogComponent, LoginDialogComponent } from 'spiff/app/ui/components/dialogs';
 
