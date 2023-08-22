@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 
 @Component({
     selector: 'spiff-form-field',
@@ -11,7 +11,7 @@ export class FormFieldComponent implements OnInit {
     @Input() inputType = 'text';
     @Input() label = 'Form Field';
     @Input() value: string;
-    @Input() control = new FormControl();
+    @Input() control = new UntypedFormControl();
 
     @Input() errorStrategy: DisplayErrorStrategy = 'all';
     @Input() errorPriority: string[];

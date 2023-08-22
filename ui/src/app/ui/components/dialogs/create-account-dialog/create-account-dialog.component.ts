@@ -4,7 +4,7 @@ import { ApiService } from 'spiff/app/api/services/api.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogRef } from '@angular/material/dialog';
 import { UserAccountService } from 'spiff/app/services/user-account.service';
-import { AbstractControl, FormControl, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { AbstractControl, UntypedFormControl, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 
 @Component({
     selector: 'spiff-create-account-dialog',
@@ -16,9 +16,9 @@ export class CreateAccountDialogComponent {
     public creatingAccount = false;
     public retypePasswordErrorMap = new Map<string, string>();
     public retypePasswordErrorPriority = ['required', 'sameValue'];
-    public usernameControl = new FormControl('', [Validators.required]);
-    public passwordControl = new FormControl('', [Validators.required]);
-    public retypePasswordControl = new FormControl('', [Validators.required, this.sameValueValidator(this.passwordControl)]);
+    public usernameControl = new UntypedFormControl('', [Validators.required]);
+    public passwordControl = new UntypedFormControl('', [Validators.required]);
+    public retypePasswordControl = new UntypedFormControl('', [Validators.required, this.sameValueValidator(this.passwordControl)]);
 
     constructor(private dialog: MatDialogRef<CreateAccountDialogComponent>,
                 private api: ApiService,

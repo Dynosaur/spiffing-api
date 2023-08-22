@@ -1,4 +1,4 @@
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
 import { errorsToString } from 'spiff/app/forms/validator-error-string';
 import { Component, EventEmitter, OnInit } from '@angular/core';
@@ -7,7 +7,7 @@ interface InputElement {
     name: string;
     label: string;
     defaultValue?: string;
-    formControl?: FormControl;
+    formControl?: UntypedFormControl;
     element: 'input' | 'text-area';
 }
 
@@ -44,7 +44,7 @@ export class TextFieldDialogComponent implements OnInit {
         if (this.description === 'Description.') console.warn('TextFieldDialogCopmonent: description is unchanged.');
         if (this.fields.length === 0) console.warn('TextFieldDialogComponent: fields length is 0.');
         else for (const field of this.fields) {
-            if (field.formControl === undefined || field.formControl === null) field.formControl = new FormControl();
+            if (field.formControl === undefined || field.formControl === null) field.formControl = new UntypedFormControl();
             switch (field.element) {
                 case 'input':
                     if (!field.type) field.type = 'text';

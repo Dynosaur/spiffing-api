@@ -1,5 +1,5 @@
 import { UserAccountService } from 'spiff/app/services/user-account.service';
-import { FormControl, Validators } from '@angular/forms';
+import { UntypedFormControl, Validators } from '@angular/forms';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { CreateAccountDialogComponent } from 'spiff/app/ui/components/dialogs/create-account-dialog';
 import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
@@ -12,8 +12,8 @@ import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 export class LoginDialogComponent implements AfterViewInit {
     errorMessage: string;
     loginInProgress: boolean;
-    usernameForm = new FormControl('', [Validators.required]);
-    passwordForm = new FormControl('', [Validators.required]);
+    usernameForm = new UntypedFormControl('', [Validators.required]);
+    passwordForm = new UntypedFormControl('', [Validators.required]);
     @ViewChild('templateUsernameForm') templateUsernameForm: ElementRef;
     @ViewChild('templatePasswordForm') templatePasswordForm: ElementRef;
 

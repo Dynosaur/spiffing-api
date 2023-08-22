@@ -1,5 +1,5 @@
 import { MatDialog } from '@angular/material/dialog';
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 import { Component, OnInit } from '@angular/core';
 import { UserAccountService } from 'spiff/app/services/user-account.service';
 
@@ -10,7 +10,7 @@ import { UserAccountService } from 'spiff/app/services/user-account.service';
 })
 export class ChangeUsernameDialogComponent implements OnInit {
     loggedIn = false;
-    usernameFormControl = new FormControl();
+    usernameFormControl = new UntypedFormControl();
 
     constructor(private account: UserAccountService, private dialog: MatDialog) {}
 

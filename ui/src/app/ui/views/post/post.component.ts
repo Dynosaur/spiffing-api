@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from 'api/services/api.service';
@@ -42,7 +42,7 @@ export class PostComponent implements OnInit {
     };
     post: PostUserIncluded;
 
-    commentControl = new FormControl();
+    commentControl = new UntypedFormControl();
     postingComment = false;
     comments: CommentUserIncluded[];
     commentsAmount: number;

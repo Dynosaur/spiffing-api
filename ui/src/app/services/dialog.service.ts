@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { ComponentType } from '@angular/cdk/portal';
 import { UserAccountService } from 'spiff/app/services/user-account.service';
 import { ActivationEnd, Router } from '@angular/router';
-import { FormControl, Validators } from '@angular/forms';
+import { UntypedFormControl, Validators } from '@angular/forms';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AcceptedElements, TextFieldDialogComponent } from 'spiff/app/ui/components/text-field-dialog/text-field-dialog.component';
 import { ChangeUsernameDialogComponent, CreateAccountDialogComponent, DeleteAccountConfirmDialogComponent, LoginDialogComponent } from 'spiff/app/ui/components/dialogs';
@@ -51,8 +51,8 @@ export class DialogService {
     }
 
     openCreatePostDialog(): void {
-        const titleControl = new FormControl(null, [Validators.required]);
-        const contentControl = new FormControl(null, [Validators.required]);
+        const titleControl = new UntypedFormControl(null, [Validators.required]);
+        const contentControl = new UntypedFormControl(null, [Validators.required]);
         this.openGenericDialog({
             title: 'Create Post',
             fields: [

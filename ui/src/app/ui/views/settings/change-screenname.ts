@@ -1,10 +1,10 @@
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 import { DialogService } from 'spiff/app/services/dialog.service';
 import { valueMustNotBe } from 'spiff/app/forms/validators';
 import { UserAccountService } from 'spiff/app/services/user-account.service';
 
 export default function changeScreenname(dialogService: DialogService, accountService: UserAccountService): void {
-    const screennameControl = new FormControl(
+    const screennameControl = new UntypedFormControl(
         accountService.user.screenname,
         valueMustNotBe(accountService.user.screenname)
     );

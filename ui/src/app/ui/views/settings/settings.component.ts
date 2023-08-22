@@ -1,6 +1,6 @@
 import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { FormControl } from '@angular/forms';
+import { UntypedFormControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import changeScreenname from './change-screenname';
 import { DialogService } from 'spiff/app/services/dialog.service';
@@ -36,8 +36,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     changePassword(): void {
-        const passwordControl = new FormControl();
-        const retypeControl = new FormControl(null, sameValueValidator(passwordControl));
+        const passwordControl = new UntypedFormControl();
+        const retypeControl = new UntypedFormControl(null, sameValueValidator(passwordControl));
         this.dialog.openGenericDialog({
             title: 'Change Password',
             submitText: 'Change',
