@@ -1,4 +1,4 @@
-import { MatLegacyDialog as MatDialog } from '@angular/material/legacy-dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { UntypedFormControl } from '@angular/forms';
 import { Component, OnInit } from '@angular/core';
 import { UserAccountService } from 'spiff/app/services/user-account.service';

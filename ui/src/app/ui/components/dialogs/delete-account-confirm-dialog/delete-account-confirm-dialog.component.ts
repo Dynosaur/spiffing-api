@@ -1,6 +1,6 @@
 import { Router } from '@angular/router';
 import { Component } from '@angular/core';
-import { MatLegacyDialog as MatDialog } from '@angular/material/legacy-dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from 'spiff/app/services/snackbar.service';
 import { UserAccountService } from 'spiff/app/services/user-account.service';
 
